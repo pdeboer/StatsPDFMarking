@@ -11,7 +11,7 @@ object MassPDFHighlighter extends App {
 
 	new File(outputDir).mkdirs()
 
-	new BMCPDFSource().get().foreach(f => {
+	new BMCPDFSource().get().par.foreach(f => {
 		val h = new PDFHighlight(f.getAbsolutePath)
 
 		val highlighted = h.highlight(new HighlightTermloader().allTerms)

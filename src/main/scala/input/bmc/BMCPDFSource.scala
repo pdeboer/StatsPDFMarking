@@ -10,12 +10,12 @@ import highlighting.HighlightTermloader
 class BMCPDFSource(val basePDFPath: String = "/Users/pdeboer/Documents/phd_local/OpenReviewCrawler/papers") {
 	def get(): Iterable[File] = {
 		val termloader = new HighlightTermloader()
-		val papers = termloader.methodsAndSynonyms.map(m => {
-			termloader.assumptionsAndSynonms.map(a => {
+		val papers = termloader.methodsAndSynonyms.par.map(m => {
+			termloader.assumptionsAndSynonms.par.map(a => {
 				DAL.getPaperIDsWithTerms(m, a).toSet
 			}).toSet.flatten
 		}).toSet.flatten
 
-		papers.map(p => new File(basePDFPath+p.filename))
+		papers.map(p => new File(basePDFPath+p.filename)).toList
 	}
 }
