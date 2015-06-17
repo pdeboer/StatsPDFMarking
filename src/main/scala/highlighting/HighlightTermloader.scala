@@ -6,8 +6,8 @@ import scala.io.Source
 /**
  * Created by pdeboer on 16/06/15.
  */
-object HighlightTermloader {
-	def load() = {
+class HighlightTermloader {
+	lazy val terms = {
 		val assumptionsInCSV = Source.fromFile("assumptions.csv").getLines().map(l => {
 			val cols = l.split(",")
 			StatisticalAssumption(cols(0), cols.drop(1).toList)
@@ -32,6 +32,15 @@ object HighlightTermloader {
 
 		methods
 	}
+
+	def termNames = terms.map(_.name).toList
+	def termSynonyms = terms.flatMap(t => t.synonyms).toList
+	def termAssumptions = terms.flatMap(t => t.assumptions.map(a => a.name)).toList
+	def termAssumptionSynonyms = terms.flatMap(t => t.assumptions.flatMap(a => a.synonym)).toList
+
+	def methodsAndSynonyms = termNames ::: termSynonyms
+	def assumptionsAndSynonms = termAssumptions ::: termAssumptionSynonyms
+	def allTerms = termNames ::: termSynonyms ::: termAssumptions ::: termAssumptionSynonyms
 }
 
 case class StatisticalMethod(name: String, synonyms: List[String], var assumptions: List[StatisticalAssumption])

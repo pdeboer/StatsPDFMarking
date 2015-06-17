@@ -11,8 +11,8 @@ object DAL {
 	ConnectionPool.singleton("jdbc:mysql://localhost/openreviewcrawl", "root", "")
 	implicit val session = AutoSession
 
-	def getPaperIDsWithTerms(term1:String, term2:String) = DB readOnly { implicit session =>
-		case class DBPaper(id:Long, filename:String)
+	case class DBPaper(id:Long, filename:String)
+	def getPaperIDsWithTerms(term1:String, term2:String):List[DBPaper] = DB readOnly { implicit session =>
 
 		val (likeTerm1, likeTerm2) = (s"%$term1%", s"%$term2%")
 
