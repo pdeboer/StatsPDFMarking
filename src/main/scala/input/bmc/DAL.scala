@@ -12,6 +12,7 @@ object DAL {
 	implicit val session = AutoSession
 
 	case class DBPaper(id:Long, filename:String)
+
 	def getPaperIDsWithTerms(term1:String, term2:String):List[DBPaper] = DB readOnly { implicit session =>
 
 		val (likeTerm1, likeTerm2) = (s"%$term1%", s"%$term2%")

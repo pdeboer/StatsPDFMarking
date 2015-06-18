@@ -238,9 +238,10 @@ public class TextHighlight extends PDFTextStripper
      * @param pattern String that will be converted to Regex pattern
      * @throws IOException
      */
-    public void highlightDefault(final String pattern) throws IOException
+    public void highlightDefault(final String pattern, Color color) throws IOException
     {
-        this.highlightDefault(Pattern.compile("\\Q" + pattern + "\\E", Pattern.CASE_INSENSITIVE));
+        Pattern compiledPattern = Pattern.compile("\\Q" + pattern + "\\E", Pattern.CASE_INSENSITIVE);
+        this.highlightDefault(compiledPattern, color);
     }
 
     /**
@@ -252,9 +253,9 @@ public class TextHighlight extends PDFTextStripper
      * @param pattern Pattern (regex)
      * @throws IOException
      */
-    public void highlightDefault(final Pattern pattern) throws IOException
+    public void highlightDefault(final Pattern pattern, Color color) throws IOException
     {
-        this.highlight(pattern);
+        this.highlight(pattern, color);
     }
 
     public void highlight(final String pattern)
@@ -264,7 +265,11 @@ public class TextHighlight extends PDFTextStripper
         this.highlight(Pattern.compile("\\b("+pattern+")\\b", Pattern.CASE_INSENSITIVE));
     }
 
-    public void highlight(final Pattern pattern)
+    public void highlight(final Pattern pattern)  throws IOException {
+        highlight(pattern, Color.yellow);
+    }
+
+    public void highlight(final Pattern pattern, Color color)
             throws IOException
     {
         if (textCache == null || document == null)
@@ -299,7 +304,7 @@ public class TextHighlight extends PDFTextStripper
 
                 if (textBoundingBoxes.size() > 0) {
                     contentStream.appendRawCommands("/highlights gs\n");
-                    contentStream.setNonStrokingColor(Color.yellow);
+                    contentStream.setNonStrokingColor(color);
 
                     contentStream.fillRect(textBoundingBoxes.get(0).getLowerLeftX(), textBoundingBoxes.get(0).getLowerLeftY(), textBoundingBoxes.get(0).getUpperRightX()-textBoundingBoxes.get(0).getLowerLeftX(), 10);
 

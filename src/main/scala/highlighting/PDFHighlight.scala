@@ -1,5 +1,6 @@
 package highlighting
 
+import java.awt.Color
 import java.io.{ByteArrayOutputStream, FileInputStream}
 
 import com.typesafe.scalalogging.LazyLogging
@@ -13,11 +14,9 @@ class PDFHighlight(val pdfPath:String) extends LazyLogging {
 
 	/**
 	 * taken from Mattia's code
-	 * Highlight all the words contained in the contentCsv variable
-	 * @param wordsToHighlight a List of strings containing all the words/phrases to highlight in the PDF
 	 */
-	def highlight(wordsToHighlight: List[String]) : Array[Byte] = {
-		val file = "./public"+pdfPath
+	def highlight(highlightsPerColor:Map[Color, List[String]]) : Array[Byte] = {
+		val file = pdfPath
 		val parser: PDFParser = new PDFParser(new FileInputStream(file))
 		parser.parse()
 		val pdDoc: PDDocument = new PDDocument(parser.getDocument)
@@ -27,10 +26,11 @@ class PDFHighlight(val pdfPath:String) extends LazyLogging {
 		pdfHighlight.setLineSeparator(" ")
 		pdfHighlight.initialize(pdDoc)
 
-		for(textRegEx <- wordsToHighlight) {
-			logger.debug("Highlighting: " + textRegEx)
-			pdfHighlight.highlightDefault(textRegEx)
+		highlightsPerColor.foreach { case (color, strings) =>
+			logger.debug(s"Highlighting color $color" )
+			strings.foreach(str => pdfHighlight.highlightDefault(str, color))
 		}
+
 
 		val byteArrayOutputStream = new ByteArrayOutputStream()
 		try {

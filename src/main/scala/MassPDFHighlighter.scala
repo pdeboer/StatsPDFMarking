@@ -1,4 +1,5 @@
-import java.io.{FileOutputStream, BufferedOutputStream, File}
+import java.awt.Color
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 
 import highlighting.{HighlightTermloader, PDFHighlight}
 import input.bmc.BMCPDFSource
@@ -14,7 +15,8 @@ object MassPDFHighlighter extends App {
 	new BMCPDFSource().get().par.foreach(f => {
 		val h = new PDFHighlight(f.getAbsolutePath)
 
-		val highlighted = h.highlight(new HighlightTermloader().allTerms)
+		val terms = new HighlightTermloader
+		val highlighted = h.highlight(Map(Color.yellow -> terms.methodsAndSynonyms, Color.green -> terms.assumptionsAndSynonms))
 
 		Some(new BufferedOutputStream(new FileOutputStream(outputDir + f.getName))).foreach(s => {
 			s.write(highlighted)
