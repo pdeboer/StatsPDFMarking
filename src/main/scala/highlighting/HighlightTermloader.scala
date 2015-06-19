@@ -39,7 +39,7 @@ class HighlightTermloader {
 	def termAssumptionSynonyms = terms.flatMap(t => t.assumptions.flatMap(a => a.synonym)).toList
 
 	def methodsAndSynonyms = termNames ::: termSynonyms
-	def assumptionsAndSynonms = termAssumptions ::: termAssumptionSynonyms
+	def assumptionsAndSynonyms = termAssumptions ::: termAssumptionSynonyms
 	def allTerms = termNames ::: termSynonyms ::: termAssumptions ::: termAssumptionSynonyms
 }
 

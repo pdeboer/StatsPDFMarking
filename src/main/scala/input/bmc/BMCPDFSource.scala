@@ -11,7 +11,7 @@ class BMCPDFSource(val basePDFPath: String = "/Users/pdeboer/Documents/phd_local
 	def get(): Iterable[File] = {
 		val termloader = new HighlightTermloader()
 		val papers = termloader.methodsAndSynonyms.par.map(m => {
-			termloader.assumptionsAndSynonms.par.map(a => {
+			termloader.assumptionsAndSynonyms.par.map(a => {
 				DAL.getPaperIDsWithTerms(m, a).toSet
 			}).toSet.flatten
 		}).toSet.flatten

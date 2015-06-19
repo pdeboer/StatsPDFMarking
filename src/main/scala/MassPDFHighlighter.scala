@@ -16,7 +16,7 @@ object MassPDFHighlighter extends App {
 		val h = new PDFHighlight(f.getAbsolutePath)
 
 		val terms = new HighlightTermloader
-		val highlighted = h.highlight(Map(Color.yellow -> terms.methodsAndSynonyms, Color.green -> terms.assumptionsAndSynonms))
+		val highlighted = h.highlight(Map(Color.yellow -> terms.methodsAndSynonyms, Color.green -> terms.assumptionsAndSynonyms))
 
 		Some(new BufferedOutputStream(new FileOutputStream(outputDir + f.getName))).foreach(s => {
 			s.write(highlighted)
