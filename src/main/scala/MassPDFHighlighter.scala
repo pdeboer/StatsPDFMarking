@@ -13,6 +13,12 @@ object MassPDFHighlighter extends App {
 	new File(outputDir).mkdirs()
 
 	new BMCPDFSource().get().par.foreach(f => {
+		highlightFile(f)
+
+		println(s"processed $f")
+	})
+
+	def highlightFile(f: File): Unit = {
 		val h = new PDFHighlight(f.getAbsolutePath)
 
 		val terms = new HighlightTermloader
@@ -22,7 +28,5 @@ object MassPDFHighlighter extends App {
 			s.write(highlighted)
 			s.close()
 		})
-
-		println(s"processed $f")
-	})
+	}
 }
