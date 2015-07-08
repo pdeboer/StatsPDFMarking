@@ -35,7 +35,7 @@ class PDFPermuter(pdfPath: String) {
 		highlightTerms.flatMap {
 			case (color, patterns) => patterns.map(p => {
 				val allIndicesOfThesePatterns = (0 until txt.length).filter(txt.startsWith(p, _))
-				val charsToTakeFromLeftAndRight = 1
+				val charsToTakeFromLeftAndRight = 20
 				val substringIndices = allIndicesOfThesePatterns.map(i => (Math.max(0, i - charsToTakeFromLeftAndRight), Math.min(txt.length, i + p.length + charsToTakeFromLeftAndRight)))
 				val substrings = substringIndices.map(i => txt.substring(i._1, p.length + i._2))
 				substrings.map(s => PDFHighlightInstruction(color, s, p))
