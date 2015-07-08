@@ -47,87 +47,8 @@ public class TextHighlight extends PDFTextStripper {
 
 	private float verticalTolerance = 0;
 	private float heightModifier = (float) 1.250;
-
-	/**
-	 * Internal utility class
-	 */
-	private class Match {
-		public final String str;
-		public final List<TextPosition> positions;
-
-		public Match(final String str, final List<TextPosition> positions) {
-			this.str = str;
-			this.positions = positions;
-		}
-	}
-
-	/**
-	 * Internal utility class that keeps a mapping from the text contents to their TextPositions. This is needed to
-	 * compute bounding boxes. The data is stored on a per-page basis (keyed on the 1-based pageNo)
-	 */
-	private class TextCache {
-		private final Map<Integer, StringBuilder> texts = new HashMap<Integer, StringBuilder>();
-		private final Map<Integer, ArrayList<TextPosition>> positions = new HashMap<Integer, ArrayList<TextPosition>>();
-
-		private StringBuilder obtainStringBuilder(final Integer pageNo) {
-			StringBuilder sb = texts.get(pageNo);
-			if (sb == null) {
-				sb = new StringBuilder();
-				texts.put(pageNo, sb);
-			}
-			return sb;
-		}
-
-		private ArrayList<TextPosition> obtainTextPositions(final Integer pageNo) {
-			ArrayList<TextPosition> textPositions = positions.get(pageNo);
-			if (textPositions == null) {
-				textPositions = new ArrayList<TextPosition>();
-				positions.put(pageNo, textPositions);
-			}
-			return textPositions;
-		}
-
-		public String getText(final Integer pageNo) {
-			return obtainStringBuilder(pageNo).toString();
-		}
-
-		public List<TextPosition> getTextPositions(final Integer pageNo) {
-			return obtainTextPositions(pageNo);
-		}
-
-		public void append(final String str, final TextPosition pos) {
-			final int currentPage = getCurrentPageNo();
-			final ArrayList<TextPosition> positions = obtainTextPositions(currentPage);
-			final StringBuilder sb = obtainStringBuilder(currentPage);
-
-			for (int i = 0; i < str.length(); i++) {
-				sb.append(str.charAt(i));
-				positions.add(pos);
-			}
-		}
-
-		/**
-		 * Given a page and a pattern it will return a list of matches for that pattern. A Match is a tuple of <String,
-		 * List<TextPositions>>
-		 *
-		 * @param pageNo
-		 * @param pattern
-		 * @return list of matches
-		 */
-		public List<Match> match(final Integer pageNo, final Pattern pattern) {
-			final Matcher matcher = pattern.matcher(this.getText(pageNo));
-			final List<Match> matches = new ArrayList<Match>();
-
-			while (matcher.find()) {
-				final List<TextPosition> elements = getTextPositions(pageNo).subList(
-						matcher.start(), matcher.end());
-				matches.add(new Match(matcher.group(), elements));
-			}
-			return matches;
-		}
-	}
-
 	private TextCache textCache;
+	private boolean inParagraph;
 
 	/**
 	 * Instantiate a new object. This object will load properties from PDFTextAnnotator.properties and will apply
@@ -228,20 +149,22 @@ public class TextHighlight extends PDFTextStripper {
 	 * @throws IOException
 	 */
 	public void highlightDefault(final Pattern pattern, Color color) throws IOException {
-		this.highlight(pattern, color);
+		this.highlight(pattern, pattern, color);
 	}
 
 	public void highlight(final String pattern)
 			throws IOException {
 		//this.highlight(Pattern.compile("\\b"+pattern+"\\b", Pattern.CASE_INSENSITIVE));
-		this.highlight(Pattern.compile("\\b(" + pattern + ")\\b", Pattern.CASE_INSENSITIVE));
+		Pattern p = Pattern.compile("\\b(" + pattern + ")\\b", Pattern.CASE_INSENSITIVE);
+		this.highlight(p);
 	}
+
 
 	public void highlight(final Pattern pattern) throws IOException {
-		highlight(pattern, Color.yellow);
+		highlight(pattern, pattern, Color.yellow);
 	}
 
-	public void highlight(final Pattern pattern, Color color)
+	public void highlight(final Pattern searchText, final Pattern markingPattern, Color color)
 			throws IOException {
 		if (textCache == null || document == null) {
 			throw new IllegalArgumentException("TextCache was not initilized");
@@ -265,20 +188,28 @@ public class TextHighlight extends PDFTextStripper {
 			graphicsStateDictionary.put("highlights", graphicsState);
 			resources.setGraphicsStates(graphicsStateDictionary);
 
-			final List<Match> matches = textCache.match(pageIndex + 1, pattern);
+			final List<Match> matches = textCache.match(pageIndex + 1, searchText);
 
-			for (final Match match : matches) {
-				final List<PDRectangle> textBoundingBoxes = getTextBoundingBoxes(match.positions);
-
-				if (textBoundingBoxes.size() > 0) {
-					contentStream.appendRawCommands("/highlights gs\n");
-					contentStream.setNonStrokingColor(color);
-
-					contentStream.fillRect(textBoundingBoxes.get(0).getLowerLeftX(), textBoundingBoxes.get(0).getLowerLeftY(), textBoundingBoxes.get(0).getUpperRightX() - textBoundingBoxes.get(0).getLowerLeftX(), 10);
-
+			for (final Match searchMatch : matches) {
+				List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
+				for (Match markingMatch : markingMatches) {
+					markupMatch(color, contentStream, markingMatch);
 				}
+
 			}
 			contentStream.close();
+		}
+	}
+
+	private void markupMatch(Color color, PDPageContentStream contentStream, Match markingMatch) throws IOException {
+		final List<PDRectangle> textBoundingBoxes = getTextBoundingBoxes(markingMatch.positions);
+
+		if (textBoundingBoxes.size() > 0) {
+			contentStream.appendRawCommands("/highlights gs\n");
+			contentStream.setNonStrokingColor(color);
+
+			contentStream.fillRect(textBoundingBoxes.get(0).getLowerLeftX(), textBoundingBoxes.get(0).getLowerLeftY(), textBoundingBoxes.get(0).getUpperRightX() - textBoundingBoxes.get(0).getLowerLeftX(), 10);
+
 		}
 	}
 
@@ -429,8 +360,6 @@ public class TextHighlight extends PDFTextStripper {
 		}
 	}
 
-	private boolean inParagraph;
-
 	/**
 	 * writes the paragraph separator string to the text cache.
 	 *
@@ -512,6 +441,85 @@ public class TextHighlight extends PDFTextStripper {
 	@Override
 	public void writeText(final PDDocument doc, final Writer outputStream) throws IOException {
 		throw new IllegalArgumentException("Not applicable for TextHighlight");
+	}
+
+	/**
+	 * Internal utility class that keeps a mapping from the text contents to their TextPositions. This is needed to
+	 * compute bounding boxes. The data is stored on a per-page basis (keyed on the 1-based pageNo)
+	 */
+	private class TextCache {
+		private final Map<Integer, StringBuilder> texts = new HashMap<Integer, StringBuilder>();
+		private final Map<Integer, ArrayList<TextPosition>> positions = new HashMap<Integer, ArrayList<TextPosition>>();
+
+		private StringBuilder obtainStringBuilder(final Integer pageNo) {
+			StringBuilder sb = texts.get(pageNo);
+			if (sb == null) {
+				sb = new StringBuilder();
+				texts.put(pageNo, sb);
+			}
+			return sb;
+		}
+
+		private ArrayList<TextPosition> obtainTextPositions(final Integer pageNo) {
+			ArrayList<TextPosition> textPositions = positions.get(pageNo);
+			if (textPositions == null) {
+				textPositions = new ArrayList<TextPosition>();
+				positions.put(pageNo, textPositions);
+			}
+			return textPositions;
+		}
+
+		public String getText(final Integer pageNo) {
+			return obtainStringBuilder(pageNo).toString();
+		}
+
+		public List<TextPosition> getTextPositions(final Integer pageNo) {
+			return obtainTextPositions(pageNo);
+		}
+
+		public void append(final String str, final TextPosition pos) {
+			final int currentPage = getCurrentPageNo();
+			final ArrayList<TextPosition> positions = obtainTextPositions(currentPage);
+			final StringBuilder sb = obtainStringBuilder(currentPage);
+
+			for (int i = 0; i < str.length(); i++) {
+				sb.append(str.charAt(i));
+				positions.add(pos);
+			}
+		}
+
+		/**
+		 * Given a page and a pattern it will return a list of matches for that pattern. A Match is a tuple of <String,
+		 * List<TextPositions>>
+		 *
+		 * @param pageNo
+		 * @param pattern
+		 * @return list of matches
+		 */
+		public List<Match> match(final Integer pageNo, final Pattern pattern) {
+			return match(getTextPositions(pageNo), this.getText(pageNo), pattern);
+		}
+
+		public List<Match> match(List<TextPosition> textPositions, final Pattern pattern) {
+			StringBuilder sb = new StringBuilder(textPositions.size() * 2);
+			for (TextPosition textPosition : textPositions) {
+				if (textPosition != null) sb.append(textPosition.getCharacter());
+			}
+			return match(textPositions, sb.toString(), pattern);
+		}
+
+		public List<Match> match(List<TextPosition> textPositions, String text, final Pattern pattern) {
+
+			final Matcher matcher = pattern.matcher(text);
+			final List<Match> matches = new ArrayList<Match>();
+
+			while (matcher.find()) {
+				final List<TextPosition> elements = textPositions.subList(
+						matcher.start(), matcher.end());
+				matches.add(new Match(matcher.group(), elements));
+			}
+			return matches;
+		}
 	}
 
 }

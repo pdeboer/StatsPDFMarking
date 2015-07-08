@@ -2,6 +2,7 @@ package highlighting
 
 import java.awt.Color
 import java.io.{ByteArrayOutputStream, FileInputStream}
+import java.util.regex.Pattern
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.pdfbox.pdfparser.PDFParser
@@ -10,12 +11,12 @@ import org.apache.pdfbox.pdmodel.PDDocument
 /**
  * Created by pdeboer on 16/06/15.
  */
-class PDFHighlight(val pdfPath:String) extends LazyLogging {
+class PDFHighlight(val pdfPath: String) extends LazyLogging {
 
 	/**
 	 * taken from Mattia's code
 	 */
-	def highlight(highlightsPerColor:Map[Color, List[String]]) : Array[Byte] = {
+	def highlight(highlightsPerColor: Map[Color, List[String]]): Array[Byte] = {
 		val file = pdfPath
 		val parser: PDFParser = new PDFParser(new FileInputStream(file))
 		parser.parse()
@@ -27,8 +28,14 @@ class PDFHighlight(val pdfPath:String) extends LazyLogging {
 		pdfHighlight.initialize(pdDoc)
 
 		highlightsPerColor.foreach { case (color, strings) =>
-			logger.debug(s"Highlighting color $color" )
-			strings.foreach(str => pdfHighlight.highlightDefault(str, color))
+			logger.debug(s"Highlighting color $color")
+
+			strings.foreach(str => {
+				//val pattern = Pattern.compile("(" + str+ ")")
+				val searchPattern = Pattern.compile("(analysis of variance)")
+				val markPattern = Pattern.compile("(of)")
+				pdfHighlight.highlight(searchPattern, markPattern, color)
+			})
 		}
 
 

@@ -2,7 +2,7 @@ import java.awt.Color
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 
 import highlighting.{HighlightTermloader, PDFHighlight}
-import input.bmc.BMCPDFSource
+import input.folder.FolderPDFSource
 
 /**
  * Created by pdeboer on 16/06/15.
@@ -12,7 +12,7 @@ object MassPDFHighlighter extends App {
 
 	new File(outputDir).mkdirs()
 
-	new BMCPDFSource().get().par.foreach(f => {
+	new FolderPDFSource("pdfs").get().par.foreach(f => {
 		highlightFile(f)
 
 		println(s"processed $f")
