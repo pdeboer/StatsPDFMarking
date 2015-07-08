@@ -11,6 +11,8 @@ object MassPDFHighlighter extends App {
 	val outputDir = "output/"
 
 	new File(outputDir).mkdirs()
+	new File(outputDir).listFiles().foreach(f => f.delete())
+
 
 	new FolderPDFSource("pdfs").get().par.foreach(f => {
 		highlightFile(f)
@@ -23,11 +25,11 @@ object MassPDFHighlighter extends App {
 		val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> terms.methodsAndSynonyms, Color.green -> terms.assumptionsAndSynonyms)
 
 
-		new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).foreach(highlighter => {
-			print("highlighting combination of " + highlighter.instructions)
+		new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.foreach(highlighter => {
+			print("highlighting combination of " + highlighter._1.instructions)
 
-			Some(new BufferedOutputStream(new FileOutputStream(outputDir + f.getName))).foreach(s => {
-				s.write(highlighter.highlight())
+			Some(new BufferedOutputStream(new FileOutputStream(outputDir + highlighter._2 + "_" + f.getName))).foreach(s => {
+				s.write(highlighter._1.highlight())
 				s.close()
 			})
 		})

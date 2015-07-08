@@ -35,9 +35,9 @@ class PDFPermuter(pdfPath: String) {
 		highlightTerms.flatMap {
 			case (color, patterns) => patterns.map(p => {
 				val allIndicesOfThesePatterns = (0 until txt.length).filter(txt.startsWith(p, _))
-				val charsToTakeFromLeftAndRight = 50
-				val substringIndices = allIndicesOfThesePatterns.map(i => (Math.max(0, i - charsToTakeFromLeftAndRight), Math.min(txt.length, i + charsToTakeFromLeftAndRight)))
-				val substrings = substringIndices.map(i => txt.substring(i._1, i._2))
+				val charsToTakeFromLeftAndRight = 1
+				val substringIndices = allIndicesOfThesePatterns.map(i => (Math.max(0, i - charsToTakeFromLeftAndRight), Math.min(txt.length, i + p.length + charsToTakeFromLeftAndRight)))
+				val substrings = substringIndices.map(i => txt.substring(i._1, p.length + i._2))
 				substrings.map(s => PDFHighlightInstruction(color, s, p))
 			})
 		}.flatten
@@ -66,9 +66,9 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 		instructions.foreach(i => {
 			logger.debug(s"Highlighting color ${i.color} for search pattern ${i.searchString} and highlighting pattern ${i.highlightString}")
 
-			val (searchPattern, highlightPattern) = (Pattern.compile(s"(${i.searchString}})"), Pattern.compile(s"(${i.highlightString}})"))
+			val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(s"(${Pattern.quote(s)}})"))
 
-			pdfHighlight.highlight(searchPattern, highlightPattern, i.color)
+			pdfHighlight.highlight(patterns.head, patterns(1), i.color)
 		})
 
 
@@ -79,7 +79,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 				pdDoc.close()
 			}
 			if (parser.getDocument != null) {
-				parser.getDocument.close
+				parser.getDocument.close()
 			}
 		}
 		catch {
