@@ -1,7 +1,7 @@
 import java.awt.Color
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 
-import highlighting.{HighlightTermloader, PDFHighlight}
+import highlighting.{HighlightTermloader, PDFPermuter}
 import input.folder.FolderPDFSource
 
 /**
@@ -19,14 +19,18 @@ object MassPDFHighlighter extends App {
 	})
 
 	def highlightFile(f: File): Unit = {
-		val h = new PDFHighlight(f.getAbsolutePath)
-
 		val terms = new HighlightTermloader
-		val highlighted = h.highlight(Map(Color.yellow -> terms.methodsAndSynonyms, Color.green -> terms.assumptionsAndSynonyms))
+		val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> terms.methodsAndSynonyms, Color.green -> terms.assumptionsAndSynonyms)
 
-		Some(new BufferedOutputStream(new FileOutputStream(outputDir + f.getName))).foreach(s => {
-			s.write(highlighted)
-			s.close()
+
+		new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).foreach(highlighter => {
+			print("highlighting combination of " + highlighter.instructions)
+
+			Some(new BufferedOutputStream(new FileOutputStream(outputDir + f.getName))).foreach(s => {
+				s.write(highlighter.highlight())
+				s.close()
+			})
 		})
+
 	}
 }

@@ -45,9 +45,9 @@ import java.util.regex.Pattern;
  */
 public class TextHighlight extends PDFTextStripper {
 
+	TextCache textCache;
 	private float verticalTolerance = 0;
 	private float heightModifier = (float) 1.250;
-	private TextCache textCache;
 	private boolean inParagraph;
 
 	/**
