@@ -66,7 +66,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 		instructions.foreach(i => {
 			logger.debug(s"Highlighting color ${i.color} for search pattern ${i.searchString} and highlighting pattern ${i.highlightString}")
 
-			val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(s"(${Pattern.quote(s)}})"))
+			val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))
 
 			pdfHighlight.highlight(patterns.head, patterns(1), i.color)
 		})
