@@ -1,11 +1,9 @@
 package snippet
 
-import java.awt.Color
-import java.awt.image.ColorModel
-import java.io.{FileInputStream, File}
+import java.io.File
 
-import ar.com.hjg.pngj.chunks.{PngChunkTextVar, ChunkCopyBehaviour}
 import ar.com.hjg.pngj._
+import ar.com.hjg.pngj.chunks.{ChunkCopyBehaviour, PngChunkTextVar}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
@@ -21,28 +19,29 @@ object MainSnippet extends App with LazyLogging{
   new File(snippetsDir).listFiles().foreach(f => f.delete())
 
   val pngFiles : List[File] = new File("output").listFiles().filter(f => f.getName.endsWith(".png")).toList
-  //.filter(f => f.getName.startsWith("58_testpdf.pdf-")).toList
 
-  pngFiles.foreach(pngFile => {
+  pngFiles.par.foreach(pngFile => {
+    logger.debug("Searching for Yellow or Green highlight on: " + pngFile.getName)
     try {
-      logger.debug("File: " + pngFile.getName)
       val in = new PngReader(pngFile)
-
-      logger.debug(in.imgInfo.toStringDetail)
 
       val coordsYellow = new mutable.HashMap[Int, Int]()
       val coordsGreen = new mutable.HashMap[Int, Int]()
+      val channels = in.imgInfo.channels
 
-      for(row <- 0 to in.imgInfo.rows) {
+      for (row <- 0 to in.imgInfo.rows) {
         val l1 = in.readRow()
-        //val scanline = l1.asInstanceOf[ImageLineInt].getScanline.toList
-        for(col <- 0 to in.imgInfo.cols) {
-          val rgb8 = ImageLineHelper.getPixelRGB8(l1, col)
+        // get all the pixel values on the row
+        val scanline = l1.asInstanceOf[ImageLineInt].getScanline
+        for (col <- 0 to in.imgInfo.cols-3) {
 
-          if(getDifference(Color.yellow.getRGB, rgb8) < 300) {
-            logger.debug("YELLOW match FOUND. file: " + pngFile.getName)
-            logger.debug("Colors JAVA: " + Color.yellow.getRGB + ", PNGJ: " + rgb8)
-            coordsYellow += (row -> col)
+          val r = scanline(col * channels)
+          val g = scanline((col * channels) + 1)
+          val b = scanline((col * channels) + 2)
+
+          if (r == 253 && g == 250 && b == 150) {
+
+            logger.debug("YELLOW " + pngFile.getName)
             val out = new PngWriter(new File("snippets/"+pngFile.getName), in.imgInfo, true)
             out.copyChunksFrom(in.getChunksList(), ChunkCopyBehaviour.COPY_ALL)
             out.getMetadata().setText(PngChunkTextVar.KEY_Description, "Identify highlighted text")
@@ -52,10 +51,9 @@ object MainSnippet extends App with LazyLogging{
             out.end()
             logger.debug("End image write")
 
-          } else if(getDifference(Color.green.getRGB, rgb8) < 300) {
-            logger.debug("GREEN match FOUND. file: " + pngFile.getName)
-            logger.debug("Colors JAVA: " + Color.yellow.getRGB + ", PNGJ: " + rgb8)
-            coordsGreen += (row -> col)
+          } else if (r == 180 && g == 251 && b == 150) {
+
+            logger.debug("GREEN " + pngFile.getName)
             val out = new PngWriter(new File("snippets/"+pngFile.getName), in.imgInfo, true)
             out.copyChunksFrom(in.getChunksList(), ChunkCopyBehaviour.COPY_ALL)
             out.getMetadata().setText(PngChunkTextVar.KEY_Description, "Identify highlighted text")
@@ -64,10 +62,10 @@ object MainSnippet extends App with LazyLogging{
             }
             out.end()
             logger.debug("End image write")
+
           }
         }
       }
-
       in.end()
     } catch {
       case e: Exception => {

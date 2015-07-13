@@ -4,6 +4,7 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 import com.typesafe.scalalogging.LazyLogging
 import highlighting.{HighlightTermloader, PDFPermuter}
 import input.folder.FolderPDFSource
+
 import scala.sys.process._
 
 /**
@@ -40,7 +41,7 @@ object MassPDFHighlighter extends App with LazyLogging{
     //Convert all the PDFs to PNG
     new File(outputDir).listFiles().par.foreach(pdfFile => {
       try {
-        ("convert -density 150 output/"+pdfFile.getName + " output/" + pdfFile.getName + ".png").!!
+        ("convert -density 200 output/"+pdfFile.getName + " output/" + pdfFile.getName + ".png").!!
         logger.debug("File: " + pdfFile.getName + ", successfully converted to PNG")
       } catch {
         case e: Exception => e.printStackTrace()
