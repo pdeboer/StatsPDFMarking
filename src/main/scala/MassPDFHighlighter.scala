@@ -28,7 +28,7 @@ object MassPDFHighlighter extends App with LazyLogging{
 
 
 		new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.foreach(highlighter => {
-			print(highlighter._2 +" highlighting combination of " + highlighter._1.instructions)
+			print(s"${highlighter._2} highlighting combination of ${highlighter._1.instructions}")
 
 			Some(new BufferedOutputStream(new FileOutputStream(outputDir + highlighter._2 + "_" + f.getName))).foreach(s => {
 				s.write(highlighter._1.highlight())
@@ -38,9 +38,9 @@ object MassPDFHighlighter extends App with LazyLogging{
 
     logger.debug("Starting conversion PDF2PNG...")
     //Convert all the PDFs to PNG
-    new File(outputDir).listFiles().foreach(pdfFile => {
+    new File(outputDir).listFiles().par.foreach(pdfFile => {
       try {
-        ("convert -density 100 output/"+pdfFile.getName + " output/" + pdfFile.getName + ".png").!!
+        ("convert -density 150 output/"+pdfFile.getName + " output/" + pdfFile.getName + ".png").!!
         logger.debug("File: " + pdfFile.getName + ", successfully converted to PNG")
       } catch {
         case e: Exception => e.printStackTrace()
