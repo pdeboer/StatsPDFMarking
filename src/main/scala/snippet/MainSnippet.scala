@@ -39,11 +39,11 @@ object MainSnippet extends App with LazyLogging{
         for(col <- 0 to in.imgInfo.cols) {
           val rgb8 = ImageLineHelper.getPixelRGB8(l1, col)
 
-          if(getDifference(ImageLineHelper.clampTo_0_255(Color.yellow.getRGB), ImageLineHelper.clampTo_0_255(rgb8)) < 10 ||
-            getDifference(ImageLineHelper.clampTo_0_255(Color.green.getRGB), ImageLineHelper.clampTo_0_255(rgb8)) < 10 ) {
+          if(getDifference(Color.yellow.getRGB, rgb8) < 300) {
             logger.debug("YELLOW match FOUND. file: " + pngFile.getName)
+            logger.debug("Colors JAVA: " + Color.yellow.getRGB + ", PNGJ: " + rgb8)
             coordsYellow += (row -> col)
-            val out = new PngWriter(new File("snippets/"+pngFile.getName), new ImageInfo(in.imgInfo.cols, in.imgInfo.rows, in.imgInfo.bitDepth, false), true)
+            val out = new PngWriter(new File("snippets/"+pngFile.getName), in.imgInfo, true)
             out.copyChunksFrom(in.getChunksList(), ChunkCopyBehaviour.COPY_ALL)
             out.getMetadata().setText(PngChunkTextVar.KEY_Description, "Identify highlighted text")
             for (roww <- 0 to in.imgInfo.rows) {
@@ -52,10 +52,19 @@ object MainSnippet extends App with LazyLogging{
             out.end()
             logger.debug("End image write")
 
-          } /*else if(getRange(Color.green.getRGB, rgb8) < 1500 ) {
+          } else if(getDifference(Color.green.getRGB, rgb8) < 300) {
             logger.debug("GREEN match FOUND. file: " + pngFile.getName)
+            logger.debug("Colors JAVA: " + Color.yellow.getRGB + ", PNGJ: " + rgb8)
             coordsGreen += (row -> col)
-          }*/
+            val out = new PngWriter(new File("snippets/"+pngFile.getName), in.imgInfo, true)
+            out.copyChunksFrom(in.getChunksList(), ChunkCopyBehaviour.COPY_ALL)
+            out.getMetadata().setText(PngChunkTextVar.KEY_Description, "Identify highlighted text")
+            for (roww <- 0 to in.imgInfo.rows) {
+              out.writeRow(in.readRow(roww))
+            }
+            out.end()
+            logger.debug("End image write")
+          }
         }
       }
 
