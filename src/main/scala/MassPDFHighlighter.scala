@@ -39,9 +39,12 @@ object MassPDFHighlighter extends App with LazyLogging{
 
     logger.debug("Starting conversion PDF2PNG...")
     //Convert all the PDFs to PNG
-    new File(outputDir).listFiles().par.foreach(pdfFile => {
+    new File(outputDir).listFiles().foreach(pdfFile => {
+
+      new File(outputDir+pdfFile.getName.substring(0, pdfFile.getName.length-4)).mkdirs()
+
       try {
-        ("convert -density 200 -depth 8 output/"+pdfFile.getName + " output/" + pdfFile.getName + ".png").!!
+        ("convert -density 100 output/"+pdfFile.getName + " output/" + pdfFile.getName.substring(0, pdfFile.getName.length-4) + "/"+ pdfFile.getName+ ".png").!!
         logger.debug("File: " + pdfFile.getName + ", successfully converted to PNG")
       } catch {
         case e: Exception => e.printStackTrace()
