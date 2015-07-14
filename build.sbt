@@ -15,7 +15,5 @@ libraryDependencies ++= Seq(
 	"ch.qos.logback"  %  "logback-classic"   % "1.1.3"
 )
 
-libraryDependencies += "ar.com.hjg" % "pngj" % "2.1.0"
-
 libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.34"
 

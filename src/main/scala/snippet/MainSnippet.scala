@@ -13,81 +13,89 @@ import scala.collection.mutable
  */
 object MainSnippet extends App with LazyLogging {
 
-  val snippetsDir = "snippets/"
+  val COLOR_TOLERANCE = 3
 
-  new File(snippetsDir).mkdirs()
-  new File(snippetsDir).listFiles().foreach(f => f.delete())
+  val YELLOW = (255, 255,127)
+  val GREEN = (127, 255, 127)
 
-  val outputDir: File = new File("output")
+  val PADDING_SNIPPET = 10
 
-  val directories: List[String] = outputDir.list(new FilenameFilter {
+  val SNIPPET_DIR = "snippets/"
+  val OUTPUT_DIR = "output/"
+
+  new File(SNIPPET_DIR).mkdirs()
+  new File(SNIPPET_DIR).listFiles().foreach(f => { f.delete() })
+
+  val outputDir: File = new File(OUTPUT_DIR)
+
+  val outputSubDirectories: List[String] = outputDir.list(new FilenameFilter {
     override def accept(dir: File, name: String): Boolean = {
       new File(dir, name).isDirectory
     }
   }).toList
 
 
-  directories.par.foreach(dir => {
+  outputSubDirectories.par.foreach(directory => {
+    new File(OUTPUT_DIR + directory).listFiles().par.foreach(pngImage => {
+      val inputImage = ImageIO.read(pngImage)
+      val width = inputImage.getWidth
+      val height = inputImage.getHeight
 
-    var coordsYellow = new mutable.HashMap[Int, Int]()
-    var coordsGreen = new mutable.HashMap[Int, Int]()
-
-    new File("output/" + dir).listFiles().par.foreach(pngFile => {
-      logger.debug("Searching for Yellow or Green highlight on: " + pngFile.getName)
-
-      val in = ImageIO.read(pngFile)
-      val width = in.getWidth
-      val height = in.getHeight
-
+      val yellowCoords = new mutable.MutableList[Coords]()
+      val greenCoords = new mutable.MutableList[Coords]()
 
       for (x <- 0 until width) {
         for (y <- 0 until height) {
-          val color = (in.getRGB(x, y) & 0xffffff)
+          val color = (inputImage.getRGB(x, y) & 0xffffff)
           val red = (color & 0xff0000) / 65536
           val green = (color & 0xff00) / 256
           val blue = (color & 0xff)
-          if (getDifference(red, 255) < 5 && getDifference(green, 255) < 5 && getDifference(blue, 127) < 5) {
-            coordsYellow += (x -> y)
 
-          } else if (getDifference(red, 127) < 5 && getDifference(green, 255) < 5 && getDifference(blue, 127) < 5) {
-            coordsGreen += (x -> y)
+          if (isColor(red, green, blue, YELLOW)) {
+            yellowCoords += Coords(x,y)
+          } else if (isColor(red, green, blue, GREEN)) {
+            greenCoords += Coords(x,y)
           }
         }
       }
 
-      // Analyze coords maps
-      if (coordsGreen.nonEmpty && coordsYellow.nonEmpty) {
+      if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
+        val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords.toList, greenCoords.toList)
+        val snippetHeight = endY - startY
 
-        val minGreenY = coordsGreen.minBy(_._2)._2
-        val minYellowY = coordsYellow.minBy(_._2)._2
-
-        //Calculate rows
-        val startRow = Math.min(minYellowY,minGreenY)-20
-        val endRow = Math.max(minYellowY, minGreenY)+20
-
-        logger.debug("Min Green: " + minGreenY)
-        logger.debug("Min Yellow: " + minYellowY)
-
-        val img = new BufferedImage(width, endRow-startRow, BufferedImage.TYPE_INT_RGB)
-
-        for (roww <- 0 until width) {
-          for(coll <- 0 until endRow-startRow){
-            img.setRGB(roww, coll, in.getRGB(roww, startRow + coll) & 0xffffff)
+        val snippetImage = new BufferedImage(width, snippetHeight, BufferedImage.TYPE_INT_RGB)
+        for (w <- 0 until width) {
+          for(h <- 0 until snippetHeight){
+            snippetImage.setRGB(w, h, inputImage.getRGB(w, startY + h) & 0xffffff)
           }
         }
-
-        ImageIO.write(img, "png", new File("snippets/"+pngFile.getName))
-        logger.debug("End image write")
-        coordsGreen = mutable.HashMap.empty
-        coordsYellow = mutable.HashMap.empty
+        ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR+pngImage.getName))
+        logger.debug("Snippet successfully written")
       }
-
     })
-
   })
 
-  def getDifference(x: Int, y: Int) = {
+  def extractImageBoundaries(coordsYellow: List[Coords], coordsGreen: List[Coords]): (Int, Int) = {
+    val minGreen = coordsGreen.minBy(_.y)
+    val minYellow = coordsYellow.minBy(_.y)
+
+    val maxGreen = coordsGreen.maxBy(_.y)
+    val maxYellow = coordsYellow.maxBy(_.y)
+
+    val startY = Math.min(minYellow.y,minGreen.y) - PADDING_SNIPPET
+    val endY = Math.max(maxYellow.y, maxGreen.y) + PADDING_SNIPPET
+
+    (startY, endY)
+  }
+
+  def getAbsDifference(x: Int, y: Int) : Int= {
     Math.abs(x-y)
+  }
+
+  def isColor(r: Int, g: Int, b: Int, color: (Int, Int, Int)): Boolean = {
+    getAbsDifference(r, color._1) < COLOR_TOLERANCE &&
+      getAbsDifference(g, color._2) < COLOR_TOLERANCE &&
+      getAbsDifference(b, color._3) < COLOR_TOLERANCE
   }
 
 }
