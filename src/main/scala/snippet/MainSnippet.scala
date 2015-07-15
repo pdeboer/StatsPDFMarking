@@ -18,6 +18,7 @@ object MainSnippet extends App with LazyLogging {
   val GREEN = (127, 255, 127)
 
   val PADDING_SNIPPET = 10
+  val MINIMAL_SNIPPET_HEIGHT = 300
 
   val SNIPPET_DIR = "snippets/"
   val OUTPUT_DIR = "output/"
@@ -56,7 +57,7 @@ object MainSnippet extends App with LazyLogging {
       }
 
       if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
-        val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, greenCoords)
+        val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, greenCoords, height)
         val snippetHeight = endY - startY
 
         val snippetImage = new BufferedImage(width, snippetHeight, BufferedImage.TYPE_INT_RGB)
@@ -71,7 +72,7 @@ object MainSnippet extends App with LazyLogging {
     })
   })
 
-  def extractImageBoundaries(coordsYellow: List[Coords], coordsGreen: List[Coords]): (Int, Int) = {
+  def extractImageBoundaries(coordsYellow: List[Coords], coordsGreen: List[Coords], maxHeight: Int): (Int, Int) = {
     val minGreen = coordsGreen.minBy(_.y)
     val minYellow = coordsYellow.minBy(_.y)
 
@@ -81,7 +82,30 @@ object MainSnippet extends App with LazyLogging {
     val startY = Math.min(minYellow.y,minGreen.y) - PADDING_SNIPPET
     val endY = Math.max(maxYellow.y, maxGreen.y) + PADDING_SNIPPET
 
-    (startY, endY)
+    checkMinimalBoundaries(startY, endY, maxHeight)
+  }
+
+  def checkMinimalBoundaries(startY: Int, endY: Int, maxHeight: Int) : (Int, Int) = {
+    var minY = startY
+    var maxY = endY
+    val originalHeight = maxY-minY
+    if(originalHeight < MINIMAL_SNIPPET_HEIGHT) {
+
+      val deltaHeight = MINIMAL_SNIPPET_HEIGHT-originalHeight
+
+      if(minY-(deltaHeight/2)>0){
+        minY = minY - (deltaHeight/2)
+      } else {
+        minY = 0
+      }
+
+      if(maxY+(deltaHeight/2) < maxHeight){
+        maxY = maxY + (deltaHeight/2)
+      } else {
+        maxY = maxHeight
+      }
+    }
+    (minY, maxY)
   }
 
   def delta(x: Int, y: Int) : Int= {
