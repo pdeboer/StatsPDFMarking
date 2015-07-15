@@ -36,7 +36,11 @@ object MainSnippet extends App with LazyLogging {
 
 
   outputSubDirectories.par.foreach(directory => {
-    new File(OUTPUT_DIR + directory).listFiles().par.foreach(pngImage => {
+    new File(OUTPUT_DIR + directory).listFiles(new FilenameFilter {
+      override def accept(dir: File, name: String): Boolean = {
+        name.endsWith(".png")
+      }
+    }).par.foreach(pngImage => {
       val inputImage = ImageIO.read(pngImage)
       val width = inputImage.getWidth
       val height = inputImage.getHeight
