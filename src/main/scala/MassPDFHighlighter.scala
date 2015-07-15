@@ -45,10 +45,17 @@ object MassPDFHighlighter extends App with LazyLogging{
     logger.debug("Starting conversion PDF2PNG...")
     new File(outputDir).listFiles().par.foreach(pdfFile => {
 
-      new File(outputDir+removePDFExtension(pdfFile.getName)).mkdirs()
+      val pathPDFFile = pdfFile.getPath
+      val subDirPNGFiles = outputDir + removePDFExtension(pdfFile.getName)
+      val pathConvertedPNGFile = subDirPNGFiles + "/" + createPNGFileName(pdfFile.getName)
+
+      new File(subDirPNGFiles).mkdirs()
+
+      val convertCommandWithParams = "convert -density 200 "
 
       try {
-        ("convert -density 200 " + outputDir + pdfFile.getName + " " + outputDir + removePDFExtension(pdfFile.getName) + "/"+ pdfFile.getName+ ".png").!!
+        (convertCommandWithParams + pathPDFFile + " " + pathConvertedPNGFile).!!
+
         logger.debug("File: " + pdfFile.getName + ", successfully converted to PNG")
       } catch {
         case e: Exception => e.printStackTrace()
@@ -56,6 +63,10 @@ object MassPDFHighlighter extends App with LazyLogging{
     })
 
 	}
+
+  def createPNGFileName(filename: String) : String = {
+    filename+".png"
+  }
 
   def removePDFExtension(fileName: String): String = {
     fileName.substring(0, fileName.length - 4)

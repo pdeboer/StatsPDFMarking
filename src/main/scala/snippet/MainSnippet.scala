@@ -1,12 +1,11 @@
 package snippet
 
+import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.{File, FilenameFilter}
 import javax.imageio.ImageIO
 
 import com.typesafe.scalalogging.LazyLogging
-
-import scala.collection.mutable
 
 /**
  * Created by mattia on 13.07.15.
@@ -41,32 +40,29 @@ object MainSnippet extends App with LazyLogging {
       val width = inputImage.getWidth
       val height = inputImage.getHeight
 
-      val yellowCoords = new mutable.MutableList[Coords]()
-      val greenCoords = new mutable.MutableList[Coords]()
+      var yellowCoords = List.empty[Coords]
+      var greenCoords = List.empty[Coords]
 
       for (x <- 0 until width) {
         for (y <- 0 until height) {
-          val color = (inputImage.getRGB(x, y) & 0xffffff)
-          val red = (color & 0xff0000) / 65536
-          val green = (color & 0xff00) / 256
-          val blue = (color & 0xff)
+          val color = new Color(inputImage.getRGB(x, y))
 
-          if (isColor(red, green, blue, YELLOW)) {
-            yellowCoords += Coords(x,y)
-          } else if (isColor(red, green, blue, GREEN)) {
-            greenCoords += Coords(x,y)
+          if (isSameColor(color, YELLOW)) {
+            yellowCoords ::= Coords(x,y)
+          } else if (isSameColor(color, GREEN)) {
+            greenCoords ::= Coords(x,y)
           }
         }
       }
 
       if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
-        val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords.toList, greenCoords.toList)
+        val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, greenCoords)
         val snippetHeight = endY - startY
 
         val snippetImage = new BufferedImage(width, snippetHeight, BufferedImage.TYPE_INT_RGB)
         for (w <- 0 until width) {
           for(h <- 0 until snippetHeight){
-            snippetImage.setRGB(w, h, inputImage.getRGB(w, startY + h) & 0xffffff)
+            snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
           }
         }
         ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR+pngImage.getName))
@@ -88,14 +84,14 @@ object MainSnippet extends App with LazyLogging {
     (startY, endY)
   }
 
-  def getAbsDifference(x: Int, y: Int) : Int= {
+  def delta(x: Int, y: Int) : Int= {
     Math.abs(x-y)
   }
 
-  def isColor(r: Int, g: Int, b: Int, color: (Int, Int, Int)): Boolean = {
-    getAbsDifference(r, color._1) < COLOR_TOLERANCE &&
-      getAbsDifference(g, color._2) < COLOR_TOLERANCE &&
-      getAbsDifference(b, color._3) < COLOR_TOLERANCE
+  def isSameColor(color1: Color, color: (Int, Int, Int)): Boolean = {
+    delta(color1.getRed, color._1) < COLOR_TOLERANCE &&
+      delta(color1.getGreen, color._2) < COLOR_TOLERANCE &&
+      delta(color1.getBlue, color._3) < COLOR_TOLERANCE
   }
 
 }
