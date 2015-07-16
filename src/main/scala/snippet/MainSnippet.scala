@@ -14,8 +14,8 @@ object MainSnippet extends App with LazyLogging {
 
   val COLOR_TOLERANCE = 3
 
-  val YELLOW = (255, 255,127)
-  val GREEN = (127, 255, 127)
+  val YELLOW = new Color(255, 255,127)
+  val GREEN = new Color(127, 255, 127)
 
   val PADDING_SNIPPET = 10
   val MINIMAL_SNIPPET_HEIGHT = 300
@@ -116,10 +116,10 @@ object MainSnippet extends App with LazyLogging {
     Math.abs(x-y)
   }
 
-  def isSameColor(color1: Color, color: (Int, Int, Int)): Boolean = {
-    delta(color1.getRed, color._1) < COLOR_TOLERANCE &&
-      delta(color1.getGreen, color._2) < COLOR_TOLERANCE &&
-      delta(color1.getBlue, color._3) < COLOR_TOLERANCE
+  def isSameColor(color1: Color, color2: Color): Boolean = {
+    delta(color1.getRed, color2.getRed) < COLOR_TOLERANCE &&
+      delta(color1.getGreen, color2.getGreen) < COLOR_TOLERANCE &&
+      delta(color1.getBlue, color2.getBlue) < COLOR_TOLERANCE
   }
 
 }
