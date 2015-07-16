@@ -34,11 +34,11 @@ class PDFPermuter(pdfPath: String) {
   def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[(PDFHighlightInstruction,PDFHighlightInstruction)] = {
 
     var list = List.empty[(PDFHighlightInstruction, PDFHighlightInstruction)]
-    val sequ = uniqueStrings.toSeq
+    val seqUniqueStrings = uniqueStrings.toSeq
 
-    for(i <- sequ) {
-      for(j <- 0 to sequ.indexOf(i)) {
-        list ::= (i -> sequ(j))
+    for(i <- 1 to seqUniqueStrings.length-1) {
+      for(j <- 0 to i-1) {
+        list ::= (seqUniqueStrings(i) -> seqUniqueStrings(j))
       }
     }
 
