@@ -32,7 +32,6 @@ class PDFPermuter(pdfPath: String) {
 	}
 
   def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[(PDFHighlightInstruction,PDFHighlightInstruction)] = {
-
     var list = List.empty[(PDFHighlightInstruction, PDFHighlightInstruction)]
     val seqUniqueStrings = uniqueStrings.toSeq
 
@@ -41,7 +40,6 @@ class PDFPermuter(pdfPath: String) {
         list ::= (seqUniqueStrings(i) -> seqUniqueStrings(j))
       }
     }
-
     list
   }
 

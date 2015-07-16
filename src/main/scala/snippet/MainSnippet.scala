@@ -1,6 +1,7 @@
 package snippet
 
 import java.awt.Color
+import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
 import java.io.{File, FilenameFilter}
 import javax.imageio.ImageIO
@@ -45,17 +46,17 @@ object MainSnippet extends App with LazyLogging {
       val width = inputImage.getWidth
       val height = inputImage.getHeight
 
-      var yellowCoords = List.empty[Coords]
-      var greenCoords = List.empty[Coords]
+      var yellowCoords = List.empty[Point2D]
+      var greenCoords = List.empty[Point2D]
 
       for (x <- 0 until width) {
         for (y <- 0 until height) {
           val color = new Color(inputImage.getRGB(x, y))
 
           if (isSameColor(color, YELLOW)) {
-            yellowCoords ::= Coords(x,y)
+            yellowCoords ::= new Point2D.Double(x,y)
           } else if (isSameColor(color, GREEN)) {
-            greenCoords ::= Coords(x,y)
+            greenCoords ::= new Point2D.Double(x,y)
           }
         }
       }
@@ -76,37 +77,37 @@ object MainSnippet extends App with LazyLogging {
     })
   })
 
-  def extractImageBoundaries(coordsYellow: List[Coords], coordsGreen: List[Coords], maxHeight: Int): (Int, Int) = {
-    val minGreen = coordsGreen.minBy(_.y)
-    val minYellow = coordsYellow.minBy(_.y)
+  def extractImageBoundaries(coordsYellow: List[Point2D], coordsGreen: List[Point2D], maxHeight: Int): (Int, Int) = {
+    val minGreen = coordsGreen.minBy(_.getY)
+    val minYellow = coordsYellow.minBy(_.getY)
 
-    val maxGreen = coordsGreen.maxBy(_.y)
-    val maxYellow = coordsYellow.maxBy(_.y)
+    val maxGreen = coordsGreen.maxBy(_.getY)
+    val maxYellow = coordsYellow.maxBy(_.getY)
 
-    val startY = Math.min(minYellow.y,minGreen.y) - PADDING_SNIPPET
-    val endY = Math.max(maxYellow.y, maxGreen.y) + PADDING_SNIPPET
+    val startY = Math.min(minYellow.getY,minGreen.getY) - PADDING_SNIPPET
+    val endY = Math.max(maxYellow.getY, maxGreen.getY) + PADDING_SNIPPET
 
-    checkMinimalBoundaries(startY, endY, maxHeight)
+    checkMinimalBoundaries(startY.toInt, endY.toInt, maxHeight)
   }
 
-  def checkMinimalBoundaries(startY: Int, endY: Int, maxHeight: Int) : (Int, Int) = {
+  def checkMinimalBoundaries(startY: Int, endY: Int, maxImageHeight: Int): (Int, Int) = {
     var minY = startY
     var maxY = endY
     val originalHeight = maxY-minY
     if(originalHeight < MINIMAL_SNIPPET_HEIGHT) {
 
-      val deltaHeight = MINIMAL_SNIPPET_HEIGHT-originalHeight
+      val deltaHeight = (MINIMAL_SNIPPET_HEIGHT-originalHeight)/2
 
-      if(minY-(deltaHeight/2)>0){
-        minY = minY - (deltaHeight/2)
+      if(minY-deltaHeight >0){
+        minY = minY - deltaHeight
       } else {
         minY = 0
       }
 
-      if(maxY+(deltaHeight/2) < maxHeight){
-        maxY = maxY + (deltaHeight/2)
+      if(maxY+deltaHeight < maxImageHeight){
+        maxY = maxY + deltaHeight
       } else {
-        maxY = maxHeight
+        maxY = maxImageHeight
       }
     }
     (minY, maxY)
