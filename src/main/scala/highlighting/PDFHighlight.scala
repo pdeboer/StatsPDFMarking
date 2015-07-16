@@ -26,10 +26,24 @@ class PDFPermuter(pdfPath: String) {
 
 	def permuteForEachCombinationOf(permutationDefinition: Map[Color, List[String]]): Iterable[PDFHighlight] = {
 		val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
-		val uniquePairs = for (x <- uniqueStrings; y <- uniqueStrings) yield (x, y)
+		val uniquePairs = getUniquePairsForSearchTerms(uniqueStrings)
 
 		uniquePairs.map(p => new PDFHighlight(pdfPath, List(p._1, p._2)))
 	}
+
+  def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[(PDFHighlightInstruction,PDFHighlightInstruction)] = {
+
+    var list = List.empty[(PDFHighlightInstruction, PDFHighlightInstruction)]
+    val sequ = uniqueStrings.toSeq
+
+    for(i <- sequ) {
+      for(j <- 0 to sequ.indexOf(i)) {
+        list ::= (i -> sequ(j))
+      }
+    }
+
+    list
+  }
 
 	def getUniqueStringsForSearchTerms(highlightTerms: Map[Color, List[String]]): Iterable[PDFHighlightInstruction] = {
 		highlightTerms.flatMap {
