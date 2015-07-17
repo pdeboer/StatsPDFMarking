@@ -6,12 +6,10 @@ import scalikejdbc.{AutoSession, ConnectionPool, DB, _}
 /**
  * Created by pdeboer on 17/06/15.
  */
-object DAL {
+private[bmc] object BMCDAL {
 	Class.forName("com.mysql.jdbc.Driver")
 	ConnectionPool.singleton("jdbc:mysql://localhost/openreviewcrawl", "root", "")
 	implicit val session = AutoSession
-
-	case class DBPaper(id:Long, filename:String)
 
 	def getPaperIDsWithTerms(term1:String, term2:String):List[DBPaper] = DB readOnly { implicit session =>
 
@@ -23,5 +21,7 @@ object DAL {
 		WHERE b.description = 'Original Submission - Version 1' and t.body like $likeTerm1 and t.body like $likeTerm2 """
 		.map(r => DBPaper(r.long(1), r.string(2))).list().apply()
 	}
+
+	case class DBPaper(id: Long, filename: String)
 
 }

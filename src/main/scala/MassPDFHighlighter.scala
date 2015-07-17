@@ -2,7 +2,8 @@ import java.awt.Color
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 
 import highlighting.{HighlightTermloader, PDFPermuter}
-import input.folder.FolderPDFSource
+import input.PDFSource
+import input.bmc.BMCPDFSource
 
 /**
  * Created by pdeboer on 16/06/15.
@@ -13,8 +14,16 @@ object MassPDFHighlighter extends App {
 	new File(outputDir).mkdirs()
 	new File(outputDir).listFiles().foreach(f => f.delete())
 
+	private val source: PDFSource = new BMCPDFSource() // new FolderPDFSource("pdfs")
+	/*
 
-	new FolderPDFSource("pdfs").get().par.foreach(f => {
+
+		source.get().foreach(f => {
+			println(s"cp ${f.getAbsolutePath} ~/Downloads/papers \n")
+		})
+	*/
+
+	source.get().par.foreach(f => {
 		highlightFile(f)
 
 		println(s"processed $f")
