@@ -11,7 +11,7 @@ import scala.sys.process._
  * Created by pdeboer on 16/06/15.
  */
 object MassPDFHighlighter extends App with LazyLogging{
-	val outputDir = "output/"
+	val outputDir = "../output/"
 
 	new File(outputDir).mkdirs()
 	new File(outputDir).listFiles().foreach(f => {
@@ -22,7 +22,7 @@ object MassPDFHighlighter extends App with LazyLogging{
   })
 
 
-	new FolderPDFSource("pdfs").get().par.foreach(f => {
+	new FolderPDFSource("../pdfs").get().par.foreach(f => {
 		highlightFile(f)
 
 		println(s"processed $f")

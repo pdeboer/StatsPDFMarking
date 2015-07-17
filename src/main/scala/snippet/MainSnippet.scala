@@ -21,8 +21,8 @@ object MainSnippet extends App with LazyLogging {
   val PADDING_SNIPPET = 10
   val MINIMAL_SNIPPET_HEIGHT = 300
 
-  val SNIPPET_DIR = "snippets/"
-  val OUTPUT_DIR = "output/"
+  val SNIPPET_DIR = "../snippets/"
+  val OUTPUT_DIR = "../output/"
 
   new File(SNIPPET_DIR).mkdirs()
   new File(SNIPPET_DIR).listFiles().foreach(f => { f.delete() })
