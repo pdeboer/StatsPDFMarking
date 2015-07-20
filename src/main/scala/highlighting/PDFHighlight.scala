@@ -48,7 +48,16 @@ class PDFPermuter(pdfPath: String) {
 			case (color, patterns) => patterns.map(p => {
 				val allIndicesOfThesePatterns = (0 until txt.length).filter(txt.startsWith(p, _))
 				val charsToTakeFromLeftAndRight = 20
-				val substringIndices = allIndicesOfThesePatterns.map(i => (Math.max(0, i - charsToTakeFromLeftAndRight), Math.min(txt.length, i + p.length + charsToTakeFromLeftAndRight)))
+
+        val substringIndices: IndexedSeq[(Int, Int)] = allIndicesOfThesePatterns.map(i => {
+          var it = 0
+          while(("\\Q"+txt.substring(Math.max(0, i - it), Math.min(txt.length, i + p.length + it))+"\\E").r.findAllIn(txt).length != 1) {
+            it += 1
+          }
+          (Math.max(0, i - it), Math.min(txt.length, i + p.length + it))
+        })
+
+        //val substringIndices = allIndicesOfThesePatterns.map(i => (Math.max(0, i - charsToTakeFromLeftAndRight), Math.min(txt.length, i + p.length + charsToTakeFromLeftAndRight)))
 				val substrings = substringIndices.map(i => txt.substring(i._1, p.length + i._2))
 				substrings.map(s => PDFHighlightInstruction(color, s, p))
 			})

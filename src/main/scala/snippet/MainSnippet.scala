@@ -61,21 +61,27 @@ object MainSnippet extends App with LazyLogging {
         }
       }
 
-      if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
-        val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, greenCoords, height)
-        val snippetHeight = endY - startY
-
-        val snippetImage = new BufferedImage(width, snippetHeight, BufferedImage.TYPE_INT_RGB)
-        for (w <- 0 until width) {
-          for(h <- 0 until snippetHeight){
-            snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
-          }
-        }
-        ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR+pngImage.getName))
-        logger.debug("Snippet successfully written")
-      }
+      extractAndStoreImage(pngImage.getName, inputImage, yellowCoords, greenCoords)
     })
   })
+
+  def extractAndStoreImage(pngFileName: String, inputImage: BufferedImage, yellowCoords: List[Point2D], greenCoords: List[Point2D]): Unit = {
+    if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
+      val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, greenCoords, inputImage.getHeight)
+      val snippetHeight = endY - startY
+
+      val imageWidth = inputImage.getWidth()
+
+      val snippetImage = new BufferedImage(imageWidth, snippetHeight, BufferedImage.TYPE_INT_RGB)
+      for (w <- 0 until imageWidth) {
+        for (h <- 0 until snippetHeight) {
+          snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
+        }
+      }
+      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + pngFileName))
+      logger.debug("Snippet successfully written")
+    }
+  }
 
   def extractImageBoundaries(coordsYellow: List[Point2D], coordsGreen: List[Point2D], maxHeight: Int): (Int, Int) = {
     val minGreen = coordsGreen.minBy(_.getY)
