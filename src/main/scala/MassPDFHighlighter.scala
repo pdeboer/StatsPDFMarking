@@ -22,7 +22,7 @@ object MassPDFHighlighter extends App with LazyLogging{
   })
 
 
-	new FolderPDFSource("../pdfs/").get().par.foreach(f => {
+	new FolderPDFSource("../1750paper/").get().par.foreach(f => {
 		highlightFile(f)
 
 		println(s"processed $f")

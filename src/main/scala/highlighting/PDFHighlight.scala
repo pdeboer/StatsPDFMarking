@@ -11,7 +11,7 @@ import org.apache.pdfbox.util.PDFTextStripper
 
 import scala.collection.immutable.Iterable
 
-case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String)
+case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String, startSearchStringIndex: Int, startHighlightStringIndex: Int)
 
 object PDFTextExtractor {
 	def extract(pdfPath: String) = {
@@ -36,21 +36,48 @@ class PDFPermuter(pdfPath: String) {
     val seqUniqueStrings = uniqueStrings.toSeq
 
     for(i <- 1 to seqUniqueStrings.length-1) {
-      for(j <- 0 to i-1) {
-        list ::= (seqUniqueStrings(i) -> seqUniqueStrings(j))
+      for(j <- i-1 to seqUniqueStrings.length-1) {
+
+        if( isUniquePairValidCandidate(seqUniqueStrings(i), seqUniqueStrings(j))) {
+          val startIndexMethod = seqUniqueStrings(i).startSearchStringIndex
+          val endIndexMethod = startIndexMethod + seqUniqueStrings(i).searchString.length
+          val startIndexAssumption = seqUniqueStrings(j).startSearchStringIndex
+          val startIndexHighlightAssumption = startIndexAssumption+
+            ("\\Q"+seqUniqueStrings(j).highlightString+"\\E").r.findFirstMatchIn(
+              txt.substring(startIndexAssumption, startIndexAssumption+seqUniqueStrings(j).searchString.length)).get.start
+
+          if(isHighlightAssumptionOutsideMethod(startIndexMethod, endIndexMethod, startIndexHighlightAssumption)) {
+            list ::= (seqUniqueStrings(i), seqUniqueStrings(j))
+          }
+
+        }
       }
     }
     list
   }
 
-	def getUniqueStringsForSearchTerms(highlightTerms: Map[Color, List[String]]): Iterable[PDFHighlightInstruction] = {
+  def isUniquePairValidCandidate(method: PDFHighlightInstruction, assumption: PDFHighlightInstruction): Boolean = {
+    val terms = new HighlightTermloader
+
+    !method.highlightString.equals(assumption.highlightString) &&
+      !method.searchString.equals(assumption.searchString) &&
+      terms.methodsAndSynonyms.exists(m => method.highlightString.contains(m)) &&
+      terms.assumptionsAndSynonyms.exists(a => assumption.highlightString.contains(a))
+  }
+def isHighlightAssumptionOutsideMethod(startIndexMethod: Int, endIndexMethod: Int, startIndexHighlightAssumption: Int): Boolean = {
+    startIndexHighlightAssumption < startIndexMethod | startIndexHighlightAssumption > endIndexMethod
+  }
+
+  def getUniqueStringsForSearchTerms(highlightTerms: Map[Color, List[String]]): Iterable[PDFHighlightInstruction] = {
 		highlightTerms.flatMap {
 			case (color, patterns) => patterns.map(p => {
-				val allIndicesOfThesePatterns = (0 until txt.length).filter(txt.startsWith(p, _))
-				val charsToTakeFromLeftAndRight = 20
+				val allIndicesOfThesePatterns: Iterator[Int] = ("\\b"+p+"\\b").r.findAllMatchIn(txt).map(m => m.start)
+          //(0 until txt.length).filter(txt.startsWith(p, _))
 
-        val substringIndices: IndexedSeq[(Int, Int)] = allIndicesOfThesePatterns.map(i => {
-          var it = 0
+				//val charsToTakeFromLeftAndRight = 20
+
+        val substringIndices: Iterator[(Int, Int)] = allIndicesOfThesePatterns.map(i => {
+          var it = 1
           while(("\\Q"+txt.substring(Math.max(0, i - it), Math.min(txt.length, i + p.length + it))+"\\E").r.findAllIn(txt).length != 1) {
             it += 1
           }
@@ -58,8 +85,11 @@ class PDFPermuter(pdfPath: String) {
         })
 
         //val substringIndices = allIndicesOfThesePatterns.map(i => (Math.max(0, i - charsToTakeFromLeftAndRight), Math.min(txt.length, i + p.length + charsToTakeFromLeftAndRight)))
-				val substrings = substringIndices.map(i => txt.substring(i._1, p.length + i._2))
-				substrings.map(s => PDFHighlightInstruction(color, s, p))
+				val substrings = substringIndices.map(i => txt.substring(i._1, i._2))
+				substrings.map(s => {
+          val searchStringMatch = ("\\Q"+s+"\\E").r.findFirstMatchIn(txt).get
+          PDFHighlightInstruction(color, s, p, searchStringMatch.start, ("\\Q"+p+"\\E").r.findFirstMatchIn(searchStringMatch.group(0)).get.start)
+        })
 			})
 		}.flatten
 	}
