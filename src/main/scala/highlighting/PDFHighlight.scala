@@ -22,6 +22,9 @@ object PDFTextExtractor {
 }
 
 class PDFPermuter(pdfPath: String) {
+
+  val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = 5
+
 	lazy val txt = PDFTextExtractor.extract(pdfPath)
 
 	def permuteForEachCombinationOf(permutationDefinition: Map[Color, List[String]]): Iterable[PDFHighlight] = {
@@ -35,21 +38,21 @@ class PDFPermuter(pdfPath: String) {
     var list = List.empty[(PDFHighlightInstruction, PDFHighlightInstruction)]
     val seqUniqueStrings = uniqueStrings.toSeq
 
-    for(i <- 1 to seqUniqueStrings.length-1) {
-      for(j <- i-1 to seqUniqueStrings.length-1) {
+    for(i <- 0 to seqUniqueStrings.length-1) {
+      for(j <- i to seqUniqueStrings.length-1) {
 
         if( isUniquePairValidCandidate(seqUniqueStrings(i), seqUniqueStrings(j))) {
+
           val startIndexMethod = seqUniqueStrings(i).startSearchStringIndex
           val endIndexMethod = startIndexMethod + seqUniqueStrings(i).searchString.length
           val startIndexAssumption = seqUniqueStrings(j).startSearchStringIndex
           val startIndexHighlightAssumption = startIndexAssumption+
-            ("\\Q"+seqUniqueStrings(j).highlightString+"\\E").r.findFirstMatchIn(
+            addIgnoreCaseAndQuotesToSearchString(seqUniqueStrings(j).highlightString).r.findFirstMatchIn(
               txt.substring(startIndexAssumption, startIndexAssumption+seqUniqueStrings(j).searchString.length)).get.start
 
           if(isHighlightAssumptionOutsideMethod(startIndexMethod, endIndexMethod, startIndexHighlightAssumption)) {
             list ::= (seqUniqueStrings(i), seqUniqueStrings(j))
           }
-
         }
       }
     }
@@ -64,31 +67,42 @@ class PDFPermuter(pdfPath: String) {
       terms.methodsAndSynonyms.exists(m => method.highlightString.contains(m)) &&
       terms.assumptionsAndSynonyms.exists(a => assumption.highlightString.contains(a))
   }
-def isHighlightAssumptionOutsideMethod(startIndexMethod: Int, endIndexMethod: Int, startIndexHighlightAssumption: Int): Boolean = {
+
+  def isHighlightAssumptionOutsideMethod(startIndexMethod: Int, endIndexMethod: Int, startIndexHighlightAssumption: Int): Boolean = {
     startIndexHighlightAssumption < startIndexMethod | startIndexHighlightAssumption > endIndexMethod
+  }
+
+  def addIgnoreCaseAndQuotesToSearchString(searchString: String): String = {
+    "(?i)(\\Q"+searchString+"\\E)"
   }
 
   def getUniqueStringsForSearchTerms(highlightTerms: Map[Color, List[String]]): Iterable[PDFHighlightInstruction] = {
 		highlightTerms.flatMap {
 			case (color, patterns) => patterns.map(p => {
-				val allIndicesOfThesePatterns: Iterator[Int] = ("\\b"+p+"\\b").r.findAllMatchIn(txt).map(m => m.start)
-          //(0 until txt.length).filter(txt.startsWith(p, _))
+        var allIndicesOfThesePatterns: Set[Int] = Set()
 
-				//val charsToTakeFromLeftAndRight = 20
+        if(p.length < ALLOWED_MAX_LENGTH_IN_WORD_MATCH){
+          ("(?i)(\\b"+p+"\\b)").r.findAllMatchIn(txt).map(m => m.start).foreach(
+            index => allIndicesOfThesePatterns += index)
+        } else {
+          addIgnoreCaseAndQuotesToSearchString(p).r.findAllMatchIn(txt).map(m => m.start).foreach(
+            index => allIndicesOfThesePatterns += index)
+        }
 
-        val substringIndices: Iterator[(Int, Int)] = allIndicesOfThesePatterns.map(i => {
+        val substringIndices: Iterator[(Int, Int)] = allIndicesOfThesePatterns.toIterator.map(i => {
           var it = 1
-          while(("\\Q"+txt.substring(Math.max(0, i - it), Math.min(txt.length, i + p.length + it))+"\\E").r.findAllIn(txt).length != 1) {
+          while(addIgnoreCaseAndQuotesToSearchString(txt.substring(Math.max(0, i - it), Math.min(txt.length, i + p.length + it))).r.findAllIn(txt).length != 1) {
             it += 1
           }
           (Math.max(0, i - it), Math.min(txt.length, i + p.length + it))
         })
 
         //val substringIndices = allIndicesOfThesePatterns.map(i => (Math.max(0, i - charsToTakeFromLeftAndRight), Math.min(txt.length, i + p.length + charsToTakeFromLeftAndRight)))
+
 				val substrings = substringIndices.map(i => txt.substring(i._1, i._2))
 				substrings.map(s => {
-          val searchStringMatch = ("\\Q"+s+"\\E").r.findFirstMatchIn(txt).get
-          PDFHighlightInstruction(color, s, p, searchStringMatch.start, ("\\Q"+p+"\\E").r.findFirstMatchIn(searchStringMatch.group(0)).get.start)
+          val searchStringMatch = addIgnoreCaseAndQuotesToSearchString(s).r.findFirstMatchIn(txt).get
+          PDFHighlightInstruction(color, s, p, searchStringMatch.start, addIgnoreCaseAndQuotesToSearchString(p).r.findFirstMatchIn(searchStringMatch.group(0)).get.start)
         })
 			})
 		}.flatten
