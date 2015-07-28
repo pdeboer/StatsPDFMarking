@@ -81,7 +81,7 @@ class PDFPermuter(pdfPath: String) {
 			case (color, patterns) => patterns.map(p => {
         var allIndicesOfThesePatterns: Set[Int] = Set()
 
-        if(p.length < ALLOWED_MAX_LENGTH_IN_WORD_MATCH){
+        if(p.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH){
           ("(?i)(\\b"+p+"\\b)").r.findAllMatchIn(txt).map(m => m.start).foreach(
             index => allIndicesOfThesePatterns += index)
         } else {
@@ -90,9 +90,9 @@ class PDFPermuter(pdfPath: String) {
         }
 
         val substringIndices: Iterator[(Int, Int)] = allIndicesOfThesePatterns.toIterator.map(i => {
-          var it = 1
+          var it = 0
           while(addIgnoreCaseAndQuotesToSearchString(txt.substring(Math.max(0, i - it), Math.min(txt.length, i + p.length + it))).r.findAllIn(txt).length != 1) {
-            it += 1
+              it += 1
           }
           (Math.max(0, i - it), Math.min(txt.length, i + p.length + it))
         })
@@ -129,7 +129,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 		pdfHighlight.initialize(pdDoc)
 
 		instructions.foreach(i => {
-			logger.debug(s"Highlighting color ${i.color} for search pattern ${i.searchString} and highlighting pattern ${i.highlightString}")
+			logger.debug(s"File: ${pdfPath} Highlight color ${i.color} for search pattern ${i.searchString} and highlighting pattern ${i.highlightString}")
 
 			val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))
 

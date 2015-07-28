@@ -35,34 +35,35 @@ object MainSnippet extends App with LazyLogging {
     }
   }).toList
 
-
-  outputSubDirectories.par.foreach(directory => {
+  val allSubDirFiles = outputSubDirectories.map (directory => {
     new File(OUTPUT_DIR + directory).listFiles(new FilenameFilter {
       override def accept(dir: File, name: String): Boolean = {
         name.endsWith(".png")
       }
-    }).par.foreach(pngImage => {
-      val inputImage = ImageIO.read(pngImage)
-      val width = inputImage.getWidth
-      val height = inputImage.getHeight
+    })
+  }).flatten
 
-      var yellowCoords = List.empty[Point2D]
-      var greenCoords = List.empty[Point2D]
+  allSubDirFiles.par.foreach(pngImage => {
+    val inputImage = ImageIO.read(pngImage)
+    val width = inputImage.getWidth
+    val height = inputImage.getHeight
 
-      for (x <- 0 until width) {
-        for (y <- 0 until height) {
-          val color = new Color(inputImage.getRGB(x, y))
+    var yellowCoords = List.empty[Point2D]
+    var greenCoords = List.empty[Point2D]
 
-          if (isSameColor(color, YELLOW)) {
-            yellowCoords ::= new Point2D.Double(x,y)
-          } else if (isSameColor(color, GREEN)) {
-            greenCoords ::= new Point2D.Double(x,y)
-          }
+    for (x <- 0 until width) {
+      for (y <- 0 until height) {
+        val color = new Color(inputImage.getRGB(x, y))
+
+        if (isSameColor(color, YELLOW)) {
+          yellowCoords ::= new Point2D.Double(x,y)
+        } else if (isSameColor(color, GREEN)) {
+          greenCoords ::= new Point2D.Double(x,y)
         }
       }
+    }
 
-      extractAndStoreImage(pngImage.getName, inputImage, yellowCoords, greenCoords)
-    })
+    extractAndStoreImage(pngImage.getName, inputImage, yellowCoords, greenCoords)
   })
 
   def extractAndStoreImage(pngFileName: String, inputImage: BufferedImage, yellowCoords: List[Point2D], greenCoords: List[Point2D]): Unit = {

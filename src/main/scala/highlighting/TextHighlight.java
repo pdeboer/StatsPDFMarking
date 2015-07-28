@@ -172,6 +172,7 @@ public class TextHighlight extends PDFTextStripper {
 
 		final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
 
+
 		for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
 				&& pageIndex < pages.size(); pageIndex++) {
 			final PDPage page = pages.get(pageIndex);

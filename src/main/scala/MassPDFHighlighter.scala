@@ -22,7 +22,7 @@ object MassPDFHighlighter extends App with LazyLogging{
   })
 
 
-	new FolderPDFSource("../1750paper/").get().par.foreach(f => {
+	new FolderPDFSource("../pdfs/").get().par.foreach(f => {
 		highlightFile(f)
 
 		println(s"processed $f")
@@ -34,7 +34,7 @@ object MassPDFHighlighter extends App with LazyLogging{
 
 
     new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.foreach(highlighter => {
-      print(s"${highlighter._2}: highlighting combination of ${highlighter._1.instructions}")
+      logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
       Some(new BufferedOutputStream(new FileOutputStream(outputDir + highlighter._2 + "_" + f.getName))).foreach(s => {
         s.write(highlighter._1.highlight())
