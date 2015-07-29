@@ -14,10 +14,28 @@ import scala.collection.immutable.Iterable
 case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String, startSearchStringIndex: Int, startHighlightStringIndex: Int)
 
 object PDFTextExtractor {
-	def extract(pdfPath: String) = {
+  def extract(pdfPath: String): String = {
+
     val doc = PDDocument.load(new File(pdfPath))
 		val stripper = new PDFTextStripper()
-		stripper.getText(doc).replaceAll("\n", " ").replaceAll("  ", "\n")
+		stripper.getText(doc).replaceAll("\n", "")//.replaceAll("  ", "\n")
+
+    val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
+    parser.parse()
+    val pdDoc: PDDocument = new PDDocument(parser.getDocument)
+
+    val pdfHighlight: TextHighlight = new TextHighlight("UTF-8")
+    pdfHighlight.setLineSeparator(" ")
+    pdfHighlight.initialize(pdDoc)
+
+    var txt = ""
+
+    for (i <- pdfHighlight.getStartPage to pdfHighlight.getEndPage){
+      txt += pdfHighlight.textCache.getText(i)
+    }
+    pdDoc.close()
+
+    txt
 	}
 }
 
@@ -128,7 +146,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 		pdfHighlight.setLineSeparator(" ")
 		pdfHighlight.initialize(pdDoc)
 
-		instructions.foreach(i => {
+    instructions.foreach(i => {
 
 			val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))
 

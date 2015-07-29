@@ -36,10 +36,11 @@ object MassPDFHighlighter extends App with LazyLogging{
   def convertToBlackAndWhiteAndHighlightTerms: Unit = {
     new FolderPDFSource("../pdfs/").get().par.foreach(f => {
 
-      val grayPdfName = f.getPath.substring(0, f.getPath.size-4)+"_gray.pdf"
+      val grayPdfName = f.getPath.substring(0, f.getPath.size)//-4)+"_gray.pdf"
+      /*
       logger.info("Converting pdf to Black and white...")
       (pathGS + " -sOutputFile=" + grayPdfName + " -sDEVICE=pdfwrite -sColorConversionStrategy=Gray -dProcessColorModel=/DeviceGray -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH " + f.getPath).!!
-
+      */
       highlightFile(new File(grayPdfName))
       logger.info(s"processed $grayPdfName")
     })

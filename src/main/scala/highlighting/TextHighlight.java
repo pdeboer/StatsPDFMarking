@@ -45,7 +45,7 @@ import java.util.regex.Pattern;
  */
 public class TextHighlight extends PDFTextStripper {
 
-	TextCache textCache;
+	public TextCache textCache;
 	private float verticalTolerance = 0;
 	private float heightModifier = (float) 1.250;
 	private boolean inParagraph;
@@ -192,7 +192,7 @@ public class TextHighlight extends PDFTextStripper {
 			final List<Match> matches = textCache.match(pageIndex + 1, searchText);
 
 			for (final Match searchMatch : matches) {
-				List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile(markingPattern.toString().replace(" ", "")));
+				List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
 				for (Match markingMatch : markingMatches) {
 					markupMatch(color, contentStream, markingMatch);
 				}
