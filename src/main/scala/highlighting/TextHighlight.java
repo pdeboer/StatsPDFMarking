@@ -192,7 +192,7 @@ public class TextHighlight extends PDFTextStripper {
 			final List<Match> matches = textCache.match(pageIndex + 1, searchText);
 
 			for (final Match searchMatch : matches) {
-				List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
+				List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile(markingPattern.toString().replace(" ", "")));
 				for (Match markingMatch : markingMatches) {
 					markupMatch(color, contentStream, markingMatch);
 				}

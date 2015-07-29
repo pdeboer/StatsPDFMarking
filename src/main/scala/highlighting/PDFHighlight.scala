@@ -15,9 +15,9 @@ case class PDFHighlightInstruction(color: Color, searchString: String, highlight
 
 object PDFTextExtractor {
 	def extract(pdfPath: String) = {
-		val doc = PDDocument.load(new File(pdfPath))
+    val doc = PDDocument.load(new File(pdfPath))
 		val stripper = new PDFTextStripper()
-		stripper.getText(doc)
+		stripper.getText(doc).replaceAll("\n", " ").replaceAll("  ", "\n")
 	}
 }
 
@@ -129,7 +129,6 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 		pdfHighlight.initialize(pdDoc)
 
 		instructions.foreach(i => {
-			logger.debug(s"File: ${pdfPath} Highlight color ${i.color} for search pattern ${i.searchString} and highlighting pattern ${i.highlightString}")
 
 			val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))
 
