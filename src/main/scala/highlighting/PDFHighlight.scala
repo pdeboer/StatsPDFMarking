@@ -11,34 +11,117 @@ import org.apache.pdfbox.util.PDFTextStripper
 
 import scala.collection.immutable.Iterable
 
-case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String)
+case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String, startSearchStringIndex: Int, startHighlightStringIndex: Int)
 
 object PDFTextExtractor {
-	def extract(pdfPath: String) = {
-		val doc = PDDocument.load(new File(pdfPath))
+  def extract(pdfPath: String): String = {
+
+    val doc = PDDocument.load(new File(pdfPath))
 		val stripper = new PDFTextStripper()
-		stripper.getText(doc)
+		stripper.getText(doc).replaceAll("\n", "")//.replaceAll("  ", "\n")
+
+    val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
+    parser.parse()
+    val pdDoc: PDDocument = new PDDocument(parser.getDocument)
+
+    val pdfHighlight: TextHighlight = new TextHighlight("UTF-8")
+    pdfHighlight.setLineSeparator(" ")
+    pdfHighlight.initialize(pdDoc)
+
+    var txt = ""
+
+    for (i <- pdfHighlight.getStartPage to pdfHighlight.getEndPage){
+      txt += pdfHighlight.textCache.getText(i)
+    }
+    pdDoc.close()
+
+    txt
 	}
 }
 
 class PDFPermuter(pdfPath: String) {
+
+  val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = 5
+
 	lazy val txt = PDFTextExtractor.extract(pdfPath)
 
 	def permuteForEachCombinationOf(permutationDefinition: Map[Color, List[String]]): Iterable[PDFHighlight] = {
 		val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
-		val uniquePairs = for (x <- uniqueStrings; y <- uniqueStrings) yield (x, y)
+		val uniquePairs = getUniquePairsForSearchTerms(uniqueStrings)
 
 		uniquePairs.map(p => new PDFHighlight(pdfPath, List(p._1, p._2)))
 	}
 
-	def getUniqueStringsForSearchTerms(highlightTerms: Map[Color, List[String]]): Iterable[PDFHighlightInstruction] = {
+  def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[(PDFHighlightInstruction,PDFHighlightInstruction)] = {
+    var list = List.empty[(PDFHighlightInstruction, PDFHighlightInstruction)]
+    val seqUniqueStrings = uniqueStrings.toSeq
+
+    for(i <- 0 to seqUniqueStrings.length-1) {
+      for(j <- i to seqUniqueStrings.length-1) {
+
+        if( isUniquePairValidCandidate(seqUniqueStrings(i), seqUniqueStrings(j))) {
+
+          val startIndexMethod = seqUniqueStrings(i).startSearchStringIndex
+          val endIndexMethod = startIndexMethod + seqUniqueStrings(i).searchString.length
+          val startIndexAssumption = seqUniqueStrings(j).startSearchStringIndex
+          val startIndexHighlightAssumption = startIndexAssumption+
+            addIgnoreCaseAndQuotesToSearchString(seqUniqueStrings(j).highlightString).r.findFirstMatchIn(
+              txt.substring(startIndexAssumption, startIndexAssumption+seqUniqueStrings(j).searchString.length)).get.start
+
+          if(isHighlightAssumptionOutsideMethod(startIndexMethod, endIndexMethod, startIndexHighlightAssumption)) {
+            list ::= (seqUniqueStrings(i), seqUniqueStrings(j))
+          }
+        }
+      }
+    }
+    list
+  }
+
+  def isUniquePairValidCandidate(method: PDFHighlightInstruction, assumption: PDFHighlightInstruction): Boolean = {
+    val terms = new HighlightTermloader
+
+    !method.highlightString.equals(assumption.highlightString) &&
+      !method.searchString.equals(assumption.searchString) &&
+      terms.methodsAndSynonyms.exists(m => method.highlightString.contains(m)) &&
+      terms.assumptionsAndSynonyms.exists(a => assumption.highlightString.contains(a))
+  }
+
+  def isHighlightAssumptionOutsideMethod(startIndexMethod: Int, endIndexMethod: Int, startIndexHighlightAssumption: Int): Boolean = {
+    startIndexHighlightAssumption < startIndexMethod | startIndexHighlightAssumption > endIndexMethod
+  }
+
+  def addIgnoreCaseAndQuotesToSearchString(searchString: String): String = {
+    "(?i)(\\Q"+searchString+"\\E)"
+  }
+
+  def getUniqueStringsForSearchTerms(highlightTerms: Map[Color, List[String]]): Iterable[PDFHighlightInstruction] = {
 		highlightTerms.flatMap {
 			case (color, patterns) => patterns.map(p => {
-				val allIndicesOfThesePatterns = (0 until txt.length).filter(txt.startsWith(p, _))
-				val charsToTakeFromLeftAndRight = 20
-				val substringIndices = allIndicesOfThesePatterns.map(i => (Math.max(0, i - charsToTakeFromLeftAndRight), Math.min(txt.length, i + p.length + charsToTakeFromLeftAndRight)))
-				val substrings = substringIndices.map(i => txt.substring(i._1, p.length + i._2))
-				substrings.map(s => PDFHighlightInstruction(color, s, p))
+        var allIndicesOfThesePatterns: Set[Int] = Set()
+
+        if(p.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH){
+          ("(?i)(\\b"+p+"\\b)").r.findAllMatchIn(txt).map(m => m.start).foreach(
+            index => allIndicesOfThesePatterns += index)
+        } else {
+          addIgnoreCaseAndQuotesToSearchString(p).r.findAllMatchIn(txt).map(m => m.start).foreach(
+            index => allIndicesOfThesePatterns += index)
+        }
+
+        val substringIndices: Iterator[(Int, Int)] = allIndicesOfThesePatterns.toIterator.map(i => {
+          var it = 0
+          while(addIgnoreCaseAndQuotesToSearchString(txt.substring(Math.max(0, i - it), Math.min(txt.length, i + p.length + it))).r.findAllIn(txt).length != 1) {
+              it += 1
+          }
+          (Math.max(0, i - it), Math.min(txt.length, i + p.length + it))
+        })
+
+        //val substringIndices = allIndicesOfThesePatterns.map(i => (Math.max(0, i - charsToTakeFromLeftAndRight), Math.min(txt.length, i + p.length + charsToTakeFromLeftAndRight)))
+
+				val substrings = substringIndices.map(i => txt.substring(i._1, i._2))
+				substrings.map(s => {
+          val searchStringMatch = addIgnoreCaseAndQuotesToSearchString(s).r.findFirstMatchIn(txt).get
+          PDFHighlightInstruction(color, s, p, searchStringMatch.start, addIgnoreCaseAndQuotesToSearchString(p).r.findFirstMatchIn(searchStringMatch.group(0)).get.start)
+        })
 			})
 		}.flatten
 	}
@@ -63,10 +146,9 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 		pdfHighlight.setLineSeparator(" ")
 		pdfHighlight.initialize(pdDoc)
 
-		instructions.foreach(i => {
-			logger.debug(s"Highlighting color ${i.color} for search pattern ${i.searchString} and highlighting pattern ${i.highlightString}")
+    instructions.foreach(i => {
 
-			val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(s"(${Pattern.quote(s)}})"))
+			val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))
 
 			pdfHighlight.highlight(patterns.head, patterns(1), i.color)
 		})

@@ -45,7 +45,7 @@ import java.util.regex.Pattern;
  */
 public class TextHighlight extends PDFTextStripper {
 
-	TextCache textCache;
+	public TextCache textCache;
 	private float verticalTolerance = 0;
 	private float heightModifier = (float) 1.250;
 	private boolean inParagraph;
@@ -171,6 +171,7 @@ public class TextHighlight extends PDFTextStripper {
 		}
 
 		final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
+
 
 		for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
 				&& pageIndex < pages.size(); pageIndex++) {

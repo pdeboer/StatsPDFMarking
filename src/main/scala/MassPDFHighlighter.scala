@@ -1,48 +1,98 @@
-import java.io.File
+import java.awt.Color
+import java.io.{BufferedOutputStream, File, FileOutputStream, FilenameFilter}
 
-import input.PDFSource
-import input.bmc.BMCPDFSource
+import com.typesafe.scalalogging.LazyLogging
+import highlighting.{HighlightTermloader, PDFPermuter}
+import input.folder.FolderPDFSource
+import org.joda.time.DateTime
+
+import scala.sys.process._
 
 /**
  * Created by pdeboer on 16/06/15.
  */
-object MassPDFHighlighter extends App {
-	val outputDir = "output/"
+object MassPDFHighlighter extends App with LazyLogging{
 
-	new File(outputDir).mkdirs()
-	new File(outputDir).listFiles().foreach(f => f.delete())
+	val outputDir = "../output/"
+  val pathConvert = "/opt/local/bin/convert"
+  val pathGS = "/opt/local/bin/gs"
 
-	private val source: PDFSource = new BMCPDFSource() // new FolderPDFSource("pdfs")
+  val startTime = new DateTime().getMillis
 
+	createOrEmptyOutputDir
 
-	source.get().foreach(f => {
-		import java.io.{FileInputStream, FileOutputStream}
-		new FileOutputStream("/Users/pdeboer/Downloads/papers/" + f.getName) getChannel() transferFrom(
-			new FileInputStream(f.getAbsolutePath) getChannel, 0, Long.MaxValue)
+  convertToBlackAndWhiteAndHighlightTerms
 
-		println("copied " + f.getAbsolutePath)
-	})
+  logger.debug("Starting conversion PDF2PNG...")
 
-	/*
-	source.get().par.foreach(f => {
-		highlightFile(f)
+  new File(outputDir).listFiles(new FilenameFilter {
+    override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
+  }).par.foreach(pdfFile => {
+    convertPDFtoPNG(pdfFile)
+  })
 
-		println(s"processed $f")
-	})
+  logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime)/1000} seconds")
 
-	def highlightFile(f: File): Unit = {
-		val terms = new HighlightTermloader
-		val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> terms.methodsAndSynonyms, Color.green -> terms.assumptionsAndSynonyms)
+  def convertToBlackAndWhiteAndHighlightTerms: Unit = {
+    new FolderPDFSource("../pdfs/").get().par.foreach(f => {
 
+      val grayPdfName = f.getPath.substring(0, f.getPath.size)//-4)+"_gray.pdf"
+      /*
+      logger.info("Converting pdf to Black and white...")
+      (pathGS + " -sOutputFile=" + grayPdfName + " -sDEVICE=pdfwrite -sColorConversionStrategy=Gray -dProcessColorModel=/DeviceGray -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH " + f.getPath).!!
+      */
+      highlightFile(new File(grayPdfName))
+      logger.info(s"processed $grayPdfName")
+    })
+  }
 
-		new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.foreach(highlighter => {
-			print("highlighting combination of " + highlighter._1.instructions)
+  def highlightFile(f: File): Unit = {
+    val terms = new HighlightTermloader
+    val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> terms.methodsAndSynonyms, Color.green -> terms.assumptionsAndSynonyms)
 
-			Some(new BufferedOutputStream(new FileOutputStream(outputDir + highlighter._2 + "_" + f.getName))).foreach(s => {
-				s.write(highlighter._1.highlight())
-				s.close()
-			})
-		})
+    new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
+      highlighter => {
+        logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
-	}*/
+        Some(new BufferedOutputStream(new FileOutputStream(outputDir + highlighter._2 + "_" + f.getName))).foreach(s => {
+          s.write(highlighter._1.highlight())
+          s.close()
+        })
+      })
+  }
+
+  def convertPDFtoPNG(pdfFile: File): Unit = {
+    val pathPDFFile = pdfFile.getPath
+    val subDirPNGFiles = outputDir + removePDFExtension(pdfFile.getName)
+    val pathConvertedPNGFile = subDirPNGFiles + "/" + createPNGFileName(pdfFile.getName)
+
+    new File(subDirPNGFiles).mkdirs()
+
+    val convertCommandWithParams = pathConvert + " -density 200 "
+
+    try {
+      (convertCommandWithParams + pathPDFFile + " " + pathConvertedPNGFile).!!
+      logger.debug("File: " + pdfFile.getName + ", successfully converted to PNG")
+    } catch {
+      case e: Exception => e.printStackTrace()
+    }
+  }
+
+  def createOrEmptyOutputDir: Unit = {
+    new File(outputDir).mkdirs()
+    new File(outputDir).listFiles().foreach(f => {
+      if (f.isDirectory) {
+        f.listFiles().foreach(img => img.delete())
+      }
+      f.delete()
+    })
+  }
+
+  def createPNGFileName(filename: String) : String = {
+    filename+".png"
+  }
+
+  def removePDFExtension(fileName: String): String = {
+    fileName.substring(0, fileName.length - 4)
+  }
 }
