@@ -6,12 +6,10 @@ import scalikejdbc.{AutoSession, ConnectionPool, DB, _}
 /**
  * Created by pdeboer on 17/06/15.
  */
-object DAL {
+object BMCDAL {
 	Class.forName("com.mysql.jdbc.Driver")
-	ConnectionPool.singleton("jdbc:mysql://localhost/openreviewcrawl", "root", "")
+	ConnectionPool.singleton("jdbc:mysql://127.0.0.1/openreviewcrawl", "root", "")
 	implicit val session = AutoSession
-
-	case class DBPaper(id:Long, filename:String)
 
 	def getPaperIDsWithTerms(term1:String, term2:String):List[DBPaper] = DB readOnly { implicit session =>
 
@@ -21,7 +19,20 @@ object DAL {
 		from papers p inner join prepub b on p.id1 = b.id1 and p.id2=b.id2 and p.id3=b.id3
 		inner join pdftext t on b.imediaURL = t.url
 		WHERE b.description = 'Original Submission - Version 1' and t.body like $likeTerm1 and t.body like $likeTerm2 """
-		.map(r => DBPaper(r.long(1), r.string(2))).list().apply()
+			.map(r => DBPaper(r.long(1), r.string(2))).list().apply()
 	}
+
+
+	def getTermOccurrenceCount(term1: String) = DB readOnly { implicit session =>
+		val likeTerm = s"%${term1.toLowerCase}%"
+
+		sql"""SELECT p.autoid
+		FROM papers p INNER JOIN prepub b ON p.id1 = b.id1 AND p.id2=b.id2 AND p.id3=b.id3
+		INNER JOIN pdftext t ON b.imediaURL = t.url
+		WHERE b.description = 'Original Submission - Version 1' AND LOWER(t.body) LIKE $likeTerm"""
+			.map(r => r.long(1)).list().apply()
+	}
+
+	case class DBPaper(id: Long, filename: String)
 
 }
