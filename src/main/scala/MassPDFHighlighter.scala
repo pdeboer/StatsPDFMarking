@@ -13,7 +13,9 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging{
 
+  val pdfsDir = "../pdfs/"
 	val outputDir = "../output/"
+
   val pathConvert = "/opt/local/bin/convert"
   val pathGS = "/opt/local/bin/gs"
 
@@ -33,20 +35,32 @@ object MassPDFHighlighter extends App with LazyLogging{
 
   logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime)/1000} seconds")
 
-  def convertToBlackAndWhiteAndHighlightTerms: Unit = {
-    new FolderPDFSource("../pdfs/").get().par.foreach(f => {
 
-      val grayPdfName = f.getPath.substring(0, f.getPath.size)//-4)+"_gray.pdf"
-      /*
-      logger.info("Converting pdf to Black and white...")
-      (pathGS + " -sOutputFile=" + grayPdfName + " -sDEVICE=pdfwrite -sColorConversionStrategy=Gray -dProcessColorModel=/DeviceGray -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH " + f.getPath).!!
-      */
-      highlightFile(new File(grayPdfName))
-      logger.info(s"processed $grayPdfName")
+  def createOrEmptyOutputDir = {
+    new File(outputDir).mkdirs()
+    new File(outputDir).listFiles().foreach(f => {
+      if (f.isDirectory) {
+        f.listFiles().foreach(img => img.delete())
+      }
+      f.delete()
     })
   }
 
-  def highlightFile(f: File): Unit = {
+  def convertToBlackAndWhiteAndHighlightTerms = {
+    new FolderPDFSource(pdfsDir).get().par.foreach(f => {
+      /*
+      val grayPdfName = f.getPath.substring(0, f.getPath.size-4)+"_gray.pdf"
+
+      logger.info("Converting pdf to Black and white...")
+      (pathGS + " -sOutputFile=" + grayPdfName + " -sDEVICE=pdfwrite -sColorConversionStrategy=Gray -dProcessColorModel=/DeviceGray -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH " + f.getPath).!!
+      */
+      highlightFile(f)
+      logger.info(s"processed $f")
+
+    })
+  }
+
+  def highlightFile(f: File) = {
     val terms = new HighlightTermloader
     val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> terms.methodsAndSynonyms, Color.green -> terms.assumptionsAndSynonyms)
 
@@ -61,31 +75,26 @@ object MassPDFHighlighter extends App with LazyLogging{
       })
   }
 
-  def convertPDFtoPNG(pdfFile: File): Unit = {
+  def convertPDFtoPNG(pdfFile: File) = {
     val pathPDFFile = pdfFile.getPath
-    val subDirPNGFiles = outputDir + removePDFExtension(pdfFile.getName)
-    val pathConvertedPNGFile = subDirPNGFiles + "/" + createPNGFileName(pdfFile.getName)
-
-    new File(subDirPNGFiles).mkdirs()
+    val pathConvertedPNGFile: String = createSubDirForPNGs(pdfFile)
 
     val convertCommandWithParams = pathConvert + " -density 200 "
 
     try {
       (convertCommandWithParams + pathPDFFile + " " + pathConvertedPNGFile).!!
-      logger.debug("File: " + pdfFile.getName + ", successfully converted to PNG")
+      logger.debug(s"File: ${pdfFile.getName} successfully converted to PNG")
     } catch {
-      case e: Exception => e.printStackTrace()
+      case e: Exception => logger.error(s"Cannot convert ${pdfFile.getName} to PNG.",e)
     }
   }
 
-  def createOrEmptyOutputDir: Unit = {
-    new File(outputDir).mkdirs()
-    new File(outputDir).listFiles().foreach(f => {
-      if (f.isDirectory) {
-        f.listFiles().foreach(img => img.delete())
-      }
-      f.delete()
-    })
+  def createSubDirForPNGs(pdfFile: File): String = {
+    val subDirPNGFiles = outputDir + removePDFExtension(pdfFile.getName)
+    val pathConvertedPNGFile = subDirPNGFiles + "/" + createPNGFileName(pdfFile.getName)
+
+    new File(subDirPNGFiles).mkdirs()
+    pathConvertedPNGFile
   }
 
   def createPNGFileName(filename: String) : String = {

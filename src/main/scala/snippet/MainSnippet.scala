@@ -37,11 +37,10 @@ object MainSnippet extends App with LazyLogging {
     }
   }).toList
 
-  val allSubDirFiles = outputSubDirectories.map (directory => {
+  outputSubDirectories.par.map (directory => {
 
     logger.debug(s"Working directory: $directory")
-    var yellowCoords = List.empty[(Int, Point2D)]
-    var greenCoords = List.empty[(Int, Point2D)]
+    var matchPages = List.empty[Int]
     var smallSnippet = false
 
     new File(OUTPUT_DIR + directory).listFiles(new FilenameFilter {
@@ -51,60 +50,78 @@ object MainSnippet extends App with LazyLogging {
     }).foreach(pngImage => {
 
       val inputImage = ImageIO.read(pngImage)
+
       val width = inputImage.getWidth
       val height = inputImage.getHeight
 
-      val pageNr = pngImage.getName.substring(pngImage.getName.indexOf("-")+1, pngImage.getName.indexOf(".png")).toInt
-      var yellowSinglePage = List.empty[Point2D]
-      var greenSinglePage = List.empty[Point2D]
+      var yellowCoords = List.empty[Point2D]
+      var greenCoords = List.empty[Point2D]
+
+      val pageNr = pngImage.getName.substring(pngImage.getName.indexOf("-") + 1, pngImage.getName.indexOf(".png")).toInt
 
       for (x <- 0 until width) {
         for (y <- 0 until height) {
           val color = new Color(inputImage.getRGB(x, y))
           if (isSameColor(color, YELLOW)) {
-            yellowCoords ::= (pageNr, new Point2D.Double(x,y))
-            yellowSinglePage ::= new Point2D.Double(x,y)
+            matchPages ::= pageNr
+            yellowCoords ::= new Point2D.Double(x, y)
           } else if (isSameColor(color, GREEN)) {
-            greenCoords ::= (pageNr, new Point2D.Double(x,y))
-            greenSinglePage ::= new Point2D.Double(x,y)
+            matchPages ::= pageNr
+            greenCoords ::= new Point2D.Double(x, y)
           }
         }
       }
-      // If there are green and yellow matches on same image, create snippet
-      smallSnippet = extractAndStoreImage(pngImage.getName, inputImage, yellowSinglePage, greenSinglePage)
+
+      if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
+        smallSnippet = extractAndGenerateImage(pngImage, yellowCoords, greenCoords)
+      }
     })
 
-    // Create big snippets if there exists not a small one
-    if(!smallSnippet){
+    if(!smallSnippet) {
       try {
-        val pageFirstMatch: Int = Math.min(yellowCoords.minBy(_._1)._1, greenCoords.minBy(_._1)._1)
-        val pageLastMatch: Int = Math.max(yellowCoords.maxBy(_._1)._1, greenCoords.maxBy(_._1)._1)
+        val pageFirstMatch: Int = matchPages.min
+        val pageLastMatch: Int = matchPages.max
 
-        var allPngs = ""
-        new File(OUTPUT_DIR + directory).listFiles(new FilenameFilter {
-          override def accept(dir: File, name: String): Boolean = {
-            name.endsWith(".png")
-          }
-        }).foreach(img => {
-          if(img.getName.endsWith("-"+pageFirstMatch+".png")) {
-            val fileName = img.getName
-            for (i <- pageFirstMatch to pageLastMatch) {
-              allPngs += " " + OUTPUT_DIR + directory + "/" + fileName.substring(0, fileName.indexOf("-")+1)+i+".png"
+        if(pageFirstMatch < pageLastMatch) {
+
+          val allPngs = (pageFirstMatch to pageLastMatch).map(OUTPUT_DIR + directory + "/*-"+_+".png").mkString(" ")
+
+          val bigSnippetOutputFilename = OUTPUT_DIR + "/"+directory+"-"+pageFirstMatch+".png"
+          
+          ("/opt/local/bin/convert " + allPngs + " -append " + bigSnippetOutputFilename).!!
+
+          val bigSnippet = ImageIO.read(new File(bigSnippetOutputFilename))
+          
+          var yellowCoordsSnippet = List.empty[Point2D]
+          var greenCoordsSnippet = List.empty[Point2D]
+
+          for (x <- 0 until bigSnippet.getWidth) {
+            for (y <- 0 until bigSnippet.getHeight) {
+              val color = new Color(bigSnippet.getRGB(x, y))
+              if (isSameColor(color, YELLOW)) {
+                yellowCoordsSnippet ::= new Point2D.Double(x,y)
+              } else if (isSameColor(color, GREEN)) {
+                greenCoordsSnippet ::= new Point2D.Double(x,y)
+              }
             }
           }
-        })
+          
+          extractAndGenerateImage(new File(bigSnippetOutputFilename), yellowCoordsSnippet, greenCoordsSnippet)
 
-        logger.debug("Creating multiple page snippet")
-        ("/opt/local/bin/convert" + allPngs + " -append " + SNIPPET_DIR + "/"+directory+"-"+pageFirstMatch+".png").!!
-      }
-      catch{
+        } else {
+          logger.error(s"Cannot create snippet for PDF: $directory")
+        }
+      } catch{
         case e: Exception => logger.error("Something not good happened", e)
       }
     }
   })
 
-  def extractAndStoreImage(pngFileName: String, inputImage: BufferedImage, yellowCoords: List[Point2D], greenCoords: List[Point2D]): Boolean = {
+
+  def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D], greenCoords: List[Point2D]): Boolean = {
+
     if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
+      val inputImage = ImageIO.read(pngImage)
       val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, greenCoords, inputImage.getHeight)
       val snippetHeight = endY - startY
 
@@ -116,8 +133,8 @@ object MainSnippet extends App with LazyLogging {
           snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
         }
       }
-      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + pngFileName))
-      logger.debug("Snippet successfully written")
+      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + pngImage.getName))
+      logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + pngImage.getName}")
       true
     } else {
       false
