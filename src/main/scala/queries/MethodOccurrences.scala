@@ -11,11 +11,11 @@ object MethodOccurrences extends App {
 
 	val occurrences = Source.fromFile("methodlist.csv").getLines().toList.par.map(l => {
 		val terms = l.split(",").map(_.trim())
-		terms.map(t => {
+		val occ = terms.flatMap(t => {
 			val targetTerms = if (t.length < 7) addWordBoundaries(t) else List(t)
-			val cnt = targetTerms.map(BMCDAL.getTermOccurrenceCount).toSet.size
-			s"$l	$cnt"
-		})
+			targetTerms.flatMap(BMCDAL.getTermOccurrenceCount)
+		}).toSet
+		s"$l	${occ.size}"
 	})
 
 	def addWordBoundaries(t: String): List[String] = {
