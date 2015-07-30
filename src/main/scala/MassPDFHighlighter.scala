@@ -1,7 +1,5 @@
-import java.awt.Color
-import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.io.File
 
-import highlighting.{HighlightTermloader, PDFPermuter}
 import input.PDFSource
 import input.bmc.BMCPDFSource
 
@@ -15,14 +13,17 @@ object MassPDFHighlighter extends App {
 	new File(outputDir).listFiles().foreach(f => f.delete())
 
 	private val source: PDFSource = new BMCPDFSource() // new FolderPDFSource("pdfs")
+
+
+	source.get().foreach(f => {
+		import java.io.{FileInputStream, FileOutputStream}
+		new FileOutputStream("/Users/pdeboer/Downloads/papers/" + f.getName) getChannel() transferFrom(
+			new FileInputStream(f.getAbsolutePath) getChannel, 0, Long.MaxValue)
+
+		println("copied " + f.getAbsolutePath)
+	})
+
 	/*
-
-
-		source.get().foreach(f => {
-			println(s"cp ${f.getAbsolutePath} ~/Downloads/papers \n")
-		})
-	*/
-
 	source.get().par.foreach(f => {
 		highlightFile(f)
 
@@ -43,5 +44,5 @@ object MassPDFHighlighter extends App {
 			})
 		})
 
-	}
+	}*/
 }

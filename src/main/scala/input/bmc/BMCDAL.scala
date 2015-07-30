@@ -8,7 +8,7 @@ import scalikejdbc.{AutoSession, ConnectionPool, DB, _}
  */
 private[bmc] object BMCDAL {
 	Class.forName("com.mysql.jdbc.Driver")
-	ConnectionPool.singleton("jdbc:mysql://localhost/openreviewcrawl", "root", "")
+	ConnectionPool.singleton("jdbc:mysql://127.0.0.1/openreviewcrawl", "root", "")
 	implicit val session = AutoSession
 
 	def getPaperIDsWithTerms(term1:String, term2:String):List[DBPaper] = DB readOnly { implicit session =>
