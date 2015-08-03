@@ -13,7 +13,7 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging{
 
-  val pdfsDir = "../pdfs/"
+  val pdfsDir = "../pdfs2/"
 	val outputDir = "../output/"
 
   val pathConvert = "/opt/local/bin/convert"

@@ -133,8 +133,13 @@ object MainSnippet extends App with LazyLogging {
           snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
         }
       }
-      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + pngImage.getName))
-      logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + pngImage.getName}")
+      val methodOnTop: Boolean = if(yellowCoords.minBy(_.getY).getY < greenCoords.minBy(_.getY).getY){ true } else {false}
+      var suffix = "methodOnTop"
+      if(!methodOnTop){
+        suffix = "prerequisiteOnTop"
+      }
+      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"))
+      logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"}")
       true
     } else {
       false

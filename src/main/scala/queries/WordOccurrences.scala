@@ -16,7 +16,6 @@ object WordOccurrences extends App {
 
   var words = collection.mutable.Map.empty[Int, Int]
   var methods2matches = collection.mutable.Map.empty[String, collection.mutable.Map[Int, Int]]
-  var deltaMethods = collection.mutable.Map.empty[String, Seq[Int]]
 
   new File(pdfSourceFolder).listFiles(new FileFilter {
     override def accept(pathname: File): Boolean = pathname.getName.endsWith(".pdf")
@@ -27,11 +26,7 @@ object WordOccurrences extends App {
         try {
           val txt = PDFTextExtractor.extract(pdfFile.getPath)
 
-          val allMatches = t.r.findAllMatchIn(txt).map(_.start).toList
-          var deltas = (allMatches, allMatches drop 1).zipped.map(_ - _)
-          deltas = deltas.map(d => Math.abs(d))
-
-          allMatches.foreach(position => {
+          val allMatches = t.r.findAllMatchIn(txt).map(_.start).foreach(position => {
 
             if(words.get(position).isDefined) {
               words.update(position, words.get(position).get+1)
@@ -48,12 +43,6 @@ object WordOccurrences extends App {
             }
           })
 
-          if(deltaMethods.get(t).isDefined) {
-              deltaMethods.update(t, (deltaMethods.get(t).get ++ deltas))
-          } else {
-            deltaMethods += (t -> deltas)
-          }
-
         } catch {
           case e: Throwable => {
             skipped += 1
@@ -62,8 +51,6 @@ object WordOccurrences extends App {
         if(methods2matches.get(t).isEmpty){
           methods2matches += (t -> collection.mutable.Map.empty[Int, Int])
         }
-
-
 
     })
   })
@@ -75,9 +62,5 @@ object WordOccurrences extends App {
   println(methods2matches.toSeq.sortBy(_._1).mkString("\n\n"))
   println(s"Skipped: $skipped")
 
-  println()
-  println()
-  println("Deltas")
-  println(deltaMethods.map(s => s._1 + ", " +  s._2.sorted).mkString("\n"))
 
 }
