@@ -14,18 +14,22 @@ case class PDFHighlightInstruction(color: Color, searchString: String, highlight
 
 object PDFTextExtractor {
   def extract(pdfPath: String): String = {
-    val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
-    parser.parse()
-    val pdDoc: PDDocument = new PDDocument(parser.getDocument)
+    try {
+      val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
+      parser.parse()
+      val pdDoc: PDDocument = new PDDocument(parser.getDocument)
 
-    val pdfHighlight: TextHighlight = new TextHighlight("UTF-8")
-    pdfHighlight.setLineSeparator(" ")
-    pdfHighlight.initialize(pdDoc)
+      val pdfHighlight: TextHighlight = new TextHighlight("UTF-8")
+      pdfHighlight.setLineSeparator(" ")
+      pdfHighlight.initialize(pdDoc)
 
-    val txt = (0 to pdDoc.getNumberOfPages).map(pdfHighlight.textCache.getText(_)).mkString("\n")
-    pdDoc.close()
+      val txt = (0 to pdDoc.getNumberOfPages).map(pdfHighlight.textCache.getText(_)).mkString("\n")
+      pdDoc.close()
 
-    txt
+      txt
+    } catch {
+      case e: Exception => throw e
+    }
 	}
 }
 
