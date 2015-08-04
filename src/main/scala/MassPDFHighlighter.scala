@@ -62,14 +62,14 @@ object MassPDFHighlighter extends App with LazyLogging{
 
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
-    val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> terms.methodsAndSynonyms, Color.green -> terms.assumptionsAndSynonyms)
+    val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> terms.methodsAndSynonyms)
 
     new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
       highlighter => {
-        logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
+        logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1._2.instructions}")
 
-        Some(new BufferedOutputStream(new FileOutputStream(outputDir + highlighter._2 + "_" + f.getName))).foreach(s => {
-          s.write(highlighter._1.highlight())
+        Some(new BufferedOutputStream(new FileOutputStream(outputDir + highlighter._2 + "_" + f.getName.substring(0, f.getName.length-4)+"-Delta-"+highlighter._1._1+".pdf"))).foreach(s => {
+          s.write(highlighter._1._2.highlight())
           s.close()
         })
       })
@@ -78,6 +78,10 @@ object MassPDFHighlighter extends App with LazyLogging{
   def convertPDFtoPNG(pdfFile: File) = {
     val pathPDFFile = pdfFile.getPath
     val pathConvertedPNGFile: String = createSubDirForPNGs(pdfFile)
+
+    //TODO: check delta between highligts
+
+
 
     val convertCommandWithParams = pathConvert + " -density 200 "
 

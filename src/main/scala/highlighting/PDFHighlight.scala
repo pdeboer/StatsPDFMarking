@@ -39,15 +39,15 @@ class PDFPermuter(pdfPath: String) {
 
 	lazy val txt = PDFTextExtractor.extract(pdfPath)
 
-	def permuteForEachCombinationOf(permutationDefinition: Map[Color, List[String]]): Iterable[PDFHighlight] = {
+	def permuteForEachCombinationOf(permutationDefinition: Map[Color, List[String]]): List[(Int, PDFHighlight)] = {
 		val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
 		val uniquePairs = getUniquePairsForSearchTerms(uniqueStrings)
 
-		uniquePairs.map(p => new PDFHighlight(pdfPath, List(p._1, p._2)))
+		uniquePairs.map(p => (p._3, new PDFHighlight(pdfPath, List(p._1, p._2)))).toList
 	}
 
-  def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[(PDFHighlightInstruction,PDFHighlightInstruction)] = {
-    var uniquePairs = List.empty[(PDFHighlightInstruction, PDFHighlightInstruction)]
+  def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[(PDFHighlightInstruction,PDFHighlightInstruction, Int)] = {
+    var uniquePairs = List.empty[(PDFHighlightInstruction, PDFHighlightInstruction, Int)]
     val seqUniqueStrings = uniqueStrings.toSeq
 
     for(i <- 0 to seqUniqueStrings.length-1) {
@@ -64,26 +64,32 @@ class PDFPermuter(pdfPath: String) {
     uniquePairs
   }
 
-  def cleanUniquePairsCandidate(seqUniqueStrings: Seq[PDFHighlightInstruction], methodIndex: Int, assumptionIndex: Int): Option[(PDFHighlightInstruction, PDFHighlightInstruction)] = {
+  def cleanUniquePairsCandidate(seqUniqueStrings: Seq[PDFHighlightInstruction], firstMatchIndex: Int, secondMatchIndex: Int): Option[(PDFHighlightInstruction, PDFHighlightInstruction, Int)] = {
     
-    if (isHighlightAssumptionOutsideMethod(seqUniqueStrings, methodIndex, assumptionIndex)) {
-      Some(seqUniqueStrings(methodIndex), seqUniqueStrings(assumptionIndex))
+    if (areHighlightSeparated(seqUniqueStrings, firstMatchIndex, secondMatchIndex)) {
+      Some(seqUniqueStrings(firstMatchIndex), seqUniqueStrings(secondMatchIndex), getDelta(seqUniqueStrings, firstMatchIndex, secondMatchIndex))
     }else {
       None
     }
   }
 
-  def isUniquePairValidCandidate(method: PDFHighlightInstruction, assumption: PDFHighlightInstruction): Boolean = {
-    val terms = new HighlightTermloader
+  def getDelta(seqUniqueStrings: Seq[PDFHighlightInstruction],  firstMethodIndex: Int, secondMethodIndex: Int): Int = {
+    val startFirstMethod = seqUniqueStrings(firstMethodIndex).startSearchStringIndex
+    val endFirstMethod = startFirstMethod + seqUniqueStrings(firstMethodIndex).searchString.length
 
-    !method.highlightString.equals(assumption.highlightString) &&
-      !method.searchString.equals(assumption.searchString) &&
-      terms.methodsAndSynonyms.exists(m => method.highlightString.contains(m)) &&
-      terms.assumptionsAndSynonyms.exists(a => assumption.highlightString.contains(a) &&
-        method.color != assumption.color)
+    val startSecondMethod = seqUniqueStrings(secondMethodIndex).startSearchStringIndex
+    val startHighlightSecondMethod = startSecondMethod +
+      escapeSearchString(seqUniqueStrings(secondMethodIndex).highlightString).r.findFirstMatchIn(
+        txt.substring(startSecondMethod, startSecondMethod + seqUniqueStrings(secondMethodIndex).searchString.length)).get.start
+
+   Math.abs(startFirstMethod - startSecondMethod)
+  }
+  
+  def isUniquePairValidCandidate(method: PDFHighlightInstruction, assumption: PDFHighlightInstruction): Boolean = {
+    !method.searchString.equals(assumption.searchString) 
   }
 
-  def isHighlightAssumptionOutsideMethod(seqUniqueStrings: Seq[PDFHighlightInstruction],  methodIndex: Int, assumptionIndex: Int): Boolean = {
+  def areHighlightSeparated(seqUniqueStrings: Seq[PDFHighlightInstruction],  methodIndex: Int, assumptionIndex: Int): Boolean = {
     val startIndexMethod = seqUniqueStrings(methodIndex).startSearchStringIndex
     val endIndexMethod = startIndexMethod + seqUniqueStrings(methodIndex).searchString.length
 
