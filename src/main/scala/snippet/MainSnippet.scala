@@ -19,6 +19,8 @@ object MainSnippet extends App with LazyLogging {
 
   val YELLOW = new Color(255, 255,127)
 
+  val CONVERT_APP = "/usr/bin/convert "
+
   val PADDING_SNIPPET = 50
   val MINIMAL_SNIPPET_HEIGHT = 300
 
@@ -78,7 +80,7 @@ object MainSnippet extends App with LazyLogging {
 
           val bigSnippetOutputFilename = OUTPUT_DIR + "/"+directory+"-"+pageFirstMatch+".png"
           
-          ("/opt/local/bin/convert " + allPngs + " -append " + bigSnippetOutputFilename).!!
+          (CONVERT_APP + allPngs + " -append " + bigSnippetOutputFilename).!!
 
           val bigSnippet = ImageIO.read(new File(bigSnippetOutputFilename))
           

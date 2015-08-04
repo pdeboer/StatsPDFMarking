@@ -13,11 +13,11 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging{
 
-  val pdfsDir = "../pdfs2/"
+  val pdfsDir = "../gray_pdfs/"
 	val outputDir = "../output/"
 
-  val pathConvert = "/opt/local/bin/convert"
-  val pathGS = "/opt/local/bin/gs"
+  val pathConvert = "/usr/bin/convert"
+  val pathGS = "/usr/bin/gs"
 
   val startTime = new DateTime().getMillis
 
@@ -28,7 +28,9 @@ object MassPDFHighlighter extends App with LazyLogging{
   logger.debug("Starting conversion PDF2PNG...")
 
   new File(outputDir).listFiles(new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
+    override def accept(dir: File, name: String): Boolean = {
+      name.endsWith(".pdf") && !dir.isDirectory
+    }
   }).par.foreach(pdfFile => {
     convertPDFtoPNG(pdfFile)
   })
@@ -79,14 +81,10 @@ object MassPDFHighlighter extends App with LazyLogging{
     val pathPDFFile = pdfFile.getPath
     val pathConvertedPNGFile: String = createSubDirForPNGs(pdfFile)
 
-    //TODO: check delta between highligts
-
-
-
     val convertCommandWithParams = pathConvert + " -density 200 "
 
     try {
-      (convertCommandWithParams + pathPDFFile + " " + pathConvertedPNGFile).!!
+      (convertCommandWithParams + pathPDFFile + " " + pathConvertedPNGFile).lineStream_!
       logger.debug(s"File: ${pdfFile.getName} successfully converted to PNG")
     } catch {
       case e: Exception => logger.error(s"Cannot convert ${pdfFile.getName} to PNG.",e)
