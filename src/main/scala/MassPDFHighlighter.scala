@@ -16,8 +16,8 @@ object MassPDFHighlighter extends App with LazyLogging{
   val pdfsDir = "../pdfs2/"
 	val outputDir = "../output/"
 
-  val pathConvert = "/usr/bin/convert"
-  val pathGS = "/usr/bin/gs"
+  val pathConvert = "/opt/local/bin/convert"
+  val pathGS = "/opt/local/bin/gs"
 
   val startTime = new DateTime().getMillis
 
@@ -83,7 +83,7 @@ object MassPDFHighlighter extends App with LazyLogging{
     val pathPDFFile = pdfFile.getPath
     val pathConvertedPNGFile: String = createSubDirForPNGs(pdfFile)
 
-    val convertCommandWithParams = pathConvert + " -density 200 "
+    val convertCommandWithParams = pathConvert + " -density 200 -append "
 
     try {
 

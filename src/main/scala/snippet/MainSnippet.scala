@@ -8,8 +8,6 @@ import javax.imageio.ImageIO
 
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.sys.process._
-
 /**
  * Created by mattia on 13.07.15.
  */
@@ -19,7 +17,7 @@ object MainSnippet extends App with LazyLogging {
 
   val YELLOW = new Color(247, 255, 132)
 
-  val CONVERT_APP = "/usr/bin/convert "
+  val CONVERT_APP = "/opt/local/bin/convert "
 
   val PADDING_SNIPPET = 200
   val MINIMAL_SNIPPET_HEIGHT = 300
@@ -41,68 +39,33 @@ object MainSnippet extends App with LazyLogging {
   outputSubDirectories.par.map (directory => {
 
     logger.debug(s"Working directory: $directory")
-    var matchPages = List.empty[Int]
-    var smallSnippet = false
-
-    new File(OUTPUT_DIR + directory).listFiles(new FilenameFilter {
-      override def accept(dir: File, name: String): Boolean = {
-        name.endsWith(".png")
-      }
-    }).foreach(pngImage => {
-
-      val inputImage = ImageIO.read(pngImage)
-
-      val width = inputImage.getWidth
-      val height = inputImage.getHeight
-
-      val pageNr = pngImage.getName.substring(pngImage.getName.lastIndexOf("-") + 1, pngImage.getName.indexOf(".png")).toInt
-
-      for (x <- 0 until width) {
-        for (y <- 0 until height) {
-          val color = new Color(inputImage.getRGB(x, y))
-          if (isSameColor(color, YELLOW)) {
-            matchPages ::= pageNr
-          }
-        }
-      }
-    })
 
     try {
-      if(matchPages.nonEmpty) {
-        val pageFirstMatch: Int = matchPages.min
-        val pageLastMatch: Int = matchPages.max
+      new File(OUTPUT_DIR + directory).listFiles(new FilenameFilter {
+        override def accept(dir: File, name: String): Boolean = {
+          name.endsWith(".png")
+        }
+      }).foreach(pngImage => {
+        val image = ImageIO.read(pngImage)
+        var yellowCoordsSnippet = List.empty[Point2D]
 
-        if (pageFirstMatch <= pageLastMatch) {
-
-          val allPngs = (pageFirstMatch to pageLastMatch).map(OUTPUT_DIR + directory + "/*-" + _ + ".png").mkString(" ")
-
-          val bigSnippetOutputFilename = OUTPUT_DIR + "/" + directory + "-" + pageFirstMatch + ".png"
-
-          logger.debug((CONVERT_APP + allPngs + " -append " + bigSnippetOutputFilename).lineStream_!.mkString("\n"))
-
-          val bigSnippet = ImageIO.read(new File(bigSnippetOutputFilename))
-
-          var yellowCoordsSnippet = List.empty[Point2D]
-
-          for (x <- 0 until bigSnippet.getWidth) {
-            for (y <- 0 until bigSnippet.getHeight) {
-              val color = new Color(bigSnippet.getRGB(x, y))
+          for (x <- 0 until image.getWidth) {
+            for (y <- 0 until image.getHeight) {
+              val color = new Color(image.getRGB(x, y))
               if (isSameColor(color, YELLOW)) {
                 yellowCoordsSnippet ::= new Point2D.Double(x, y)
               }
             }
           }
 
-          extractAndGenerateImage(new File(bigSnippetOutputFilename), yellowCoordsSnippet)
 
-        } else {
-          logger.error(s"Cannot create snippet for PDF: $directory")
-        }
+        extractAndGenerateImage(pngImage, yellowCoordsSnippet)
+      })
+    } catch {
+      case e: Exception => {
+        logger.error("Error", e)
       }
-    } catch{
-      case e: Exception => logger.error("Something not good happened", e)
     }
-
   })
 
 
