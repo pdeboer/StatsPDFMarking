@@ -80,7 +80,7 @@ object MainSnippet extends App with LazyLogging {
 
           val bigSnippetOutputFilename = OUTPUT_DIR + "/"+directory+"-"+pageFirstMatch+".png"
           
-          (CONVERT_APP + allPngs + " -append " + bigSnippetOutputFilename).!!
+          logger.debug((CONVERT_APP + allPngs + " -append " + bigSnippetOutputFilename).lineStream_!.mkString("\n"))
 
           val bigSnippet = ImageIO.read(new File(bigSnippetOutputFilename))
           
@@ -123,8 +123,8 @@ object MainSnippet extends App with LazyLogging {
         }
       }
 
-      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+".png"))
-      logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+".png"}")
+      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + pngImage.getName))
+      logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + pngImage.getName}")
       true
     } else {
       false
