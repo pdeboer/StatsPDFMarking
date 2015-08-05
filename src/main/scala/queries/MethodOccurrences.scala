@@ -2,6 +2,7 @@ package queries
 
 import java.util.regex.Pattern
 
+import ch.uzh.ifi.pdeboer.pplib.process.entities.FileProcessMemoizer
 import input.bmc.BMCDAL
 import input.bmc.BMCDAL.DBPaperBody
 
@@ -11,18 +12,33 @@ import scala.io.Source
  * Created by pdeboer on 30/07/15.
  */
 object MethodOccurrences extends App {
-	val occurrences = Source.fromFile("methodlist.csv").getLines().toList.par.map(l => {
+	val occurrences: List[MethodOccurrence] = new FileProcessMemoizer("sqldata").mem("method")(Source.fromFile("methodlist.csv").getLines().toList.par.map(l => {
 		val terms = l.split(",").map(_.trim())
-		val occ = terms.flatMap(t => {
+		val papersWithTermVariations = terms.flatMap(t => {
 			val targetTerms = if (t.length < 7) addWordBoundaries(t) else List(t)
-			targetTerms.flatMap(tt => BMCDAL.getTermOccurrenceCount(tt).map(o => PaperOccurrence(o)(countOccurrences(t, o.body))))
+			targetTerms.flatMap(tt => BMCDAL.getPapersContainingTerm(tt).map(o => PaperOccurrence(o)(List(tt))))
 		})
-		val sum: Int = occ.groupBy(_.dbp).map(_._2.map(_.occurrences).sum).sum
-		s"$l	${occ.toSet.size}	$sum"
+		val termOccurrences = papersWithTermVariations.groupBy(_.dbp).map {
+			case (body, occurenceList) => PaperOccurrence(body)(occurenceList.map(po => po.terms).toList.flatten)
+		}
+
+		MethodOccurrence(l, termOccurrences.toList)
+	}).toList)
+
+
+	val methodNumbers = occurrences.map(mo => {
+		val stringMatches = mo.po.foldLeft(0)((s, po) => s + countOccurrences(po.terms, po.dbp.body))
+		val numPapers = mo.po.map(_.dbp).toSet.size
+		MethodCounts(mo, numPapers, stringMatches)
 	})
 
-	def countOccurrences(needle: String, haystack: String): Int = {
-		Pattern.quote(needle).r.findAllMatchIn(haystack).length
+
+	def countOccurrences(needles: List[String], haystack: String, ignoreCases: Boolean = true): Int = needles.map(n => countOccurrence(n, haystack, ignoreCases)).sum
+
+	def countOccurrence(needle: String, haystack: String, ignoreCases: Boolean = true): Int = {
+		val needleIgnoreCase = if (ignoreCases) needle.toLowerCase else needle
+		val haystackIgnoreCase = if (ignoreCases) haystack.toLowerCase else haystack
+		Pattern.quote(needleIgnoreCase).r.findAllMatchIn(haystackIgnoreCase).length
 	}
 
 	def addWordBoundaries(t: String): List[String] = {
@@ -34,7 +50,13 @@ object MethodOccurrences extends App {
 		})
 	}
 
-	case class PaperOccurrence(dbp: DBPaperBody)(val occurrences: Int)
+	case class MethodCounts(methodOccurrence: MethodOccurrence, numPapers: Int, numStringMatches: Int) extends Serializable {
+		override def toString = s"${methodOccurrence.method.replaceAll(",", "/")},$numPapers,$numStringMatches"
+	}
 
-	occurrences.foreach(println)
+	case class MethodOccurrence(method: String, po: List[PaperOccurrence]) extends Serializable
+
+	case class PaperOccurrence(dbp: DBPaperBody)(val terms: List[String]) extends Serializable
+
+	methodNumbers.foreach(println)
 }
