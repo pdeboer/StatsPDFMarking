@@ -79,10 +79,12 @@ object MassPDFHighlighter extends App with LazyLogging{
     val pathPDFFile = pdfFile.getPath
     val pathConvertedPNGFile: String = createSubDirForPNGs(pdfFile)
 
-    val convertCommandWithParams = pathConvert + " -density 200 "
+    val convertCommandWithParams = pathConvert + " -density 200 -append "
 
     try {
-      (convertCommandWithParams + pathPDFFile + " " + pathConvertedPNGFile).!!
+
+      logger.error((convertCommandWithParams + pathPDFFile + " " + pathConvertedPNGFile).lineStream_!.mkString("\n"))
+
       logger.debug(s"File: ${pdfFile.getName} successfully converted to PNG")
     } catch {
       case e: Exception => logger.error(s"Cannot convert ${pdfFile.getName} to PNG.",e)

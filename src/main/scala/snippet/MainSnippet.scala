@@ -8,19 +8,19 @@ import javax.imageio.ImageIO
 
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.sys.process._
-
 /**
  * Created by mattia on 13.07.15.
  */
 object MainSnippet extends App with LazyLogging {
 
-  val COLOR_TOLERANCE = 3
+  val COLOR_TOLERANCE = 15
 
   val YELLOW = new Color(255, 255,127)
   val GREEN = new Color(127, 255, 127)
 
-  val PADDING_SNIPPET = 10
+  val CONVERT_APP = "/opt/local/bin/convert "
+
+  val PADDING_SNIPPET = 200
   val MINIMAL_SNIPPET_HEIGHT = 300
 
   val SNIPPET_DIR = "../snippets/"
@@ -40,80 +40,37 @@ object MainSnippet extends App with LazyLogging {
   outputSubDirectories.par.map (directory => {
 
     logger.debug(s"Working directory: $directory")
-    var matchPages = List.empty[Int]
-    var smallSnippet = false
-
-    new File(OUTPUT_DIR + directory).listFiles(new FilenameFilter {
-      override def accept(dir: File, name: String): Boolean = {
-        name.endsWith(".png")
-      }
-    }).foreach(pngImage => {
-
-      val inputImage = ImageIO.read(pngImage)
-
-      val width = inputImage.getWidth
-      val height = inputImage.getHeight
-
-      var yellowCoords = List.empty[Point2D]
-      var greenCoords = List.empty[Point2D]
-
-      val pageNr = pngImage.getName.substring(pngImage.getName.indexOf("-") + 1, pngImage.getName.indexOf(".png")).toInt
-
-      for (x <- 0 until width) {
-        for (y <- 0 until height) {
-          val color = new Color(inputImage.getRGB(x, y))
-          if (isSameColor(color, YELLOW)) {
-            matchPages ::= pageNr
-            yellowCoords ::= new Point2D.Double(x, y)
-          } else if (isSameColor(color, GREEN)) {
-            matchPages ::= pageNr
-            greenCoords ::= new Point2D.Double(x, y)
-          }
+    try {
+      new File(OUTPUT_DIR + directory).listFiles(new FilenameFilter {
+        override def accept(dir: File, name: String): Boolean = {
+          name.endsWith(".png")
         }
-      }
+      }).foreach(pngImage => {
 
-      if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
-        smallSnippet = extractAndGenerateImage(pngImage, yellowCoords, greenCoords)
-      }
-    })
+        val inputImage = ImageIO.read(pngImage)
 
-    if(!smallSnippet) {
-      try {
-        val pageFirstMatch: Int = matchPages.min
-        val pageLastMatch: Int = matchPages.max
+        val width = inputImage.getWidth
+        val height = inputImage.getHeight
 
-        if(pageFirstMatch < pageLastMatch) {
+        var yellowCoords = List.empty[Point2D]
+        var greenCoords = List.empty[Point2D]
 
-          val allPngs = (pageFirstMatch to pageLastMatch).map(OUTPUT_DIR + directory + "/*-"+_+".png").mkString(" ")
-
-          val bigSnippetOutputFilename = OUTPUT_DIR + "/"+directory+"-"+pageFirstMatch+".png"
-          
-          ("/opt/local/bin/convert " + allPngs + " -append " + bigSnippetOutputFilename).!!
-
-          val bigSnippet = ImageIO.read(new File(bigSnippetOutputFilename))
-          
-          var yellowCoordsSnippet = List.empty[Point2D]
-          var greenCoordsSnippet = List.empty[Point2D]
-
-          for (x <- 0 until bigSnippet.getWidth) {
-            for (y <- 0 until bigSnippet.getHeight) {
-              val color = new Color(bigSnippet.getRGB(x, y))
-              if (isSameColor(color, YELLOW)) {
-                yellowCoordsSnippet ::= new Point2D.Double(x,y)
-              } else if (isSameColor(color, GREEN)) {
-                greenCoordsSnippet ::= new Point2D.Double(x,y)
-              }
+        for (x <- 0 until width) {
+          for (y <- 0 until height) {
+            val color = new Color(inputImage.getRGB(x, y))
+            if (isSameColor(color, YELLOW)) {
+              yellowCoords ::= new Point2D.Double(x, y)
+            } else if (isSameColor(color, GREEN)) {
+              greenCoords ::= new Point2D.Double(x, y)
             }
           }
-          
-          extractAndGenerateImage(new File(bigSnippetOutputFilename), yellowCoordsSnippet, greenCoordsSnippet)
-
-        } else {
-          logger.error(s"Cannot create snippet for PDF: $directory")
         }
-      } catch{
-        case e: Exception => logger.error("Something not good happened", e)
-      }
+
+        extractAndGenerateImage(pngImage, yellowCoords, greenCoords)
+
+      })
+    } catch {
+      case e: Exception => logger.error("Error: ", e)
     }
   })
 
@@ -142,6 +99,7 @@ object MainSnippet extends App with LazyLogging {
       logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"}")
       true
     } else {
+      logger.error(s"Cannot create snippet. No highlight found in file: ${pngImage.getName}")
       false
     }
   }
