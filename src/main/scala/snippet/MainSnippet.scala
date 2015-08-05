@@ -13,7 +13,7 @@ import com.typesafe.scalalogging.LazyLogging
  */
 object MainSnippet extends App with LazyLogging {
 
-  val COLOR_TOLERANCE = 3
+  val COLOR_TOLERANCE = 15
 
   val YELLOW = new Color(247, 255, 132)
 
@@ -36,7 +36,7 @@ object MainSnippet extends App with LazyLogging {
     }
   }).toList
 
-  outputSubDirectories.par.map (directory => {
+  outputSubDirectories.map (directory => {
 
     logger.debug(s"Working directory: $directory")
 
@@ -89,6 +89,7 @@ object MainSnippet extends App with LazyLogging {
       logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + pngImage.getName}")
       true
     } else {
+      logger.debug(s"Cannot create snippet (no highlight found on PNG): ${pngImage.getName}")
       false
     }
   }
