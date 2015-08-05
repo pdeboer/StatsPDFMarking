@@ -27,11 +27,17 @@ object MethodOccurrences extends App {
 
 
 	val methodNumbers = occurrences.map(mo => {
-		val stringMatches = mo.po.foldLeft(0)((s, po) => s + countOccurrences(po.terms, po.dbp.body))
-		val numPapers = mo.po.map(_.dbp).toSet.size
-		MethodCounts(mo, numPapers, stringMatches)
+		val yearly = (2009 to 2014).map(year => countOccurrencePerYear(mo, year)).toList
+		val overview = countOccurrencePerYear(mo)
+		MethodCounts(mo, overview, yearly)
 	})
 
+	def countOccurrencePerYear(mo: MethodOccurrence, year: Int = -1): MethodCountPerYear = {
+		val occurrenceList = if (year == -1) mo else MethodOccurrence(mo.method, mo.po.filter(_.dbp.year == year))
+		val stringMatches = occurrenceList.po.foldLeft(0)((s, po) => s + countOccurrences(po.terms, po.dbp.body))
+		val numPapers = occurrenceList.po.map(_.dbp).toSet.size
+		MethodCountPerYear(year, numPapers, stringMatches)
+	}
 
 	def countOccurrences(needles: List[String], haystack: String, ignoreCases: Boolean = true): Int = needles.map(n => countOccurrence(n, haystack, ignoreCases)).sum
 
@@ -50,13 +56,23 @@ object MethodOccurrences extends App {
 		})
 	}
 
-	case class MethodCounts(methodOccurrence: MethodOccurrence, numPapers: Int, numStringMatches: Int) extends Serializable {
-		override def toString = s"${methodOccurrence.method.replaceAll(",", "/")},$numPapers,$numStringMatches"
+	case class MethodCounts(methodOccurrence: MethodOccurrence, overall: MethodCountPerYear, years: List[MethodCountPerYear]) extends Serializable {}
+
+	case class MethodCountPerYear(year: Int, numPapers: Int, numStringMatches: Int) extends Serializable {
+		val csvHeader = {
+			val yearDescription = if (year == -1) "all" else year + ""
+			s"$yearDescription papers,$yearDescription string matches"
+		}
+
+		override def toString = numPapers + "," + numStringMatches
 	}
 
-	case class MethodOccurrence(method: String, po: List[PaperOccurrence]) extends Serializable
+	case class MethodOccurrence(method: String, po: List[PaperOccurrence]) extends Serializable {
+		override def toString = method.replaceAll(",", "/")
+	}
 
 	case class PaperOccurrence(dbp: DBPaperBody)(val terms: List[String]) extends Serializable
 
-	methodNumbers.foreach(println)
+	println(s"Method,${methodNumbers.head.overall.csvHeader},${methodNumbers.head.years.map(_.csvHeader).mkString(",")} ")
+	methodNumbers.foreach(mc => println(s"${mc.methodOccurrence},${mc.overall},${mc.years.mkString(",")} "))
 }
