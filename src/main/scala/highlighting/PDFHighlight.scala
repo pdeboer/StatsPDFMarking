@@ -73,16 +73,14 @@ class PDFPermuter(pdfPath: String) {
     }
   }
 
-  def getDelta(seqUniqueStrings: Seq[PDFHighlightInstruction],  firstMethodIndex: Int, secondMethodIndex: Int): Int = {
-    val startFirstMethod = seqUniqueStrings(firstMethodIndex).startSearchStringIndex
-    val endFirstMethod = startFirstMethod + seqUniqueStrings(firstMethodIndex).searchString.length
+  def getDelta(seqUniqueStrings: Seq[PDFHighlightInstruction], firstMethodIndex: Int, secondMethodIndex: Int): Int = {
 
-    val startSecondMethod = seqUniqueStrings(secondMethodIndex).startSearchStringIndex
-    val startHighlightSecondMethod = startSecondMethod +
-      escapeSearchString(seqUniqueStrings(secondMethodIndex).highlightString).r.findFirstMatchIn(
-        txt.substring(startSecondMethod, startSecondMethod + seqUniqueStrings(secondMethodIndex).searchString.length)).get.start
+    val startFirstMethod = seqUniqueStrings(firstMethodIndex).startSearchStringIndex +
+      seqUniqueStrings(firstMethodIndex).startHighlightStringIndex
+    val startSecondMethod = seqUniqueStrings(secondMethodIndex).startSearchStringIndex +
+      seqUniqueStrings(secondMethodIndex).startHighlightStringIndex
 
-   Math.abs(startFirstMethod - startSecondMethod)
+    Math.abs(startFirstMethod - startSecondMethod)
   }
   
   def isUniquePairValidCandidate(method: PDFHighlightInstruction, assumption: PDFHighlightInstruction): Boolean = {
