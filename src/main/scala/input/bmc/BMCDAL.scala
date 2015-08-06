@@ -23,16 +23,18 @@ object BMCDAL {
 	}
 
 
-	def getTermOccurrenceCount(term1: String) = DB readOnly { implicit session =>
-		val likeTerm = s"%${term1.toLowerCase}%"
+	def getPapersContainingTerm(term: String) = DB readOnly { implicit session =>
+		val likeTerm = s"%${term.toLowerCase}%"
 
-		sql"""SELECT p.autoid
+		sql"""SELECT DISTINCT p.autoid, t.body, right(b.createdAt,4) as y
 		FROM papers p INNER JOIN prepub b ON p.id1 = b.id1 AND p.id2=b.id2 AND p.id3=b.id3
 		INNER JOIN pdftext t ON b.imediaURL = t.url
 		WHERE b.description = 'Original Submission - Version 1' AND LOWER(t.body) LIKE $likeTerm"""
-			.map(r => r.long(1)).list().apply()
+			.map(r => DBPaperBody(r.long(1))(r.string(2), r.int(3))).list().apply()
 	}
 
 	case class DBPaper(id: Long, filename: String)
+
+	case class DBPaperBody(id: Long)(val body: String, val year: Int) extends Serializable
 
 }
