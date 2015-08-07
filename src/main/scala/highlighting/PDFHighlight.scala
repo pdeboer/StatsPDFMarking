@@ -36,6 +36,8 @@ object PDFTextExtractor {
 class PDFPermuter(pdfPath: String) {
 
   val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = 5
+  val VALID_DELTA_BETWEEN_METHODS_SYNONYMS : (Int, Int) = (20000, Int.MaxValue)
+  assert(VALID_DELTA_BETWEEN_METHODS_SYNONYMS._1 > VALID_DELTA_BETWEEN_METHODS_SYNONYMS._2, "Merge Methods Error: Please fix the min and max values")
 
 	lazy val txt = PDFTextExtractor.extract(pdfPath)
 
@@ -44,7 +46,32 @@ class PDFPermuter(pdfPath: String) {
 		val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
 		val uniquePairs = getUniquePairsForSearchTerms(uniqueStrings)
 
-		uniquePairs.map(p => new PDFHighlight(pdfPath, List(p._1, p._2)))
+    if(uniquePairs.nonEmpty) {
+
+      var finalUniquePairs = List.empty[(PDFHighlightInstruction, PDFHighlightInstruction)]
+      finalUniquePairs ::= uniquePairs.filter(p => !uniquePairs.exists(up => {
+        (p._1.startSearchStringIndex+p._1.startHighlightStringIndex) > (up._1.startSearchStringIndex+up._1.startHighlightStringIndex)
+      })).head
+
+      uniquePairs.foreach(p => {
+        val indexPosition = p._1.startSearchStringIndex + p._1.startHighlightStringIndex
+
+        if(finalUniquePairs.exists(u => { u != p && Math.abs(u._1.startSearchStringIndex+u._1.startHighlightStringIndex - indexPosition) == 0})){
+          finalUniquePairs ::= p
+        } else if(!finalUniquePairs.exists(u => {
+          Math.abs(u._1.startSearchStringIndex+u._1.startHighlightStringIndex - indexPosition) <= VALID_DELTA_BETWEEN_METHODS_SYNONYMS._1 ||
+            Math.abs(u._1.startSearchStringIndex+u._1.startHighlightStringIndex - indexPosition) >= VALID_DELTA_BETWEEN_METHODS_SYNONYMS._2
+        })){
+          finalUniquePairs ::= p
+        }
+      })
+
+      finalUniquePairs.map(p => {
+        new PDFHighlight(pdfPath, List(p._1, p._2))
+      })
+    }else {
+      Iterable.empty[PDFHighlight]
+    }
 	}
 
   def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[(PDFHighlightInstruction,PDFHighlightInstruction)] = {

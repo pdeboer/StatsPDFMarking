@@ -85,21 +85,15 @@ object MassPDFHighlighter extends App with LazyLogging{
           logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
           val methodName = terms.getMethodFromSynonymOrMethod(highlighter._1.instructions.head.highlightString).get.name.replaceAll(" ", "_")
-          if(methodName!="ANOVA")
-            println(methodName)
-
           val pdfDirName = f.getName.substring(0,f.getName.length-4)
+
           new File(snippetsDir+"/"+methodName+"/"+pdfDirName).mkdirs()
           Some(new BufferedOutputStream(new FileOutputStream(snippetsDir+"/"+methodName+"/" +pdfDirName + "/" + highlighter._2 + "_" + f.getName))).foreach(s => {
             s.write(highlighter._1.highlight())
             s.close()
           })
         })
-
     })
-
-
-
   }
 
   def convertPDFtoPNG(pdfFile: File) = {
