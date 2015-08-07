@@ -22,70 +22,58 @@ object MainSnippet extends App with LazyLogging {
   val MINIMAL_SNIPPET_HEIGHT = 300
 
   val SNIPPET_DIR = "../snippets/"
-  val OUTPUT_DIR = "../output/"
 
-  new File(SNIPPET_DIR).mkdir()
-  new File(SNIPPET_DIR).listFiles().foreach(f => {
-    if(f.isDirectory) {
-      f.listFiles().foreach(f1 =>
-        f1.delete()
-      )}
-    f.delete()
-  })
-
-  val outputDir: File = new File(OUTPUT_DIR)
-
-  val methodsDirectories: List[File] = outputDir.listFiles(new FilenameFilter {
+  val filterDirectories = new FilenameFilter {
     override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
-  }).toList
+  }
 
-  var permutationsDirectories : List[File] = List.empty[File]
+  val snippetDir: File = new File(SNIPPET_DIR)
 
-  methodsDirectories.foreach(methodDirectory => {
-    permutationsDirectories = permutationsDirectories ::: methodDirectory.listFiles(new FilenameFilter {
-      override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
-    }).toList
+  snippetDir.listFiles(filterDirectories).par.foreach(methodDir => {
+    methodDir.listFiles(filterDirectories).par.foreach(pdfDir => {
+      createSnippet(pdfDir)
+    })
   })
 
-  permutationsDirectories.map (directory => {
 
+  def createSnippet(directory: File): Unit = {
     logger.debug(s"Working directory: $directory")
     try {
-      directory.listFiles(new FilenameFilter {
-        override def accept(dir: File, name: String): Boolean = {
-          name.endsWith(".png")
-        }
-      }).foreach(pngImage => {
+      directory.listFiles(filterDirectories).par.foreach(permutationDir =>
+        permutationDir.listFiles(new FilenameFilter {
+          override def accept(dir: File, name: String): Boolean = name.endsWith(".png")
+        }).par.foreach(pngImage => {
 
-        logger.debug(s"Found file: ${pngImage.getName}")
+          logger.debug(s"Found file: ${pngImage.getName}")
 
-        val inputImage = ImageIO.read(pngImage)
+          val inputImage = ImageIO.read(pngImage)
 
-        val width = inputImage.getWidth
-        val height = inputImage.getHeight
+          val width = inputImage.getWidth
+          val height = inputImage.getHeight
 
-        var yellowCoords = List.empty[Point2D]
-        var greenCoords = List.empty[Point2D]
+          var yellowCoords = List.empty[Point2D]
+          var greenCoords = List.empty[Point2D]
 
-        for (x <- 0 until width) {
-          for (y <- 0 until height) {
-            val color = new Color(inputImage.getRGB(x, y))
-            if (isSameColor(color, YELLOW)) {
-              yellowCoords ::= new Point2D.Double(x, y)
-            } else if (isSameColor(color, GREEN)) {
-              greenCoords ::= new Point2D.Double(x, y)
+          for (x <- 0 until width) {
+            for (y <- 0 until height) {
+              val color = new Color(inputImage.getRGB(x, y))
+              if (isSameColor(color, YELLOW)) {
+                yellowCoords ::= new Point2D.Double(x, y)
+              } else if (isSameColor(color, GREEN)) {
+                greenCoords ::= new Point2D.Double(x, y)
+              }
             }
           }
-        }
 
-        extractAndGenerateImage(pngImage, yellowCoords, greenCoords)
+          extractAndGenerateImage(pngImage, yellowCoords, greenCoords)
 
-      })
-    } catch {
+        })
+      )
+    }catch {
       case e: Exception => logger.error("Error: ", e)
     }
-  })
 
+  }
 
   def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D], greenCoords: List[Point2D]): Boolean = {
 
@@ -108,13 +96,10 @@ object MainSnippet extends App with LazyLogging {
         suffix = "prerequisiteOnTop"
       }
 
-      val methodName = pngImage.getParentFile.getParentFile.getName
-      if(!new File(SNIPPET_DIR + methodName).exists()) {
-        new File(SNIPPET_DIR + methodName).mkdir()
-      }
+      val storeSnippetPath = pngImage.getParentFile.getParentFile
 
-      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + methodName + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"))
-      logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + methodName + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"}")
+      ImageIO.write(snippetImage, "png", new File(storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"))
+      logger.debug(s"Snippet successfully written: ${storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"}")
       true
     } else {
       logger.error(s"Cannot create snippet. No highlight found in file: ${pngImage.getName}")

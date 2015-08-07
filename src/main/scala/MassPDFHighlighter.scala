@@ -14,44 +14,45 @@ import scala.sys.process._
 object MassPDFHighlighter extends App with LazyLogging{
 
   val pdfsDir = "../pdfs2/"
-	val outputDir = "../output/"
+	val snippetsDir = "../snippets/"
 
   val pathConvert = "/opt/local/bin/convert"
   val pathGS = "/opt/local/bin/gs"
 
   val startTime = new DateTime().getMillis
 
-	createOrEmptyOutputDir
+  val filterDirectories = new FilenameFilter {
+    override def accept(dir: File, name: String): Boolean = new File(dir,name).isDirectory
+  }
+
+  new File(snippetsDir).mkdir()
+	emptySnippetsDir(new File(snippetsDir))
 
   highlightPDFFile
 
   logger.debug("Starting conversion PDF2PNG...")
 
-  new File(outputDir).listFiles(new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean = dir.isDirectory
-  }).par.foreach(methodDirectory => {
-    methodDirectory.listFiles(new FilenameFilter {
-      override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
-    }).par.foreach(pdfFile => {
-      convertPDFtoPNG(pdfFile)
+  new File(snippetsDir).listFiles(filterDirectories).par.foreach(methodDirectory => {
+    methodDirectory.listFiles(filterDirectories).par.foreach(pdfDirectory => {
+      pdfDirectory.listFiles(new FilenameFilter {
+        override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
+      }).par.foreach(pdfFile => {
+        convertPDFtoPNG(pdfFile)
+      })
     })
   })
 
   logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime)/1000} seconds")
 
 
-  def createOrEmptyOutputDir = {
-    new File(outputDir).mkdir()
-    new File(outputDir).listFiles().foreach(f => {
-      if (f.isDirectory) {
-        f.listFiles().foreach(img => {
-          if(img.isDirectory){
-            img.listFiles().foreach(ff => ff.delete())
-          }
-          img.delete()})
+  def emptySnippetsDir(dir: File): Boolean = {
+    dir.listFiles().foreach(file => {
+      if (file.isDirectory) {
+        emptySnippetsDir(file)
       }
-      f.delete()
+      file.delete()
     })
+    true
   }
 
   def highlightPDFFile = {
@@ -86,8 +87,10 @@ object MassPDFHighlighter extends App with LazyLogging{
           val methodName = terms.getMethodFromSynonymOrMethod(highlighter._1.instructions.head.highlightString).get.name.replaceAll(" ", "_")
           if(methodName!="ANOVA")
             println(methodName)
-          new File(outputDir+"/"+methodName).mkdirs()
-          Some(new BufferedOutputStream(new FileOutputStream(outputDir+"/"+methodName+"/" + highlighter._2 + "_" + f.getName))).foreach(s => {
+
+          val pdfDirName = f.getName.substring(0,f.getName.length-4)
+          new File(snippetsDir+"/"+methodName+"/"+pdfDirName).mkdirs()
+          Some(new BufferedOutputStream(new FileOutputStream(snippetsDir+"/"+methodName+"/" +pdfDirName + "/" + highlighter._2 + "_" + f.getName))).foreach(s => {
             s.write(highlighter._1.highlight())
             s.close()
           })
