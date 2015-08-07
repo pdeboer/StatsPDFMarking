@@ -40,6 +40,7 @@ class PDFPermuter(pdfPath: String) {
 	lazy val txt = PDFTextExtractor.extract(pdfPath)
 
 	def permuteForEachCombinationOf(permutationDefinition: Map[Color, List[String]]): Iterable[PDFHighlight] = {
+
 		val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
 		val uniquePairs = getUniquePairsForSearchTerms(uniqueStrings)
 

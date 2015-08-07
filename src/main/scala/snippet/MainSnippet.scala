@@ -18,34 +18,46 @@ object MainSnippet extends App with LazyLogging {
   val YELLOW = new Color(255, 255,127)
   val GREEN = new Color(127, 255, 127)
 
-  val CONVERT_APP = "/opt/local/bin/convert "
-
   val PADDING_SNIPPET = 200
   val MINIMAL_SNIPPET_HEIGHT = 300
 
   val SNIPPET_DIR = "../snippets/"
   val OUTPUT_DIR = "../output/"
 
-  new File(SNIPPET_DIR).mkdirs()
-  new File(SNIPPET_DIR).listFiles().foreach(f => { f.delete() })
+  new File(SNIPPET_DIR).mkdir()
+  new File(SNIPPET_DIR).listFiles().foreach(f => {
+    if(f.isDirectory) {
+      f.listFiles().foreach(f1 =>
+        f1.delete()
+      )}
+    f.delete()
+  })
 
   val outputDir: File = new File(OUTPUT_DIR)
 
-  val outputSubDirectories: List[String] = outputDir.list(new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean = {
-      new File(dir, name).isDirectory
-    }
+  val methodsDirectories: List[File] = outputDir.listFiles(new FilenameFilter {
+    override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
   }).toList
 
-  outputSubDirectories.par.map (directory => {
+  var permutationsDirectories : List[File] = List.empty[File]
+
+  methodsDirectories.foreach(methodDirectory => {
+    permutationsDirectories = permutationsDirectories ::: methodDirectory.listFiles(new FilenameFilter {
+      override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
+    }).toList
+  })
+
+  permutationsDirectories.map (directory => {
 
     logger.debug(s"Working directory: $directory")
     try {
-      new File(OUTPUT_DIR + directory).listFiles(new FilenameFilter {
+      directory.listFiles(new FilenameFilter {
         override def accept(dir: File, name: String): Boolean = {
           name.endsWith(".png")
         }
       }).foreach(pngImage => {
+
+        logger.debug(s"Found file: ${pngImage.getName}")
 
         val inputImage = ImageIO.read(pngImage)
 
@@ -95,8 +107,14 @@ object MainSnippet extends App with LazyLogging {
       if(!methodOnTop){
         suffix = "prerequisiteOnTop"
       }
-      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"))
-      logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"}")
+
+      val methodName = pngImage.getParentFile.getParentFile.getName
+      if(!new File(SNIPPET_DIR + methodName).exists()) {
+        new File(SNIPPET_DIR + methodName).mkdir()
+      }
+
+      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + methodName + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"))
+      logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + methodName + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"}")
       true
     } else {
       logger.error(s"Cannot create snippet. No highlight found in file: ${pngImage.getName}")

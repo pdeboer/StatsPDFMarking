@@ -1,3 +1,22 @@
 ANOVA,Independen
 ANOVA,Normal
 ANOVA,Homogeneity of variances
+Pearson,interval
+Pearson,Homoscedasticity
+Pearson,no outliers
+Spearman,ordinal
+Linear regression,Homogeneity of variances
+Linear regression,Normal
+Linear regression,no multicollinearity
+Linear regression,linearity
+Linear regression,Independen
+Multiple regression,Homogeneity of variances
+Multiple regression,Normal
+Multiple regression,no multicollinearity
+Multiple regression,linearity
+Logistic regression,Independen
+Logistic regression,linearity of independent variable
+t-test,Normal
+t-test,Independen
+t-test,Homogeneity of variances
+t-test,linearity
