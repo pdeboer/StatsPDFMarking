@@ -8,7 +8,8 @@ import scala.io.Source
  */
 class HighlightTermloader {
 	lazy val terms = {
-		val assumptionsInCSV = Source.fromFile("assumptions.csv").getLines().map(l => {
+
+    val assumptionsInCSV = Source.fromFile("assumptions.csv").getLines().map(l => {
 			val cols = l.split(",")
 			StatisticalAssumption(cols(0), cols.drop(1).toList)
 		}).toList
@@ -17,7 +18,8 @@ class HighlightTermloader {
 			val cols = l.split(",")
 			(cols(0), cols.drop(1).toList)
 		}).toList
-		var methodMap = new mutable.HashMap[String, List[StatisticalAssumption]]()
+
+    var methodMap = new mutable.HashMap[String, List[StatisticalAssumption]]()
 		Source.fromFile("met2ass.csv").getLines().foreach(l => {
 			val cols = l.split(",")
 
@@ -37,10 +39,18 @@ class HighlightTermloader {
 	def termSynonyms = terms.flatMap(t => t.synonyms).toList
 	def termAssumptions = terms.flatMap(t => t.assumptions.map(a => a.name)).toList
 	def termAssumptionSynonyms = terms.flatMap(t => t.assumptions.flatMap(a => a.synonym)).toList
-
 	def methodsAndSynonyms = termNames ::: termSynonyms
 	def assumptionsAndSynonyms = termAssumptions ::: termAssumptionSynonyms
 	def allTerms = termNames ::: termSynonyms ::: termAssumptions ::: termAssumptionSynonyms
+
+  def getMethodFromSynonymOrMethod(synonymOrMethod: String) : Option[StatisticalMethod] = {
+    terms.find(t => t.name.equalsIgnoreCase(synonymOrMethod) || t.synonyms.contains(synonymOrMethod))
+  }
+
+  def getMethodAndSynonymsFromMethodName(method: String): Option[StatisticalMethod] = {
+    terms.find(m => m.name.equalsIgnoreCase(method))
+  }
+
 }
 
 case class StatisticalMethod(name: String, synonyms: List[String], var assumptions: List[StatisticalAssumption])

@@ -43,7 +43,9 @@ class PDFPermuter(pdfPath: String) {
 		val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
 		val uniquePairs = getUniquePairsForSearchTerms(uniqueStrings)
 
-		uniquePairs.map(p => (p._3, new PDFHighlight(pdfPath, List(p._1, p._2)))).toList
+    uniquePairs.map(p => {
+      (p._3, new PDFHighlight(pdfPath, List(p._1, p._2)))
+    }).toList
 	}
 
   def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[(PDFHighlightInstruction,PDFHighlightInstruction, Int)] = {
@@ -84,7 +86,8 @@ class PDFPermuter(pdfPath: String) {
   }
   
   def isUniquePairValidCandidate(method: PDFHighlightInstruction, assumption: PDFHighlightInstruction): Boolean = {
-    !method.searchString.equals(assumption.searchString) 
+    !method.highlightString.equals(assumption.highlightString) &&
+      !method.searchString.equals(assumption.searchString)
   }
 
   def areHighlightSeparated(seqUniqueStrings: Seq[PDFHighlightInstruction],  methodIndex: Int, assumptionIndex: Int): Boolean = {
