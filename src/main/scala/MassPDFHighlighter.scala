@@ -1,5 +1,5 @@
 import java.awt.Color
-import java.io.{BufferedOutputStream, File, FileOutputStream, FilenameFilter}
+import java.io._
 
 import com.typesafe.scalalogging.LazyLogging
 import highlighting.{HighlightTermloader, PDFPermuter}
@@ -66,18 +66,14 @@ object MassPDFHighlighter extends App with LazyLogging{
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.foreach(method => {
+    terms.termNames.par.foreach(method => {
 
       println(s"Highlighting method $method")
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
-      var assumptionsAndSynonyms : List[String] = List.empty[String]
-
-      methodAndSynonyms.assumptions.foreach(assumption => {
-        assumptionsAndSynonyms = assumptionsAndSynonyms ::: List[String](assumption.name) ::: assumption.synonym
-      })
 
       val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms))
+
 
       new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
         highlighter => {
@@ -87,7 +83,8 @@ object MassPDFHighlighter extends App with LazyLogging{
           val pdfDirName = f.getName.substring(0,f.getName.length-4)
 
           new File(snippetsDir+"/"+methodName+"/"+pdfDirName).mkdirs()
-          Some(new BufferedOutputStream(new FileOutputStream(snippetsDir+"/"+methodName+"/" +pdfDirName + "/" + highlighter._1._1 + "-Delta-" + highlighter._2 + f.getName))).foreach(s => {
+
+          Some(new BufferedOutputStream(new FileOutputStream(snippetsDir+"/"+methodName+"/" +pdfDirName + "/" + highlighter._1._1 + "-Delta-" + highlighter._2 +"_"+ f.getName))).foreach(s => {
             s.write(highlighter._1._2.highlight())
             s.close()
           })
@@ -99,7 +96,7 @@ object MassPDFHighlighter extends App with LazyLogging{
     val pathPDFFile = pdfFile.getPath
     val pathConvertedPNGFile: String = createSubDirForPNGs(pdfFile)
 
-    val convertCommandWithParams = "nice -n 5 " + pathConvert + " -density 200 -append "
+    val convertCommandWithParams = "nice -n 5 " + pathConvert + " -density 60 -append "
 
     try {
 

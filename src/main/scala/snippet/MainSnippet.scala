@@ -13,60 +13,57 @@ import com.typesafe.scalalogging.LazyLogging
  */
 object MainSnippet extends App with LazyLogging {
 
-  val COLOR_TOLERANCE = 15
+  val COLOR_TOLERANCE = 5
 
-  val YELLOW = new Color(247, 255, 132)
-
-  val CONVERT_APP = "/opt/local/bin/convert "
+  val YELLOW = new Color(200, 200, 70)
 
   val PADDING_SNIPPET = 200
   val MINIMAL_SNIPPET_HEIGHT = 300
 
   val SNIPPET_DIR = "../snippets/"
-  val OUTPUT_DIR = "../output/"
 
-  new File(SNIPPET_DIR).mkdirs()
-  new File(SNIPPET_DIR).listFiles().foreach(f => { f.delete() })
+  val filterDirectories = new FilenameFilter {
+    override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
+  }
 
-  val outputDir: File = new File(OUTPUT_DIR)
+  val snippetDir: File = new File(SNIPPET_DIR)
 
-  val outputSubDirectories: List[String] = outputDir.list(new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean = {
-      new File(dir, name).isDirectory
-    }
-  }).toList
+  snippetDir.listFiles(filterDirectories).par.foreach(methodDir => {
+    methodDir.listFiles(filterDirectories).par.foreach(pdfDir => {
+      createSnippet(pdfDir)
+    })
+  })
 
-  outputSubDirectories.map (directory => {
 
+  def createSnippet(directory: File): Unit = {
     logger.debug(s"Working directory: $directory")
-
+    var yellowCoordsSnippet = List.empty[Point2D]
     try {
-      new File(OUTPUT_DIR + directory).listFiles(new FilenameFilter {
-        override def accept(dir: File, name: String): Boolean = {
-          name.endsWith(".png")
-        }
-      }).foreach(pngImage => {
-        val image = ImageIO.read(pngImage)
-        var yellowCoordsSnippet = List.empty[Point2D]
+      directory.listFiles(filterDirectories).par.foreach(permutationDir =>
+        permutationDir.listFiles(new FilenameFilter {
+          override def accept(dir: File, name: String): Boolean = name.endsWith(".png")
+        }).par.foreach(image => {
 
-          for (x <- 0 until image.getWidth) {
-            for (y <- 0 until image.getHeight) {
-              val color = new Color(image.getRGB(x, y))
+          val pngImage = ImageIO.read(image)
+
+          for (x <- 0 until pngImage.getWidth) {
+            for (y <- 0 until pngImage.getHeight) {
+              val color = new Color(pngImage.getRGB(x, y))
               if (isSameColor(color, YELLOW)) {
                 yellowCoordsSnippet ::= new Point2D.Double(x, y)
               }
             }
           }
 
+          extractAndGenerateImage(image, yellowCoordsSnippet)
 
-        extractAndGenerateImage(pngImage, yellowCoordsSnippet)
-      })
-    } catch {
-      case e: Exception => {
-        logger.error("Error", e)
-      }
+        })
+      )
+    }catch {
+      case e: Exception => logger.error("Error: ", e)
     }
-  })
+
+  }
 
 
   def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D]): Boolean = {
@@ -85,11 +82,13 @@ object MainSnippet extends App with LazyLogging {
         }
       }
 
-      ImageIO.write(snippetImage, "png", new File(SNIPPET_DIR + pngImage.getName))
-      logger.debug(s"Snippet successfully written: ${SNIPPET_DIR + pngImage.getName}")
+      val storeSnippetPath = pngImage.getParentFile.getParentFile.getParentFile
+
+      ImageIO.write(snippetImage, "png", new File(storeSnippetPath + "/" + pngImage.getName))
+      logger.debug(s"Snippet successfully written: ${storeSnippetPath + "/" + pngImage.getName}")
       true
     } else {
-      logger.debug(s"Cannot create snippet (no highlight found on PNG): ${pngImage.getName}")
+      logger.error(s"Cannot create snippet. No highlight found in file: ${pngImage.getName}")
       false
     }
   }

@@ -95,11 +95,14 @@ class PDFPermuter(pdfPath: String) {
     val endIndexMethod = startIndexMethod + seqUniqueStrings(methodIndex).searchString.length
 
     val startIndexAssumption = seqUniqueStrings(assumptionIndex).startSearchStringIndex
-    val startIndexHighlightAssumption = startIndexAssumption +
-      escapeSearchString(seqUniqueStrings(assumptionIndex).highlightString).r.findFirstMatchIn(
-        txt.substring(startIndexAssumption, startIndexAssumption + seqUniqueStrings(assumptionIndex).searchString.length)).get.start
-    
-    startIndexHighlightAssumption < startIndexMethod | startIndexHighlightAssumption > endIndexMethod
+    val endIndexAssumption = startIndexAssumption + seqUniqueStrings(assumptionIndex).searchString.length
+
+    //TODO: find if method and method are overlapping!!
+    if(startIndexMethod-startIndexAssumption<Math.min(seqUniqueStrings(assumptionIndex).highlightString.length, seqUniqueStrings(methodIndex).highlightString.length)){
+      false
+    } else {
+      true
+    }
   }
 
   def escapeSearchString(searchString: String): String = {
