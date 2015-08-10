@@ -13,11 +13,11 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging{
 
-  val pdfsDir = "../pdfs2/"
-	val snippetsDir = "../snippets/"
+  val pdfsDir = "../pdfs/"
+	val snippetsDir = "../delta_snippets/"
 
-  val pathConvert = "/opt/local/bin/convert"
-  val pathGS = "/opt/local/bin/gs"
+  val pathConvert = "/usr/bin/convert"
+  val pathGS = "/usr/bin/gs"
 
   val startTime = new DateTime().getMillis
 
@@ -59,7 +59,6 @@ object MassPDFHighlighter extends App with LazyLogging{
     new FolderPDFSource(pdfsDir).get().par.foreach(f => {
       highlightFile(f)
       logger.info(s"processed $f")
-
     })
   }
 
@@ -84,7 +83,7 @@ object MassPDFHighlighter extends App with LazyLogging{
 
           new File(snippetsDir+"/"+methodName+"/"+pdfDirName).mkdirs()
 
-          Some(new BufferedOutputStream(new FileOutputStream(snippetsDir+"/"+methodName+"/" +pdfDirName + "/" + highlighter._1._1 + "-Delta-" + highlighter._2 +"_"+ f.getName))).foreach(s => {
+          Some(new BufferedOutputStream(new FileOutputStream(snippetsDir+"/"+methodName+"/" +pdfDirName + "/" + highlighter._1._1 + "-D-" + highlighter._2 +"_"+ f.getName))).foreach(s => {
             s.write(highlighter._1._2.highlight())
             s.close()
           })

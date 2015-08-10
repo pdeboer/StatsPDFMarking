@@ -128,7 +128,7 @@ class PDFPermuter(pdfPath: String) {
 			case (color, patterns) => patterns.map(pattern => {
 
         val allIndicesOfThesePatterns : Iterator[Int] =
-          if(pattern.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH){
+          if(pattern.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || pattern.contains(" ")){
             ("(?i)(\\b"+pattern+"\\b)").r.findAllMatchIn(txt).map(_.start)
           } else {
             escapeSearchString(pattern).r.findAllMatchIn(txt).map(_.start)

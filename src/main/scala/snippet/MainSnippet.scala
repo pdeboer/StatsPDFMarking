@@ -20,7 +20,7 @@ object MainSnippet extends App with LazyLogging {
   val PADDING_SNIPPET = 150
   val MINIMAL_SNIPPET_HEIGHT = 300
 
-  val SNIPPET_DIR = "../snippets/"
+  val SNIPPET_DIR = "../delta_snippets/"
 
   val filterDirectories = new FilenameFilter {
     override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
