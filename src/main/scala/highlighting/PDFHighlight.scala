@@ -91,17 +91,31 @@ class PDFPermuter(pdfPath: String) {
   }
 
   def areHighlightSeparated(seqUniqueStrings: Seq[PDFHighlightInstruction],  methodIndex: Int, assumptionIndex: Int): Boolean = {
-    val startIndexMethod = seqUniqueStrings(methodIndex).startSearchStringIndex
-    val endIndexMethod = startIndexMethod + seqUniqueStrings(methodIndex).searchString.length
+    val startSearchIndexMethod = seqUniqueStrings(methodIndex).startSearchStringIndex
+    val endSearchIndexMethod = startSearchIndexMethod + seqUniqueStrings(methodIndex).searchString.length
 
-    val startIndexAssumption = seqUniqueStrings(assumptionIndex).startSearchStringIndex
-    val endIndexAssumption = startIndexAssumption + seqUniqueStrings(assumptionIndex).searchString.length
+    val startHighlightIndexMethod = startSearchIndexMethod+seqUniqueStrings(methodIndex).startHighlightStringIndex
+    val endHighlightIndexMethod = endSearchIndexMethod + seqUniqueStrings(methodIndex).highlightString.length
 
-    //TODO: find if method and method are overlapping!!
-    if(startIndexMethod-startIndexAssumption<Math.min(seqUniqueStrings(assumptionIndex).highlightString.length, seqUniqueStrings(methodIndex).highlightString.length)){
-      false
-    } else {
+    val startSearchIndexAssumption = seqUniqueStrings(assumptionIndex).startSearchStringIndex
+    val endSearchIndexAssumption = startSearchIndexAssumption + seqUniqueStrings(assumptionIndex).searchString.length
+
+    val startHighlightIndexAssumption = startSearchIndexAssumption+seqUniqueStrings(assumptionIndex).startHighlightStringIndex
+    val endHighlightIndexAssumption = startHighlightIndexAssumption + seqUniqueStrings(assumptionIndex).highlightString.length
+
+    if(startSearchIndexMethod < startSearchIndexAssumption && endSearchIndexMethod < startSearchIndexAssumption && endSearchIndexAssumption> endSearchIndexMethod){
       true
+    }
+    else if(startHighlightIndexMethod < startHighlightIndexAssumption && endHighlightIndexMethod < startHighlightIndexAssumption && endHighlightIndexAssumption> endHighlightIndexMethod){
+      true
+    }
+    else if(startSearchIndexAssumption < startSearchIndexMethod && endSearchIndexAssumption < startSearchIndexMethod && endSearchIndexAssumption < endSearchIndexMethod){
+      true
+    }else if(startHighlightIndexAssumption < startHighlightIndexMethod && endHighlightIndexAssumption < startHighlightIndexMethod && endHighlightIndexAssumption < endHighlightIndexMethod){
+      true
+    }
+    else {
+      false
     }
   }
 

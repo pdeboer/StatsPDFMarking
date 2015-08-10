@@ -72,7 +72,7 @@ object MassPDFHighlighter extends App with LazyLogging{
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
-      val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms))
+      val colorToStrings: Map[Color, List[String]] = Map(Color.RED -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms))
 
 
       new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
@@ -96,7 +96,7 @@ object MassPDFHighlighter extends App with LazyLogging{
     val pathPDFFile = pdfFile.getPath
     val pathConvertedPNGFile: String = createSubDirForPNGs(pdfFile)
 
-    val convertCommandWithParams = "nice -n 5 " + pathConvert + " -density 60 -append "
+    val convertCommandWithParams = "nice -n 5 " + pathConvert + " -density 90 -append "
 
     try {
 

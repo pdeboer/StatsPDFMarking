@@ -13,11 +13,11 @@ import com.typesafe.scalalogging.LazyLogging
  */
 object MainSnippet extends App with LazyLogging {
 
-  val COLOR_TOLERANCE = 5
+  val COLOR_TOLERANCE = 20
 
-  val YELLOW = new Color(200, 200, 70)
+  val RED = new Color(230, 117, 117)
 
-  val PADDING_SNIPPET = 200
+  val PADDING_SNIPPET = 150
   val MINIMAL_SNIPPET_HEIGHT = 300
 
   val SNIPPET_DIR = "../snippets/"
@@ -42,14 +42,15 @@ object MainSnippet extends App with LazyLogging {
       directory.listFiles(filterDirectories).par.foreach(permutationDir =>
         permutationDir.listFiles(new FilenameFilter {
           override def accept(dir: File, name: String): Boolean = name.endsWith(".png")
-        }).par.foreach(image => {
+        }).foreach(image => {
 
           val pngImage = ImageIO.read(image)
+          val name = image.getName
 
           for (x <- 0 until pngImage.getWidth) {
             for (y <- 0 until pngImage.getHeight) {
               val color = new Color(pngImage.getRGB(x, y))
-              if (isSameColor(color, YELLOW)) {
+              if (isSameColor(color, RED)) {
                 yellowCoordsSnippet ::= new Point2D.Double(x, y)
               }
             }
@@ -78,7 +79,11 @@ object MainSnippet extends App with LazyLogging {
       val snippetImage = new BufferedImage(imageWidth, snippetHeight, BufferedImage.TYPE_INT_RGB)
       for (w <- 0 until imageWidth) {
         for (h <- 0 until snippetHeight) {
-          snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
+          try{
+            snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
+          } catch {
+            case e: Exception => snippetImage.setRGB(w, h, Color.BLACK.getRGB)
+          }
         }
       }
 
@@ -98,8 +103,8 @@ object MainSnippet extends App with LazyLogging {
 
     val maxYellow = coordsYellow.maxBy(_.getY)
 
-    val startY = minYellow.getY - PADDING_SNIPPET
-    val endY = maxYellow.getY + PADDING_SNIPPET
+    val startY = if(minYellow.getY - PADDING_SNIPPET>=0){minYellow.getY - PADDING_SNIPPET}else{0}
+    val endY = if(maxYellow.getY + PADDING_SNIPPET<=maxHeight){maxYellow.getY + PADDING_SNIPPET}else{maxHeight}
 
     checkMinimalBoundaries(startY.toInt, endY.toInt, maxHeight)
   }
@@ -107,7 +112,7 @@ object MainSnippet extends App with LazyLogging {
   def checkMinimalBoundaries(startY: Int, endY: Int, maxImageHeight: Int): (Int, Int) = {
     var minY = startY
     var maxY = endY
-    val originalHeight = maxY-minY
+    val originalHeight = delta(maxY,minY)
     if(originalHeight < MINIMAL_SNIPPET_HEIGHT) {
 
       val deltaHeight = (MINIMAL_SNIPPET_HEIGHT-originalHeight)/2
@@ -132,9 +137,9 @@ object MainSnippet extends App with LazyLogging {
   }
 
   def isSameColor(color1: Color, color2: Color): Boolean = {
-    delta(color1.getRed, color2.getRed) < COLOR_TOLERANCE &&
-      delta(color1.getGreen, color2.getGreen) < COLOR_TOLERANCE &&
-      delta(color1.getBlue, color2.getBlue) < COLOR_TOLERANCE
+    delta(color1.getRed, color2.getRed) <= COLOR_TOLERANCE &&
+      delta(color1.getGreen, color2.getGreen) <= COLOR_TOLERANCE &&
+      delta(color1.getBlue, color2.getBlue) <= COLOR_TOLERANCE
   }
 
 }
