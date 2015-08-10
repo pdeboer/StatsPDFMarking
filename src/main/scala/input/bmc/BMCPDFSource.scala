@@ -11,7 +11,7 @@ import input.bmc.BMCDAL.DBPaper
 class BMCPDFSource(val basePDFPath: String = "/Users/pdeboer/Documents/phd_local/OpenReviewCrawler/papers") {
 	def get(): List[BMCPaper] = {
 		val termloader = new HighlightTermloader()
-		val papers = termloader.methodsAndSynonyms.par.map(m => {
+		val papers = termloader.methodsAndSynonyms.map(m => {
 			termloader.assumptionsAndSynonyms.par.map(a => {
 				BMCDAL.getPaperIDsWithTerms(m, a).toSet
 			}).toSet.flatten
