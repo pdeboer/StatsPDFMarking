@@ -2,6 +2,7 @@ package input.bmc
 
 import java.io.File
 
+import ch.uzh.ifi.pdeboer.pplib.util.U
 import highlighting.HighlightTermloader
 import input.bmc.BMCDAL.DBPaper
 
@@ -11,9 +12,9 @@ import input.bmc.BMCDAL.DBPaper
 class BMCPDFSource(val basePDFPath: String = "/Users/pdeboer/Documents/phd_local/OpenReviewCrawler/papers") {
 	def get(): List[BMCPaper] = {
 		val termloader = new HighlightTermloader()
-		val papers = termloader.methodsAndSynonyms.map(m => {
-			termloader.assumptionsAndSynonyms.par.map(a => {
-				BMCDAL.getPaperIDsWithTerms(m, a).toSet
+		val papers = termloader.methodsAndSynonyms.par.map(m => {
+			termloader.assumptionsAndSynonyms.map(a => {
+				U.retry(10)(BMCDAL.getPaperIDsWithTerms(m, a).toSet)
 			}).toSet.flatten
 		}).toSet.flatten
 
