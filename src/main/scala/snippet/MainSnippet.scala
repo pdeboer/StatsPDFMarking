@@ -13,9 +13,9 @@ import com.typesafe.scalalogging.LazyLogging
  */
 object MainSnippet extends App with LazyLogging {
 
-  val COLOR_TOLERANCE = 20
-
-  val RED = new Color(230, 117, 117)
+  val RED_RANGE = (190, 255)
+  val GREEN_RANGE = (0, 100)
+  val BLUE_RANGE = (0, 100)
 
   val PADDING_SNIPPET = 150
   val MINIMAL_SNIPPET_HEIGHT = 300
@@ -37,41 +37,34 @@ object MainSnippet extends App with LazyLogging {
 
   def createSnippet(directory: File): Unit = {
     logger.debug(s"Working directory: $directory")
-    var yellowCoordsSnippet = List.empty[Point2D]
     try {
       directory.listFiles(filterDirectories).par.foreach(permutationDir =>
         permutationDir.listFiles(new FilenameFilter {
           override def accept(dir: File, name: String): Boolean = name.endsWith(".png")
-        }).foreach(image => {
+        }).par.foreach(image => {
 
           val pngImage = ImageIO.read(image)
-          val name = image.getName
 
-          for (x <- 0 until pngImage.getWidth) {
-            for (y <- 0 until pngImage.getHeight) {
-              val color = new Color(pngImage.getRGB(x, y))
-              if (isSameColor(color, RED)) {
-                yellowCoordsSnippet ::= new Point2D.Double(x, y)
-              }
-            }
+          val redCoordsSnippets = for (x <- 0 until pngImage.getWidth; y <- 0 until pngImage.getHeight; if isColorInRange(new Color(pngImage.getRGB(x, y)))) yield {
+            new Point2D.Double(x, y)
           }
 
-          extractAndGenerateImage(image, yellowCoordsSnippet)
+          extractAndGenerateImage(image, redCoordsSnippets.toList)
 
         })
       )
-    }catch {
+    } catch {
       case e: Exception => logger.error("Error: ", e)
     }
 
   }
 
 
-  def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D]): Boolean = {
+  def extractAndGenerateImage(pngImage: File, redCoords: List[Point2D]): Boolean = {
 
-    if (yellowCoords.nonEmpty) {
+    if (redCoords.nonEmpty) {
       val inputImage = ImageIO.read(pngImage)
-      val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, inputImage.getHeight)
+      val (startY: Int, endY: Int) = extractImageBoundaries(redCoords, inputImage.getHeight)
       val snippetHeight = endY - startY
 
       val imageWidth = inputImage.getWidth()
@@ -79,7 +72,7 @@ object MainSnippet extends App with LazyLogging {
       val snippetImage = new BufferedImage(imageWidth, snippetHeight, BufferedImage.TYPE_INT_RGB)
       for (w <- 0 until imageWidth) {
         for (h <- 0 until snippetHeight) {
-          try{
+          try {
             snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
           } catch {
             case e: Exception => snippetImage.setRGB(w, h, Color.BLACK.getRGB)
@@ -103,8 +96,16 @@ object MainSnippet extends App with LazyLogging {
 
     val maxYellow = coordsYellow.maxBy(_.getY)
 
-    val startY = if(minYellow.getY - PADDING_SNIPPET>=0){minYellow.getY - PADDING_SNIPPET}else{0}
-    val endY = if(maxYellow.getY + PADDING_SNIPPET<=maxHeight){maxYellow.getY + PADDING_SNIPPET}else{maxHeight}
+    val startY = if (minYellow.getY - PADDING_SNIPPET >= 0) {
+      minYellow.getY - PADDING_SNIPPET
+    } else {
+      0
+    }
+    val endY = if (maxYellow.getY + PADDING_SNIPPET <= maxHeight) {
+      maxYellow.getY + PADDING_SNIPPET
+    } else {
+      maxHeight
+    }
 
     checkMinimalBoundaries(startY.toInt, endY.toInt, maxHeight)
   }
@@ -112,18 +113,18 @@ object MainSnippet extends App with LazyLogging {
   def checkMinimalBoundaries(startY: Int, endY: Int, maxImageHeight: Int): (Int, Int) = {
     var minY = startY
     var maxY = endY
-    val originalHeight = delta(maxY,minY)
-    if(originalHeight < MINIMAL_SNIPPET_HEIGHT) {
+    val originalHeight = delta(maxY, minY)
+    if (originalHeight < MINIMAL_SNIPPET_HEIGHT) {
 
-      val deltaHeight = (MINIMAL_SNIPPET_HEIGHT-originalHeight)/2
+      val deltaHeight = (MINIMAL_SNIPPET_HEIGHT - originalHeight) / 2
 
-      if(minY-deltaHeight >0){
+      if (minY - deltaHeight > 0) {
         minY = minY - deltaHeight
       } else {
         minY = 0
       }
 
-      if(maxY+deltaHeight < maxImageHeight){
+      if (maxY + deltaHeight < maxImageHeight) {
         maxY = maxY + deltaHeight
       } else {
         maxY = maxImageHeight
@@ -132,14 +133,17 @@ object MainSnippet extends App with LazyLogging {
     (minY, maxY)
   }
 
-  def delta(x: Int, y: Int) : Int= {
-    Math.abs(x-y)
+  def delta(x: Int, y: Int): Int = {
+    Math.abs(x - y)
   }
 
-  def isSameColor(color1: Color, color2: Color): Boolean = {
-    delta(color1.getRed, color2.getRed) <= COLOR_TOLERANCE &&
-      delta(color1.getGreen, color2.getGreen) <= COLOR_TOLERANCE &&
-      delta(color1.getBlue, color2.getBlue) <= COLOR_TOLERANCE
+  def isColorInRange(color1: Color): Boolean = {
+    color1.getRed <= RED_RANGE._2 &&
+      color1.getRed >= RED_RANGE._1 &&
+      color1.getGreen <= GREEN_RANGE._2 &&
+      color1.getGreen >= GREEN_RANGE._1 &&
+      color1.getBlue <= BLUE_RANGE._2 &&
+      color1.getBlue >= BLUE_RANGE._1
   }
 
 }
