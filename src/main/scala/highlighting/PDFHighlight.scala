@@ -12,7 +12,7 @@ import scala.collection.immutable.Iterable
 
 case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String, startSearchStringIndex: Int, startHighlightStringIndex: Int)
 
-object PDFTextExtractor {
+object PDFTextExtractor extends LazyLogging{
   def extract(pdfPath: String): String = {
     try {
       val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
@@ -28,7 +28,14 @@ object PDFTextExtractor {
 
       txt
     } catch {
-      case e: Exception => throw e
+      case e: Exception => {
+        logger.error("Error while extracting text from pdf " + pdfPath)
+        throw e
+      }
+      case e1: Error => {
+        logger.error("An error occurred while extracting text from pdf ", e1)
+        throw e1
+      }
     }
 	}
 }
@@ -169,38 +176,50 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 	 * taken from Mattia's code and adapted
 	 */
 	def highlight(): Array[Byte] = {
-		val file = pdfPath
-		val parser: PDFParser = new PDFParser(new FileInputStream(file))
-		parser.parse()
-		val pdDoc: PDDocument = new PDDocument(parser.getDocument)
+    try {
+      val file = pdfPath
 
-		val pdfHighlight: TextHighlight = new TextHighlight("UTF-8")
-		pdfHighlight.setLineSeparator(" ")
-		pdfHighlight.initialize(pdDoc)
+      val parser: PDFParser = new PDFParser(new FileInputStream(file))
+      parser.parse()
+      val pdDoc: PDDocument = new PDDocument(parser.getDocument)
 
-    instructions.foreach(i => {
+      val pdfHighlight: TextHighlight = new TextHighlight("UTF-8")
+      pdfHighlight.setLineSeparator(" ")
+      pdfHighlight.initialize(pdDoc)
 
-			val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))
+      instructions.foreach(i => {
 
-			pdfHighlight.highlight(patterns.head, patterns(1), i.color)
-		})
+        val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))
+
+        pdfHighlight.highlight(patterns.head, patterns(1), i.color)
+      })
 
 
-		val byteArrayOutputStream = new ByteArrayOutputStream()
-		try {
-			if (pdDoc != null) {
-				pdDoc.save(byteArrayOutputStream)
-				pdDoc.close()
-			}
-			if (parser.getDocument != null) {
-				parser.getDocument.close()
-			}
-		}
-		catch {
-			case e: Exception => {
-				e.printStackTrace
-			}
-		}
-		byteArrayOutputStream.toByteArray()
-	}
+      val byteArrayOutputStream = new ByteArrayOutputStream()
+      try {
+        if (pdDoc != null) {
+          pdDoc.save(byteArrayOutputStream)
+          pdDoc.close()
+        }
+        if (parser.getDocument != null) {
+          parser.getDocument.close()
+        }
+      }
+      catch {
+        case e: Exception => {
+          logger.error(s"Error while writing highlighted pdf for file $file", e)
+        }
+      }
+      byteArrayOutputStream.toByteArray()
+    }catch {
+      case e: Exception => {
+        logger.error("Cannot highlight pdf", e)
+        throw e
+      }
+      case e1: Error => {
+        logger.error("An error occurred while extracting text from pdf ", e1)
+        throw e1
+      }
+    }
+  }
 }

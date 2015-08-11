@@ -13,11 +13,11 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging{
 
-  val pdfsDir = "../pdfs/"
+  val pdfsDir = "../pdfs2/"
 	val snippetsDir = "../delta_snippets/"
 
-  val pathConvert = "/usr/bin/convert"
-  val pathGS = "/usr/bin/gs"
+  val pathConvert = "/opt/local/bin/convert"
+  val pathGS = "/opt/local/bin/gs"
 
   val startTime = new DateTime().getMillis
 
@@ -57,37 +57,39 @@ object MassPDFHighlighter extends App with LazyLogging{
 
   def highlightPDFFile = {
     new FolderPDFSource(pdfsDir).get().par.foreach(f => {
-      highlightFile(f)
-      logger.info(s"processed $f")
+      try {
+        highlightFile(f)
+        logger.info(s"processed $f")
+      } catch {
+        case e: Exception => logger.error(s"Cannot highlight file ${f.getName}", e)
+      }
     })
   }
 
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.par.foreach(method => {
-
-      println(s"Highlighting method $method")
+    terms.termNames.foreach(method => {
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
       val colorToStrings: Map[Color, List[String]] = Map(Color.RED -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms))
 
+        new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.foreach(
+          highlighter => {
+            logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1._2.instructions}")
 
-      new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
-        highlighter => {
-          logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1._2.instructions}")
+            val methodName = terms.getMethodFromSynonymOrMethod(highlighter._1._2.instructions.head.highlightString).get.name.replaceAll(" ", "_")
+            val pdfDirName = f.getName.substring(0, f.getName.length - 4)
 
-          val methodName = terms.getMethodFromSynonymOrMethod(highlighter._1._2.instructions.head.highlightString).get.name.replaceAll(" ", "_")
-          val pdfDirName = f.getName.substring(0,f.getName.length-4)
+            new File(snippetsDir + "/" + methodName + "/" + pdfDirName).mkdirs()
 
-          new File(snippetsDir+"/"+methodName+"/"+pdfDirName).mkdirs()
 
-          Some(new BufferedOutputStream(new FileOutputStream(snippetsDir+"/"+methodName+"/" +pdfDirName + "/" + highlighter._1._1 + "-D-" + highlighter._2 +"_"+ f.getName))).foreach(s => {
-            s.write(highlighter._1._2.highlight())
-            s.close()
+            Some(new BufferedOutputStream(new FileOutputStream(snippetsDir + "/" + methodName + "/" + pdfDirName + "/" + highlighter._1._1 + "-D-" + highlighter._2 + "_" + f.getName))).foreach(s => {
+              s.write(highlighter._1._2.highlight())
+              s.close()
+            })
           })
-        })
     })
   }
 
