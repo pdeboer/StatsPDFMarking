@@ -11,15 +11,15 @@ import scala.sys.process._
 /**
  * Created by pdeboer on 16/06/15.
  */
-object MassPDFHighlighter extends App with LazyLogging{
+object MassPDFHighlighter extends App with LazyLogging {
 
   val pdfsDir = "../pdfs2/"
 	val snippetsDir = "../snippets/"
 
-  val pathConvert = "/opt/local/bin/convert"
-  val pathGS = "/opt/local/bin/gs"
+	val pathConvert = "/opt/local/bin/convert"
+	val pathGS = "/opt/local/bin/gs"
 
-  val startTime = new DateTime().getMillis
+	val startTime = new DateTime().getMillis
 
   val filterDirectories = new FilenameFilter {
     override def accept(dir: File, name: String): Boolean = new File(dir,name).isDirectory
@@ -30,7 +30,7 @@ object MassPDFHighlighter extends App with LazyLogging{
 
   highlightPDFFile
 
-  logger.debug("Starting conversion PDF2PNG...")
+	logger.debug("Starting conversion PDF2PNG...")
 
   new File(snippetsDir).listFiles(filterDirectories).par.foreach(methodDirectory => {
     methodDirectory.listFiles(filterDirectories).par.foreach(pdfDirectory => {
@@ -42,7 +42,7 @@ object MassPDFHighlighter extends App with LazyLogging{
     })
   })
 
-  logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime)/1000} seconds")
+	logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
 
   def emptySnippetsDir(dir: File): Boolean = {
@@ -73,24 +73,20 @@ object MassPDFHighlighter extends App with LazyLogging{
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
       var assumptionsAndSynonyms : List[String] = List.empty[String]
 
-      methodAndSynonyms.assumptions.foreach(assumption => {
-        assumptionsAndSynonyms = assumptionsAndSynonyms ::: List[String](assumption.name) ::: assumption.synonym
-      })
+			methodAndSynonyms.assumptions.foreach(assumption => {
+				assumptionsAndSynonyms = assumptionsAndSynonyms ::: List[String](assumption.name) ::: assumption.synonym
+			})
 
-      val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms),
-        Color.green -> assumptionsAndSynonyms)
+			val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms),
+				Color.green -> assumptionsAndSynonyms)
 
-      new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
-        highlighter => {
-          logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
+			new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
+				highlighter => {
+					logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
           val methodName = terms.getMethodFromSynonymOrMethod(highlighter._1.instructions.head.highlightString).get.name.replaceAll(" ", "_")
-          if(methodName!="ANOVA")
-            println(methodName)
-
-          val pdfDirName = f.getName.substring(0,f.getName.length-4)
-          new File(snippetsDir+"/"+methodName+"/"+pdfDirName).mkdirs()
-          Some(new BufferedOutputStream(new FileOutputStream(snippetsDir+"/"+methodName+"/" +pdfDirName + "/" + highlighter._2 + "_" + f.getName))).foreach(s => {
+          new File(outputDir+"/"+methodName).mkdirs()
+          Some(new BufferedOutputStream(new FileOutputStream(outputDir+"/"+methodName+"/" + highlighter._2 + "_" + f.getName))).foreach(s => {
             s.write(highlighter._1.highlight())
             s.close()
           })

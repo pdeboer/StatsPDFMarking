@@ -12,7 +12,7 @@ import scala.io.Source
  * Created by pdeboer on 30/07/15.
  */
 object MethodOccurrences extends App {
-	val occurrences: List[MethodOccurrence] = new FileProcessMemoizer("sqldata").mem("method")(Source.fromFile("methodlist.csv").getLines().toList.par.map(l => {
+	val occurrences: List[MethodOccurrence] = new FileProcessMemoizer("sqldata").mem("method_everything")(Source.fromFile("methodlist.csv").getLines().toList.par.map(l => {
 		val terms = l.split(",").map(_.trim())
 		val papersWithTermVariations = terms.flatMap(t => {
 			val targetTerms = if (t.length < 7) addWordBoundaries(t) else List(t)
@@ -24,7 +24,6 @@ object MethodOccurrences extends App {
 
 		MethodOccurrence(l, termOccurrences.toList)
 	}).toList)
-
 
 	val methodNumbers = occurrences.map(mo => {
 		val yearly = (2009 to 2014).map(year => countOccurrencePerYear(mo, year)).toList

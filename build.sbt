@@ -9,6 +9,6 @@ libraryDependencies ++= Seq(
 	"com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
 	"org.scalikejdbc" %% "scalikejdbc" % "2.2.7",
 	"ch.qos.logback" % "logback-classic" % "1.1.3",
-	"mysql" % "mysql-connector-java" % "5.1.34",
+	"mysql" % "mysql-connector-java" % "5.1.36",
 	"pdeboer" %% "pplib" % "0.1-SNAPSHOT"
 )
