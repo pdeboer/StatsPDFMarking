@@ -12,7 +12,7 @@ import scala.collection.immutable.Iterable
 
 case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String, startSearchStringIndex: Int, startHighlightStringIndex: Int)
 
-object PDFTextExtractor {
+object PDFTextExtractor extends LazyLogging{
   def extract(pdfPath: String): String = {
     try {
       val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
@@ -28,7 +28,14 @@ object PDFTextExtractor {
 
       txt
     } catch {
-      case e: Exception => throw e
+      case e: Exception => {
+        logger.error(s"Cannot decode text for pdf $pdfPath", e)
+        throw e
+      }
+      case e1: Error => {
+        logger.error("An error occurred while extracting text from pdf ", e1)
+        throw e1
+      }
     }
 	}
 }
@@ -85,15 +92,32 @@ class PDFPermuter(pdfPath: String) {
   }
 
   def isHighlightAssumptionOutsideMethod(seqUniqueStrings: Seq[PDFHighlightInstruction],  methodIndex: Int, assumptionIndex: Int): Boolean = {
-    val startIndexMethod = seqUniqueStrings(methodIndex).startSearchStringIndex
-    val endIndexMethod = startIndexMethod + seqUniqueStrings(methodIndex).searchString.length
+    val startSearchIndexMethod = seqUniqueStrings(methodIndex).startSearchStringIndex
+    val endSearchIndexMethod = startSearchIndexMethod + seqUniqueStrings(methodIndex).searchString.length
 
-    val startIndexAssumption = seqUniqueStrings(assumptionIndex).startSearchStringIndex
-    val startIndexHighlightAssumption = startIndexAssumption +
-      escapeSearchString(seqUniqueStrings(assumptionIndex).highlightString).r.findFirstMatchIn(
-        txt.substring(startIndexAssumption, startIndexAssumption + seqUniqueStrings(assumptionIndex).searchString.length)).get.start
-    
-    startIndexHighlightAssumption < startIndexMethod | startIndexHighlightAssumption > endIndexMethod
+    val startHighlightIndexMethod = startSearchIndexMethod+seqUniqueStrings(methodIndex).startHighlightStringIndex
+    val endHighlightIndexMethod = endSearchIndexMethod + seqUniqueStrings(methodIndex).highlightString.length
+
+    val startSearchIndexAssumption = seqUniqueStrings(assumptionIndex).startSearchStringIndex
+    val endSearchIndexAssumption = startSearchIndexAssumption + seqUniqueStrings(assumptionIndex).searchString.length
+
+    val startHighlightIndexAssumption = startSearchIndexAssumption+seqUniqueStrings(assumptionIndex).startHighlightStringIndex
+    val endHighlightIndexAssumption = startHighlightIndexAssumption + seqUniqueStrings(assumptionIndex).highlightString.length
+
+    if(startSearchIndexMethod < startSearchIndexAssumption && endSearchIndexMethod < startSearchIndexAssumption && endSearchIndexAssumption> endSearchIndexMethod){
+      true
+    }
+    else if(startHighlightIndexMethod < startHighlightIndexAssumption && endHighlightIndexMethod < startHighlightIndexAssumption && endHighlightIndexAssumption> endHighlightIndexMethod){
+      true
+    }
+    else if(startSearchIndexAssumption < startSearchIndexMethod && endSearchIndexAssumption < startSearchIndexMethod && endSearchIndexAssumption < endSearchIndexMethod){
+      true
+    }else if(startHighlightIndexAssumption < startHighlightIndexMethod && endHighlightIndexAssumption < startHighlightIndexMethod && endHighlightIndexAssumption < endHighlightIndexMethod){
+      true
+    }
+    else {
+      false
+    }
   }
 
   def escapeSearchString(searchString: String): String = {
@@ -105,7 +129,7 @@ class PDFPermuter(pdfPath: String) {
 			case (color, patterns) => patterns.map(pattern => {
 
         val allIndicesOfThesePatterns : Iterator[Int] =
-          if(pattern.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH){
+          if(pattern.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || pattern.contains(" ")){
             ("(?i)(\\b"+pattern+"\\b)").r.findAllMatchIn(txt).map(_.start)
           } else {
             escapeSearchString(pattern).r.findAllMatchIn(txt).map(_.start)
@@ -175,7 +199,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 		}
 		catch {
 			case e: Exception => {
-				e.printStackTrace
+				logger.error(s"Cannot store highlighted version of pdf: $file.")
 			}
 		}
 		byteArrayOutputStream.toByteArray()

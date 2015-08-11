@@ -1,9 +1,10 @@
 import java.awt.Color
-import java.io.{BufferedOutputStream, File, FileOutputStream, FilenameFilter}
+import java.io._
 
 import com.typesafe.scalalogging.LazyLogging
 import highlighting.{HighlightTermloader, PDFPermuter}
 import input.folder.FolderPDFSource
+import org.codehaus.plexus.util.FileUtils
 import org.joda.time.DateTime
 
 import scala.sys.process._
@@ -13,11 +14,11 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs2/"
+  val pdfsDir = "../pdfs/"
 	val snippetsDir = "../snippets/"
 
-	val pathConvert = "/opt/local/bin/convert"
-	val pathGS = "/opt/local/bin/gs"
+	val pathConvert = "/usr/bin/convert"
+	val pathGS = "/usr/bin/gs"
 
 	val startTime = new DateTime().getMillis
 
@@ -32,12 +33,14 @@ object MassPDFHighlighter extends App with LazyLogging {
 
 	logger.debug("Starting conversion PDF2PNG...")
 
-  new File(snippetsDir).listFiles(filterDirectories).par.foreach(methodDirectory => {
-    methodDirectory.listFiles(filterDirectories).par.foreach(pdfDirectory => {
-      pdfDirectory.listFiles(new FilenameFilter {
-        override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
-      }).par.foreach(pdfFile => {
-        convertPDFtoPNG(pdfFile)
+  new File(snippetsDir).listFiles(filterDirectories).par.foreach(yearDir => {
+    yearDir.listFiles(filterDirectories).par.foreach(methodDir => {
+      methodDir.listFiles(filterDirectories).par.foreach(pdfDir => {
+        pdfDir.listFiles(new FilenameFilter {
+          override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
+        }).par.foreach(pdfFile =>
+          convertPDFtoPNG(pdfFile)
+        )
       })
     })
   })
@@ -79,47 +82,60 @@ object MassPDFHighlighter extends App with LazyLogging {
 
 			val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms),
 				Color.green -> assumptionsAndSynonyms)
+      try {
+        new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
+          highlighter => {
+            logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
-			new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
-				highlighter => {
-					logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
+            val methodName = terms.getMethodFromSynonymOrMethod(highlighter._1.instructions.head.highlightString).get.name.replaceAll(" ", "_")
+            val year = f.getName.substring(0, f.getName.indexOf("_"))
+            val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
 
-          val methodName = terms.getMethodFromSynonymOrMethod(highlighter._1.instructions.head.highlightString).get.name.replaceAll(" ", "_")
-          new File(outputDir+"/"+methodName).mkdirs()
-          Some(new BufferedOutputStream(new FileOutputStream(outputDir+"/"+methodName+"/" + highlighter._2 + "_" + f.getName))).foreach(s => {
-            s.write(highlighter._1.highlight())
-            s.close()
+            val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
+            new File(pathToSavePDFs).mkdirs()
+
+            Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + ".pdf"))).foreach(s => {
+              s.write(highlighter._1.highlight())
+              s.close()
+            })
           })
-        })
 
+      } catch {
+        case e: Exception => {
+          logger.error(s"Error while higlighting permutations for file $f", e)
+          new File("../errors_whilePermuting").mkdir()
+          val pdf = new File("../errors_whilePermuting/"+f.getName)
+          try{
+            FileUtils.copyFile(f, pdf)
+          }catch {
+            case e: Exception => logger.error(s"Cannot copy file $f to ../errors_whilePermuting/ directory!", e)
+          }
+        }
+      }
     })
-
-
-
   }
 
   def convertPDFtoPNG(pdfFile: File) = {
     val pathPDFFile = pdfFile.getPath
-    val pathConvertedPNGFile: String = createSubDirForPNGs(pdfFile)
+    val pathConvertedPNGFile: String = pdfFile.getParentFile.getPath+"/"+createPNGFileName(pdfFile.getName)
 
     val convertCommandWithParams = "nice -n 5 " + pathConvert + " -density 200 -append "
 
     try {
-
       logger.error((convertCommandWithParams + pathPDFFile.replaceAll(" ", "\\ ") + " " + pathConvertedPNGFile.replaceAll(" ", "\\ ")).lineStream_!.mkString("\n"))
-
       logger.debug(s"File: ${pdfFile.getName} successfully converted to PNG")
     } catch {
-      case e: Exception => logger.error(s"Cannot convert ${pdfFile.getName} to PNG.",e)
+      case e: Exception => {
+        logger.error(s"Cannot convert ${pdfFile.getName} to PNG.",e)
+        new File("../errors_convertPDFtoPNG").mkdir()
+        val pdf = new File("../errors_convertPDFtoPNG/"+pdfFile.getName)
+        try{
+          FileUtils.copyFile(pdfFile, pdf)
+        }catch {
+          case e: Exception => logger.error(s"Cannot copy file $pdfFile to ../errors_convertToPNG/ directory!", e)
+        }
+      }
     }
-  }
-
-  def createSubDirForPNGs(pdfFile: File): String = {
-    val subDirPNGFiles = removePDFExtension(pdfFile.getPath)
-    val pathConvertedPNGFile = subDirPNGFiles + "/" + createPNGFileName(pdfFile.getName)
-
-    new File(subDirPNGFiles).mkdirs()
-    pathConvertedPNGFile
   }
 
   def createPNGFileName(filename: String) : String = {
