@@ -14,11 +14,10 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs/"
+  val pdfsDir = "../pdfs2/"
 	val snippetsDir = "../snippets/"
 
-	val pathConvert = "/usr/bin/convert"
-	val pathGS = "/usr/bin/gs"
+	val pathConvert = "/opt/local/bin/convert"
 
 	val startTime = new DateTime().getMillis
 
@@ -27,23 +26,27 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   new File(snippetsDir).mkdir()
-	emptySnippetsDir(new File(snippetsDir))
+
+  emptySnippetsDir(new File(snippetsDir))
+
 
   highlightPDFFile
 
 	logger.debug("Starting conversion PDF2PNG...")
 
-  new File(snippetsDir).listFiles(filterDirectories).par.foreach(yearDir => {
-    yearDir.listFiles(filterDirectories).par.foreach(methodDir => {
-      methodDir.listFiles(filterDirectories).par.foreach(pdfDir => {
+  val allPdfFiles :List[File] = new File(snippetsDir).listFiles(filterDirectories).par.flatMap(yearDir => {
+    yearDir.listFiles(filterDirectories).par.flatMap(methodDir => {
+      methodDir.listFiles(filterDirectories).par.flatMap(pdfDir => {
         pdfDir.listFiles(new FilenameFilter {
           override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
-        }).par.foreach(pdfFile =>
-          convertPDFtoPNG(pdfFile)
-        )
-      })
-    })
-  })
+        }).par.map(pdfFile =>
+          pdfFile
+        ).toList
+      }).toList
+    }).toList
+  }).toList
+
+  allPdfFiles.par.foreach(convertPDFtoPNG(_))
 
 	logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
@@ -62,7 +65,6 @@ object MassPDFHighlighter extends App with LazyLogging {
     new FolderPDFSource(pdfsDir).get().par.foreach(f => {
       highlightFile(f)
       logger.info(s"processed $f")
-
     })
   }
 
@@ -74,10 +76,8 @@ object MassPDFHighlighter extends App with LazyLogging {
       println(s"Highlighting method $method")
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
-      var assumptionsAndSynonyms : List[String] = List.empty[String]
-
-			methodAndSynonyms.assumptions.foreach(assumption => {
-				assumptionsAndSynonyms = assumptionsAndSynonyms ::: List[String](assumption.name) ::: assumption.synonym
+      val assumptionsAndSynonyms : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
+				List[String](assumption.name) ::: assumption.synonym
 			})
 
 			val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms),
@@ -121,12 +121,8 @@ object MassPDFHighlighter extends App with LazyLogging {
 
     val convertCommandWithParams = "nice -n 5 " + pathConvert + " -density 200 -append "
 
-    try {
-      logger.error((convertCommandWithParams + pathPDFFile.replaceAll(" ", "\\ ") + " " + pathConvertedPNGFile.replaceAll(" ", "\\ ")).lineStream_!.mkString("\n"))
-      logger.debug(s"File: ${pdfFile.getName} successfully converted to PNG")
-    } catch {
-      case e: Exception => {
-        logger.error(s"Cannot convert ${pdfFile.getName} to PNG.",e)
+    if((convertCommandWithParams + pathPDFFile.replaceAll(" ", "\\ ") + " " + pathConvertedPNGFile.replaceAll(" ", "\\ ")).! != 0){
+        logger.error(s"File: ${pdfFile.getName} cannot be converted to PNG")
         new File("../errors_convertPDFtoPNG").mkdir()
         val pdf = new File("../errors_convertPDFtoPNG/"+pdfFile.getName)
         try{
@@ -134,7 +130,8 @@ object MassPDFHighlighter extends App with LazyLogging {
         }catch {
           case e: Exception => logger.error(s"Cannot copy file $pdfFile to ../errors_convertToPNG/ directory!", e)
         }
-      }
+    }else {
+      logger.debug(s"File: ${pdfFile.getName} successfully converted to PNG")
     }
   }
 
