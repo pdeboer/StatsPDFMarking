@@ -113,7 +113,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   }
 
   def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}[\\s]*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r\\.]{0,3}[\\s]*").mkString("")
     if(searchString.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
@@ -145,7 +145,6 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
               null
             }
           }
-
         })
 
       })
@@ -153,8 +152,8 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 	}
 
   def isSmallestMatch(it: Int, indexPosition: Int, inputStringLength: Int): Int = {
-    if(escapeSearchString(txt.substring(Math.max(0, indexPosition - it), Math.min(txt.length, indexPosition + inputStringLength + it)))
-      .r.findAllMatchIn(txt).length == 1){
+    val subTxt = txt.substring(Math.max(0, indexPosition - it), Math.min(txt.length, indexPosition + inputStringLength + it))
+    if(escapeSearchString(subTxt).r.findAllMatchIn(txt).length == 1){
       it
     }else {
       isSmallestMatch(it+1, indexPosition, inputStringLength)
@@ -162,9 +161,10 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   }
 
   def extractSmallestBoundaryForSingleMatch(inputString: String, indexPosition: Int): (Int, Int) = {
-    val it = isSmallestMatch(0, indexPosition, inputString.length)
 
+    val it = isSmallestMatch(0, indexPosition, inputString.length)
     (Math.max(0, indexPosition - it), Math.min(txt.length, indexPosition + inputString.length + it))
+
   }
 }
 
@@ -176,7 +176,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 
 
   def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}[\\s]*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r\\.]{0,3}[\\s]*").mkString("")
     if(searchString.length <= 5 || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
