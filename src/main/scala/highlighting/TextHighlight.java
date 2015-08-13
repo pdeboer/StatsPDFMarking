@@ -196,6 +196,7 @@ public class TextHighlight extends PDFTextStripper {
 				for (Match markingMatch : markingMatches) {
 					markupMatch(color, contentStream, markingMatch);
                     found = true;
+                    break;
 				}
 
 			}
@@ -220,7 +221,7 @@ public class TextHighlight extends PDFTextStripper {
                 resources.setGraphicsStates(graphicsStateDictionary);
 
                 String pageText = textCache.getText(pageIndex + 1);
-                String lastCharsOnPage = pageText.substring(Math.max(pageText.length() - searchText.toString().replaceAll("\\Q[\\-\\n\\r\\.]{0,3}[\\s]*\\E", "").length(), 0), pageText.length());
+                String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length() - searchText.toString().replaceAll("\\Q[\\-\\n\\r\\.]{0,3}[\\s]*\\E", "").length()), pageText.length());
 
                 List<Match> matches = textCache.match(pageIndex + 1, Pattern.compile("\\Q" + lastCharsOnPage + "\\E"));
 
@@ -228,9 +229,9 @@ public class TextHighlight extends PDFTextStripper {
                     List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
                     for (Match markingMatch : markingMatches) {
                         markupMatch(color, contentStream, markingMatch);
+                        break;
                     }
                 }
-
                 contentStream.close();
             }
         }

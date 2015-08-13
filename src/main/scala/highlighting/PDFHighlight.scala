@@ -60,7 +60,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
         cleanUniquePairsCandidate(uniqueStrings.toSeq, i, j)
       }
 
-    uniquePairs.filter(f=> f.isDefined).map(m => m.get).toSeq.toList
+    uniquePairs.filter(f=> f.isDefined).map(m => m.get).toList
   }
 
   def cleanUniquePairsCandidate(seqUniqueStrings: Seq[PDFHighlightInstruction], methodIndex: Int, assumptionIndex: Int): Option[(PDFHighlightInstruction, PDFHighlightInstruction)] = {

@@ -44,7 +44,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     }).toList
   }).toList
 
-  //allPdfFiles.par.foreach(convertPDFtoPNG(_))
+  allPdfFiles.par.foreach(convertPDFtoPNG(_))
 
 	logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
