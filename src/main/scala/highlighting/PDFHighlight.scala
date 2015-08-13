@@ -113,7 +113,7 @@ class PDFPermuter(pdfPath: String) {
   }
 
   def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}[\\s]*").mkString("")
+    val search = "[\\-\\n\\r]{0,3}[\\s]*"+searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}[\\s]*").mkString("")
     if(searchString.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
