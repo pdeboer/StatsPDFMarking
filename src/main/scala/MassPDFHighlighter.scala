@@ -39,9 +39,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       methodDir.listFiles(filterDirectories).par.flatMap(pdfDir => {
         pdfDir.listFiles(new FilenameFilter {
           override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
-        }).par.map(pdfFile =>
-          pdfFile
-        ).toList
+        }).map(file => file)
       }).toList
     }).toList
   }).toList
@@ -71,7 +69,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.foreach(method => {
+    terms.termNames.par.foreach(method => {
 
       println(s"Highlighting method $method")
 

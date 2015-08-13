@@ -232,19 +232,25 @@ public class TextHighlight extends PDFTextStripper {
 	 * The following methods are overwritten from the PDTextStripper
 	 */
 	public void initialize(final PDDocument pdf) throws IOException {
-		resetEngine();
-		document = pdf;
-		textCache = new TextCache();
+        try {
+            resetEngine();
+            document = pdf;
+            textCache = new TextCache();
 
-		if (getAddMoreFormatting()) {
-			setParagraphEnd(getLineSeparator());
-			setPageStart(getLineSeparator());
-			setArticleStart(getLineSeparator());
-			setArticleEnd(getLineSeparator());
-		}
-		startDocument(pdf);
-		processPages(pdf.getDocumentCatalog().getAllPages());
-		endDocument(pdf);
+            if (getAddMoreFormatting()) {
+                setParagraphEnd(getLineSeparator());
+                setPageStart(getLineSeparator());
+                setArticleStart(getLineSeparator());
+                setArticleEnd(getLineSeparator());
+            }
+            startDocument(pdf);
+            processPages(pdf.getDocumentCatalog().getAllPages());
+            endDocument(pdf);
+        }catch (Exception e) {
+            e.printStackTrace();
+        }catch(Error e1) {
+            e1.printStackTrace();
+        }
 	}
 
 	/**
