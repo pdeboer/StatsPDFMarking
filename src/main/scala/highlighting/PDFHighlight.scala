@@ -40,7 +40,7 @@ object PDFTextExtractor extends LazyLogging{
 	}
 }
 
-class PDFPermuter(pdfPath: String) {
+class PDFPermuter(pdfPath: String) extends LazyLogging {
 
   val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = 5
 
@@ -113,7 +113,7 @@ class PDFPermuter(pdfPath: String) {
   }
 
   def escapeSearchString(searchString: String): String = {
-    val search = "[\\-\\n\\r]{0,3}[\\s]*"+searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}[\\s]*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}[\\s]*").mkString("")
     if(searchString.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
@@ -135,10 +135,17 @@ class PDFPermuter(pdfPath: String) {
 				substrings.map(substring => {
 
           //TODO: problema se serachStringMatch contiene due volte l'assumption che é da evidenziare
-          val searchStringMatch = escapeSearchString(substring).r.findAllMatchIn(txt).next()
-          val start = escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
+          try {
+            val searchStringMatch = escapeSearchString(substring).r.findFirstMatchIn(txt).get
+            val start = escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
+            PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start)
+          }catch {
+            case e: Exception => {
+              logger.error(s"Cannot find term $substring in pdf $pdfPath",e)
+              null
+            }
+          }
 
-          PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start)
         })
 
       })
@@ -169,11 +176,10 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 
 
   def escapeSearchString(searchString: String): String = {
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}[\\s]*").mkString("")
     if(searchString.length <= 5 || searchString.contains(" ")){
-      val search = searchString.map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}[\\s]*").mkString("")
       "(?i)(\\b"+search+"\\b)"
     } else {
-      val search = searchString.map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}[\\s]*").mkString("")
       "(?i)("+search+")"
     }
   }
