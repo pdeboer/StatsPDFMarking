@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
 public class TextHighlight extends PDFTextStripper {
 
 	public TextCache textCache;
-	private float verticalTolerance = 0;
+	private float verticalTolerance = 5;
 	private float heightModifier = (float) 1.250;
 	private boolean inParagraph;
 
@@ -268,7 +268,7 @@ public class TextHighlight extends PDFTextStripper {
                     List<Match> matches = textCache.match(pageIndex + 1, searchText);
 
                     for (Match searchMatch : matches) {
-                        List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile(".*"));
+                        List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile(".+"));
                         for (Match markingMatch : markingMatches) {
                             markupMatch(color, contentStream, markingMatch);
                             found2 = true;
@@ -293,8 +293,9 @@ public class TextHighlight extends PDFTextStripper {
 		if (textBoundingBoxes.size() > 0) {
 			contentStream.appendRawCommands("/highlights gs\n");
 			contentStream.setNonStrokingColor(color);
-
-			contentStream.fillRect(textBoundingBoxes.get(0).getLowerLeftX(), textBoundingBoxes.get(0).getLowerLeftY(), textBoundingBoxes.get(0).getUpperRightX() - textBoundingBoxes.get(0).getLowerLeftX(), 10);
+            for(int i=0; i < textBoundingBoxes.size(); i++){
+                contentStream.fillRect(textBoundingBoxes.get(i).getLowerLeftX(), textBoundingBoxes.get(i).getLowerLeftY(), Math.max(textBoundingBoxes.get(i).getUpperRightX() - textBoundingBoxes.get(i).getLowerLeftX(), 10), 10);
+            }
 
 		}
 	}
