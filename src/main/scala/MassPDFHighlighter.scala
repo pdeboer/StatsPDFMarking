@@ -29,7 +29,6 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   emptySnippetsDir(new File(snippetsDir))
 
-
   highlightPDFFile
 
 	logger.debug("Starting conversion PDF2PNG...")
@@ -44,7 +43,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     }).toList
   }).toList
 
-  allPdfFiles.par.foreach(convertPDFtoPNG(_))
+  allPdfFiles.foreach(convertPDFtoPNG(_))
 
 	logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
@@ -60,7 +59,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def highlightPDFFile = {
-    new FolderPDFSource(pdfsDir).get().par.foreach(f => {
+    new FolderPDFSource(pdfsDir).get().foreach(f => {
       highlightFile(f)
       logger.info(s"processed $f")
     })
@@ -69,7 +68,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.par.foreach(method => {
+    terms.termNames.foreach(method => {
 
       println(s"Highlighting method $method")
 

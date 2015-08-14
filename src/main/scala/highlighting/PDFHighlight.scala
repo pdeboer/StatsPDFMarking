@@ -23,7 +23,7 @@ object PDFTextExtractor extends LazyLogging{
       pdfHighlight.setLineSeparator(" ")
       pdfHighlight.initialize(pdDoc)
 
-      val txt = (0 to pdDoc.getNumberOfPages).map(pdfHighlight.textCache.getText(_)).mkString("\n")
+      val txt = (0 to pdDoc.getNumberOfPages).map(pdfHighlight.textCache.getText(_)).mkString("")
       pdDoc.close()
 
       txt
@@ -137,11 +137,16 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
           //TODO: problema se serachStringMatch contiene due volte l'assumption che é da evidenziare
           try {
             val searchStringMatch = escapeSearchString(substring).r.findFirstMatchIn(txt).get
-            val start = escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
+            val start = if (escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
+              escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
+            } else {
+              0
+            }
             PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start)
           }catch {
             case e: Exception => {
-              logger.error(s"Cannot find term $substring in pdf $pdfPath",e)
+              logger.error("Cannot find term " + substring + " in pdf "+ pdfPath,e)
+              //TODO: si arriva qui solo se la substring é contenuta in diverse pagine?
               null
             }
           }
