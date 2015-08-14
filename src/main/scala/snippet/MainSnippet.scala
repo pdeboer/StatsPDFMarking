@@ -13,13 +13,12 @@ import com.typesafe.scalalogging.LazyLogging
  */
 object MainSnippet extends App with LazyLogging {
 
-  val YELLOW_RANGES= List[(Int, Int)]((200, 255), (200, 255), (100, 150))
-  val GREEN_RANGES= List[(Int, Int)]((100, 150), (200, 255), (100, 150))
+  val RED_RANGES= List[(Int, Int)]((190, 255), (0, 100), (0, 100))
 
   val PADDING_SNIPPET = 200
   val MINIMAL_SNIPPET_HEIGHT = 300
 
-  val SNIPPET_DIR = "../snippets/"
+  val SNIPPET_DIR = "../delta_snippets/"
 
   val filterDirectories = new FilenameFilter {
     override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
@@ -51,21 +50,11 @@ object MainSnippet extends App with LazyLogging {
       val width = inputImage.getWidth
       val height = inputImage.getHeight
 
-      var yellowCoords = List.empty[Point2D]
-      var greenCoords = List.empty[Point2D]
-
-      for (x <- 0 until width) {
-        for (y <- 0 until height) {
-          val color = new Color(inputImage.getRGB(x, y))
-          if (isSameColor(color, YELLOW_RANGES)) {
-            yellowCoords ::= new Point2D.Double(x, y)
-          } else if (isSameColor(color, GREEN_RANGES)) {
-            greenCoords ::= new Point2D.Double(x, y)
-          }
-        }
+      val redCoords = for (x <- 0 until width; y <- 0 until height; if(isSameColor(new Color(inputImage.getRGB(x, y)), RED_RANGES)))  yield {
+        new Point2D.Double(x, y)
       }
 
-      extractAndGenerateImage(pngImage, yellowCoords, greenCoords)
+      extractAndGenerateImage(pngImage, redCoords.toList)
       
     }catch {
       case e: Exception => logger.error("Error: ", e)
@@ -73,11 +62,11 @@ object MainSnippet extends App with LazyLogging {
 
   }
 
-  def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D], greenCoords: List[Point2D]): Boolean = {
+  def extractAndGenerateImage(pngImage: File, redCoords: List[Point2D]): Boolean = {
 
-    if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
+    if (redCoords.nonEmpty) {
       val inputImage = ImageIO.read(pngImage)
-      val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, greenCoords, inputImage.getHeight)
+      val (startY: Int, endY: Int) = extractImageBoundaries(redCoords, inputImage.getHeight)
       val snippetHeight = endY - startY
 
       val imageWidth = inputImage.getWidth()
@@ -88,16 +77,11 @@ object MainSnippet extends App with LazyLogging {
           snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
         }
       }
-      val methodOnTop: Boolean = if(yellowCoords.minBy(_.getY).getY < greenCoords.minBy(_.getY).getY){ true } else {false}
-      var suffix = "methodOnTop"
-      if(!methodOnTop){
-        suffix = "prerequisiteOnTop"
-      }
 
       val storeSnippetPath = pngImage.getParentFile.getPath
 
-      ImageIO.write(snippetImage, "png", new File(storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"))
-      logger.debug(s"Snippet successfully written: ${storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"}")
+      ImageIO.write(snippetImage, "png", new File(storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+".png"))
+      logger.debug(s"Snippet successfully written: ${storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+".png"}")
       true
     } else {
       logger.error(s"Cannot create snippet. No highlight found in file: ${pngImage.getName}")
@@ -105,15 +89,21 @@ object MainSnippet extends App with LazyLogging {
     }
   }
 
-  def extractImageBoundaries(coordsYellow: List[Point2D], coordsGreen: List[Point2D], maxHeight: Int): (Int, Int) = {
-    val minGreen = coordsGreen.minBy(_.getY)
+  def extractImageBoundaries(coordsYellow: List[Point2D], maxHeight: Int): (Int, Int) = {
     val minYellow = coordsYellow.minBy(_.getY)
 
-    val maxGreen = coordsGreen.maxBy(_.getY)
     val maxYellow = coordsYellow.maxBy(_.getY)
 
-    val startY = Math.min(minYellow.getY,minGreen.getY) - PADDING_SNIPPET
-    val endY = Math.max(maxYellow.getY, maxGreen.getY) + PADDING_SNIPPET
+    val startY = if (minYellow.getY - PADDING_SNIPPET >= 0) {
+      minYellow.getY - PADDING_SNIPPET
+    } else {
+      0
+    }
+    val endY = if (maxYellow.getY + PADDING_SNIPPET <= maxHeight) {
+      maxYellow.getY + PADDING_SNIPPET
+    } else {
+      maxHeight
+    }
 
     checkMinimalBoundaries(startY.toInt, endY.toInt, maxHeight)
   }
