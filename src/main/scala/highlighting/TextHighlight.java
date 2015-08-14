@@ -280,9 +280,6 @@ public class TextHighlight extends PDFTextStripper {
                     }
                     contentStream.close();
                 }
-                if(!found2){
-                    System.out.println("ERROR: Cannot find Search Text " + searchText.toString().replaceAll("\\Q[\\-\\n\\r\\.]{0,3}[\\s]*\\E", "") + " and markingPattern " + (markingPattern.toString().substring(0, markingPattern.toString().length()-3-(25*11))+"\\b)").replaceAll("\\Q[\\-\\n\\r\\.]{0,3}[\\s]*\\E", ""));
-                }
             }
         }
     }
