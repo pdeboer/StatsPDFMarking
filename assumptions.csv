@@ -1,10 +1,12 @@
-Independen,Independence of Error
-Homogeneity of variances,variance,same variance,Homogeneity,equal variance,sphericity,homoscedasticity,Constant variance
-Normal,gaussian,bell curve,normal error,Multivariate normality
+Independen,randomly
+Homogeneity of variance,same variance,equal variance,sphericity,homoscedasticity,Constant variance
+homogeneity of regression slopes
+Normal,gaussian,bell,normal error,Multivariate normality
 interval,ratio
 Homoscedasticity
-no outliers,outliers
+outliers
 ordinal
-no multicollinearity
+multicollinearity
 linearity
 linearity of independent variable,linearity of log odds
+categorical,dicotomous

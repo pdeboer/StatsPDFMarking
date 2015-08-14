@@ -43,7 +43,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     }).toList
   }).toList
 
-  allPdfFiles.foreach(convertPDFtoPNG(_))
+  allPdfFiles.par.foreach(convertPDFtoPNG(_))
 
 	logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
@@ -59,7 +59,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def highlightPDFFile = {
-    new FolderPDFSource(pdfsDir).get().foreach(f => {
+    new FolderPDFSource(pdfsDir).get().par.foreach(f => {
       highlightFile(f)
       logger.info(s"processed $f")
     })
@@ -68,9 +68,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.foreach(method => {
-
-      println(s"Highlighting method $method")
+    terms.termNames.par.foreach(method => {
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
       val assumptionsAndSynonyms : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
@@ -80,7 +78,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 			val colorToStrings: Map[Color, List[String]] = Map(Color.yellow -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms),
 				Color.green -> assumptionsAndSynonyms)
       try {
-        new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.foreach(
+        new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
           highlighter => {
             logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 

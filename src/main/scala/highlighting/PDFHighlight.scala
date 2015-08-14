@@ -134,7 +134,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 				val substrings = substringIndices.map(i => txt.substring(i._1, i._2))
 				substrings.map(substring => {
 
-          //TODO: problema se serachStringMatch contiene due volte l'assumption che é da evidenziare
+          //TODO: What if the searchStringMatch contains two times the word to highlight? which one is to highlight?
           try {
             val searchStringMatch = escapeSearchString(substring).r.findFirstMatchIn(txt).get
             val start = if (escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
@@ -146,7 +146,6 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
           }catch {
             case e: Exception => {
               logger.error("Cannot find term " + substring + " in pdf "+ pdfPath,e)
-              //TODO: si arriva qui solo se la substring é contenuta in diverse pagine?
               null
             }
           }
