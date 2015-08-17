@@ -46,21 +46,18 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 
 	lazy val txt = PDFTextExtractor.extract(pdfPath)
 
-	def permuteForEachCombinationOf(permutationDefinition: Map[Color, List[String]]): Iterable[PDFHighlight] = {
+  def findAllMethodsInPaper(permutationDefinition: Map[Color, List[String]]): List[PDFHighlightInstruction] = {
+    val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
+    uniqueStrings.toList
+  }
 
-		val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
-		val uniquePairs = getUniquePairsForSearchTerms(uniqueStrings)
-
-		uniquePairs.map(p => new PDFHighlight(pdfPath, List(p._1, p._2)))
-	}
-
-  def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[(PDFHighlightInstruction,PDFHighlightInstruction)] = {
+  def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[PDFHighlight] = {
     val uniquePairs : IndexedSeq[Option[(PDFHighlightInstruction,PDFHighlightInstruction)]] =
       for (i <- 0 until uniqueStrings.toSeq.length; j <- i until uniqueStrings.toSeq.length; if(isUniquePairValidCandidate(uniqueStrings.toSeq(i), uniqueStrings.toSeq(j)))) yield {
         cleanUniquePairsCandidate(uniqueStrings.toSeq, i, j)
       }
 
-    uniquePairs.filter(f=> f.isDefined).map(m => m.get).toList
+    uniquePairs.filter(f=> f.isDefined).map(p => new PDFHighlight(pdfPath, List(p.get._1, p.get._2))).toList
   }
 
   def cleanUniquePairsCandidate(seqUniqueStrings: Seq[PDFHighlightInstruction], methodIndex: Int, assumptionIndex: Int): Option[(PDFHighlightInstruction, PDFHighlightInstruction)] = {
@@ -145,7 +142,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
             PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start)
           }catch {
             case e: Exception => {
-              logger.error("Cannot find term " + substring + " in pdf "+ pdfPath,e)
+              logger.error("Cannot find term " + pattern + " in pdf "+ pdfPath,e)
               null
             }
           }
