@@ -41,8 +41,8 @@ object BMCDAL {
 			.map(r => DBPaperBody(r.long(1))(r.string(2), r.string(3), r.int(4))).list().apply()
 	}
 
-	case class DBPaper(id: Long, filename: String, year: Int)
-
-	case class DBPaperBody(id: Long)(val body: String, val url: String, val year: Int) extends Serializable
-
 }
+
+case class DBPaper(id: Long, filename: String, year: Int)
+
+case class DBPaperBody(id: Long)(val body: String, val url: String, val year: Int) extends Serializable
