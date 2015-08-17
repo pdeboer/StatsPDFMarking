@@ -4,7 +4,6 @@ import java.io.File
 
 import ch.uzh.ifi.pdeboer.pplib.util.U
 import highlighting.HighlightTermloader
-import input.bmc.BMCDAL.DBPaper
 
 /**
  * Created by pdeboer on 17/06/15.
