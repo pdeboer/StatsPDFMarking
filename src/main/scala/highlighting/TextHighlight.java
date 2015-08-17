@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
 public class TextHighlight extends PDFTextStripper {
 
 	public TextCache textCache;
-	private float verticalTolerance = 0;
+	private float verticalTolerance = 5;
 	private float heightModifier = (float) 1.250;
 	private boolean inParagraph;
 
@@ -154,7 +154,6 @@ public class TextHighlight extends PDFTextStripper {
 
 	public void highlight(final String pattern)
 			throws IOException {
-		//this.highlight(Pattern.compile("\\b"+pattern+"\\b", Pattern.CASE_INSENSITIVE));
 		Pattern p = Pattern.compile("\\b(" + pattern + ")\\b", Pattern.CASE_INSENSITIVE);
 		this.highlight(p);
 	}
@@ -173,6 +172,7 @@ public class TextHighlight extends PDFTextStripper {
 		final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
 
 
+        boolean found = false;
 		for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
 				&& pageIndex < pages.size(); pageIndex++) {
 			final PDPage page = pages.get(pageIndex);
@@ -189,18 +189,100 @@ public class TextHighlight extends PDFTextStripper {
 			graphicsStateDictionary.put("highlights", graphicsState);
 			resources.setGraphicsStates(graphicsStateDictionary);
 
-			final List<Match> matches = textCache.match(pageIndex + 1, searchText);
+			List<Match> matches = textCache.match(pageIndex + 1, searchText);
 
-			for (final Match searchMatch : matches) {
+			for (Match searchMatch : matches) {
 				List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
 				for (Match markingMatch : markingMatches) {
 					markupMatch(color, contentStream, markingMatch);
+                    found = true;
+                    break;
 				}
-
+                if(found){
+                    break;
+                }
 			}
 			contentStream.close();
 		}
-	}
+        // Try to search in the last sentence of each page
+        if(!found){
+            System.out.println("The word may be in the last sentence of the page at this point");
+
+            boolean found1 = false;
+            for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
+                    && pageIndex < pages.size(); pageIndex++) {
+                final PDPage page = pages.get(pageIndex);
+                PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
+
+                PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
+                graphicsState.setNonStrokingAlphaConstant(0.5f);
+                PDResources resources = page.findResources();
+                Map graphicsStateDictionary = resources.getGraphicsStates();
+                if (graphicsStateDictionary == null) {
+                    // There is no graphics state dictionary in the resources dictionary, create one.
+                    graphicsStateDictionary = new TreeMap();
+                }
+                graphicsStateDictionary.put("highlights", graphicsState);
+                resources.setGraphicsStates(graphicsStateDictionary);
+
+                String pageText = textCache.getText(pageIndex + 1);
+                String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length() - searchText.toString().replaceAll("\\Q[\\-\\n\\r\\.]{0,3}[\\s]*\\E", "").length()), pageText.length());
+
+                List<Match> matches = textCache.match(pageIndex + 1, Pattern.compile("\\Q" + lastCharsOnPage + "\\E"));
+
+                for (Match searchMatch : matches) {
+                    List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
+                    for (Match markingMatch : markingMatches) {
+                        markupMatch(color, contentStream, markingMatch);
+                        found1 = true;
+                        break;
+                    }
+                    if(found1){
+                        break;
+                    }
+                }
+                contentStream.close();
+            }
+            if(!found1){
+                System.out.println("The word may be written in vertical at this point");
+
+                boolean found2 = false;
+                for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
+                        && pageIndex < pages.size(); pageIndex++) {
+                    final PDPage page = pages.get(pageIndex);
+                    PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
+
+                    PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
+                    graphicsState.setNonStrokingAlphaConstant(0.5f);
+                    PDResources resources = page.findResources();
+                    Map graphicsStateDictionary = resources.getGraphicsStates();
+                    if (graphicsStateDictionary == null) {
+                        // There is no graphics state dictionary in the resources dictionary, create one.
+                        graphicsStateDictionary = new TreeMap();
+                    }
+                    graphicsStateDictionary.put("highlights", graphicsState);
+                    resources.setGraphicsStates(graphicsStateDictionary);
+
+                    String pageText = textCache.getText(pageIndex + 1);
+
+                    List<Match> matches = textCache.match(pageIndex + 1, searchText);
+
+                    for (Match searchMatch : matches) {
+                        List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile(".+"));
+                        for (Match markingMatch : markingMatches) {
+                            markupMatch(color, contentStream, markingMatch);
+                            found2 = true;
+                            break;
+                        }
+                        if(found2){
+                            break;
+                        }
+                    }
+                    contentStream.close();
+                }
+            }
+        }
+    }
 
 	private void markupMatch(Color color, PDPageContentStream contentStream, Match markingMatch) throws IOException {
 		final List<PDRectangle> textBoundingBoxes = getTextBoundingBoxes(markingMatch.positions);
@@ -208,8 +290,9 @@ public class TextHighlight extends PDFTextStripper {
 		if (textBoundingBoxes.size() > 0) {
 			contentStream.appendRawCommands("/highlights gs\n");
 			contentStream.setNonStrokingColor(color);
-
-			contentStream.fillRect(textBoundingBoxes.get(0).getLowerLeftX(), textBoundingBoxes.get(0).getLowerLeftY(), textBoundingBoxes.get(0).getUpperRightX() - textBoundingBoxes.get(0).getLowerLeftX(), 10);
+            for(int i=0; i < textBoundingBoxes.size(); i++){
+                contentStream.fillRect(textBoundingBoxes.get(i).getLowerLeftX(), textBoundingBoxes.get(i).getLowerLeftY(), Math.max(textBoundingBoxes.get(i).getUpperRightX() - textBoundingBoxes.get(i).getLowerLeftX(), 10), 10);
+            }
 
 		}
 	}
@@ -232,19 +315,25 @@ public class TextHighlight extends PDFTextStripper {
 	 * The following methods are overwritten from the PDTextStripper
 	 */
 	public void initialize(final PDDocument pdf) throws IOException {
-		resetEngine();
-		document = pdf;
-		textCache = new TextCache();
+        try {
+            resetEngine();
+            document = pdf;
+            textCache = new TextCache();
 
-		if (getAddMoreFormatting()) {
-			setParagraphEnd(getLineSeparator());
-			setPageStart(getLineSeparator());
-			setArticleStart(getLineSeparator());
-			setArticleEnd(getLineSeparator());
-		}
-		startDocument(pdf);
-		processPages(pdf.getDocumentCatalog().getAllPages());
-		endDocument(pdf);
+            if (getAddMoreFormatting()) {
+                setParagraphEnd(getLineSeparator());
+                setPageStart(getLineSeparator());
+                setArticleStart(getLineSeparator());
+                setArticleEnd(getLineSeparator());
+            }
+            startDocument(pdf);
+            processPages(pdf.getDocumentCatalog().getAllPages());
+            endDocument(pdf);
+        }catch (Exception e) {
+            e.printStackTrace();
+        }catch(Error e1) {
+            e1.printStackTrace();
+        }
 	}
 
 	/**
