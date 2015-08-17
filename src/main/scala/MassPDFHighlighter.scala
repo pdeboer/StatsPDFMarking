@@ -14,10 +14,10 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs2/"
+  val pdfsDir = "../pdfs/"
   val snippetsDir = "../delta_snippets/"
 
-  val pathConvert = "/opt/local/bin/convert"
+  val pathConvert = "/usr/bin/convert"
 
   val startTime = new DateTime().getMillis
 
@@ -43,7 +43,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     }).toList
   }).toList
 
-  allPdfFiles.par.foreach(convertPDFtoPNG(_))
+  //allPdfFiles.par.foreach(convertPDFtoPNG(_))
 
   logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
@@ -91,7 +91,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       List[StatMethod](StatMethod(
         Math.min(method1.minIndex, method2.minIndex),
         Math.max(method1.maxIndex, method2.maxIndex),
-        List[StatMethod](method1, method2) ::: method1.children ::: method2.children, method2.superMethodenIndex))
+        List[StatMethod](method1, method2) ::: method1.children ::: method2.children, method1.superMethodenIndex))
     }
     else {
       List[StatMethod](method1, method2)
@@ -117,6 +117,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
         val methodList = permuter.findAllMethodsInPaper(colorToStrings).sortBy(method  => method.startSearchStringIndex+method.startHighlightStringIndex)
 
+        /*
         var methodList2 = methodList.map(m => {
           StatMethod(
             Math.max(0, m.startSearchStringIndex + m.startHighlightStringIndex - 10000),
@@ -135,25 +136,14 @@ object MassPDFHighlighter extends App with LazyLogging {
           }while(changedSomething)
 
           if(methodList2.length > 1) {
-            logger.debug(s"Start highlight ${methodList2.length} permutations for method $method")
-            new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList2.map(m => m.superMethodenIndex)).zipWithIndex.par.foreach(highlighter => {
-
-              logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1._2.instructions}")
-
-              val methodName = terms.getMethodFromSynonymOrMethod(highlighter._1._2.instructions.head.highlightString).get.name.replaceAll(" ", "_")
-              val year = f.getName.substring(0, f.getName.indexOf("_"))
-              val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
-
-              val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
-              new File(pathToSavePDFs).mkdirs()
-
-              Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + highlighter._1._1 + "-D-" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 ))).foreach(s => {
-                s.write(highlighter._1._2.highlight())
-                s.close()
-              })
-            })
+            createHighlightedPDFMerge(methodList2, method, f)
           }
         }
+        */
+        if(methodList.length>1){
+          createHighlightedPDF(methodList, method, f)
+        }
+
       } catch {
         case e: Exception => {
           logger.error(s"Error while highlighting permutations for file $f", e)
@@ -166,6 +156,46 @@ object MassPDFHighlighter extends App with LazyLogging {
           }
         }
       }
+    })
+  }
+
+  def createHighlightedPDF(methodList: List[PDFHighlightInstruction], method: String, f: File) = {
+    logger.debug(s"Start highlight ${methodList.length} permutations for method $method")
+    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList).zipWithIndex.par.foreach(highlighter => {
+
+      logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1._2.instructions}")
+
+      val methodName = method.replaceAll(" ", "_")
+      val year = f.getName.substring(0, f.getName.indexOf("_"))
+      val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
+
+      val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
+      new File(pathToSavePDFs).mkdirs()
+
+      Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + highlighter._1._1 + "-D-" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 +".pdf"))).foreach(s => {
+        s.write(highlighter._1._2.highlight())
+        s.close()
+      })
+    })
+  }
+
+  def createHighlightedPDFMerge(methodList2: List[StatMethod], method: String, f: File) = {
+    logger.debug(s"Start highlight ${methodList2.length} permutations for method $method")
+    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList2.map(m => m.superMethodenIndex)).zipWithIndex.par.foreach(highlighter => {
+
+      logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1._2.instructions}")
+
+      val methodName = method.replaceAll(" ", "_")
+      val year = f.getName.substring(0, f.getName.indexOf("_"))
+      val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
+
+      val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
+      new File(pathToSavePDFs).mkdirs()
+
+      Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + highlighter._1._1 + "-D-" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 ))).foreach(s => {
+        s.write(highlighter._1._2.highlight())
+        s.close()
+      })
     })
   }
 
