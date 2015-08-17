@@ -82,7 +82,6 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   }
 
   def isUniquePairValidCandidate(method: PDFHighlightInstruction, assumption: PDFHighlightInstruction): Boolean = {
-    !method.highlightString.equals(assumption.highlightString) &&
       !method.searchString.equals(assumption.searchString)
   }
 

@@ -14,7 +14,7 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs/"
+  val pdfsDir = "../pdfs2/"
   val snippetsDir = "../delta_snippets/"
 
   val pathConvert = "/opt/local/bin/convert"
@@ -68,21 +68,25 @@ object MassPDFHighlighter extends App with LazyLogging {
   case class StatMethod(minIndex:Int, maxIndex:Int, children:List[StatMethod], superMethodenIndex: PDFHighlightInstruction)
 
   def combine(myList: List[StatMethod]) : List[StatMethod] = {
-    val newList : List[StatMethod] =
-      myList.zip(myList.drop(1)).flatMap{
-        case(left, right) => {
-          mergeIfMergeable(left, right)
-        }
-      }
+    val zipped1 = myList.zipWithIndex.filter(m => m._2 % 2 == 0)
+    val zipped2 = myList.zipWithIndex.filter(m => m._2 % 2 == 1)
 
-    if(newList.length>2){
+    val newList : List[StatMethod] =
+      zipped1 zip zipped2 map {
+          case (left, right) => {
+            mergeIfMergeable(left._1, right._1)
+          }
+      } flatten
+
+
+    if(newList.length>=2){
       newList.splitAt(newList.length-2)._1 ::: mergeIfMergeable(newList(newList.length-2), newList(newList.length-1))
-    } else {
+    }else {
       newList
     }
   }
 
-  def mergeIfMergeable(method1: StatMethod, method2: StatMethod) = {
+  def mergeIfMergeable(method1: StatMethod, method2: StatMethod) : List[StatMethod] = {
     if(areMergeable(method1,method2)) {
       List[StatMethod](StatMethod(
         Math.min(method1.minIndex, method2.minIndex),
@@ -94,7 +98,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     }
   }
 
-  def areMergeable(method1: StatMethod, method2: StatMethod) = {
+  def areMergeable(method1: StatMethod, method2: StatMethod): Boolean = {
     method1.maxIndex > method2.minIndex
   }
 
@@ -102,7 +106,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.foreach(method => {
+    terms.termNames.par.foreach(method => {
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
@@ -112,6 +116,7 @@ object MassPDFHighlighter extends App with LazyLogging {
         val maxLengthPDF=permuter.txt.length
 
         val methodList = permuter.findAllMethodsInPaper(colorToStrings).sortBy(method  => method.startSearchStringIndex+method.startHighlightStringIndex)
+
         var methodList2 = methodList.map(m => {
           StatMethod(
             Math.max(0, m.startSearchStringIndex + m.startHighlightStringIndex - 10000),
@@ -125,12 +130,12 @@ object MassPDFHighlighter extends App with LazyLogging {
           var changedSomething = false
           do {
             val tmpList = combine(methodList2)
-            changedSomething = (tmpList equals methodList2)
+            changedSomething = !(tmpList equals methodList2)
             methodList2 = tmpList
           }while(changedSomething)
 
           if(methodList2.length > 1) {
-            logger.debug(s"Start highlight permutations.. $method -> ${methodList2.length}")
+            logger.debug(s"Start highlight ${methodList2.length} permutations for method $method")
             new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList2.map(m => m.superMethodenIndex)).zipWithIndex.par.foreach(highlighter => {
 
               logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1._2.instructions}")
@@ -142,18 +147,16 @@ object MassPDFHighlighter extends App with LazyLogging {
               val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
               new File(pathToSavePDFs).mkdirs()
 
-              Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + highlighter._1._1 + "-D-" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + "_" + f.getName))).foreach(s => {
+              Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + highlighter._1._1 + "-D-" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 ))).foreach(s => {
                 s.write(highlighter._1._2.highlight())
                 s.close()
               })
             })
-          }else {
-            logger.debug(s"There is only 1 method in paper ${f.getName}")
           }
         }
       } catch {
         case e: Exception => {
-          logger.error(s"Error while higlighting permutations for file $f", e)
+          logger.error(s"Error while highlighting permutations for file $f", e)
           new File("../errors_whilePermuting").mkdir()
           val pdf = new File("../errors_whilePermuting/"+f.getName)
           try{

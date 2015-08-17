@@ -16,10 +16,10 @@ Multiple regression,multicollinearity
 Multiple regression,linearity
 Logistic regression,Independen
 Logistic regression,linearity of independent variable
-t-test,Normal
-t-test,Independen
-t-test,Homogeneity of variance
-t-test,linearity
+t test,Normal
+t test,Independen
+t test,Homogeneity of variance
+t test,linearity
 U test,Independen
 U test,ordinal
 Kappa,Independen
