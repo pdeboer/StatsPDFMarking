@@ -147,7 +147,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
             PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start)
           }catch {
             case e: Exception => {
-              logger.error("Cannot find term " + pattern + " in pdf "+ pdfPath,e)
+              //logger.error("Cannot find term " + pattern + " in pdf "+ pdfPath,e)
               null
             }
           }

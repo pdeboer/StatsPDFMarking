@@ -206,7 +206,7 @@ public class TextHighlight extends PDFTextStripper {
 		}
         // Try to search in the last sentence of each page
         if(!found){
-            System.out.println("The word may be in the last sentence of the page at this point");
+            System.out.println("Searching match in the last sentence of the page...");
 
             boolean found1 = false;
             for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
@@ -226,25 +226,31 @@ public class TextHighlight extends PDFTextStripper {
                 resources.setGraphicsStates(graphicsStateDictionary);
 
                 String pageText = textCache.getText(pageIndex + 1);
-                String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length() - searchText.toString().replaceAll("\\Q[\\-\\n\\r\\.]{0,3}[\\s]*\\E", "").length()), pageText.length());
+                try {
+                    String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length() - searchText.toString().replaceAll("\\Q[\\-\\n\\r\\.]{0,3}[\\s]*\\E", "").length()), pageText.length());
 
-                List<Match> matches = textCache.match(pageIndex + 1, Pattern.compile("\\Q" + lastCharsOnPage + "\\E"));
+                    List<Match> matches = textCache.match(pageIndex + 1, Pattern.compile("\\Q" + lastCharsOnPage + "\\E"));
 
-                for (Match searchMatch : matches) {
-                    List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
-                    for (Match markingMatch : markingMatches) {
-                        markupMatch(color, contentStream, markingMatch);
-                        found1 = true;
-                        break;
+                    for (Match searchMatch : matches) {
+                        List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
+                        for (Match markingMatch : markingMatches) {
+                            markupMatch(color, contentStream, markingMatch);
+                            found1 = true;
+                            break;
+                        }
+                        if (found1) {
+                            break;
+                        }
                     }
-                    if(found1){
-                        break;
-                    }
+                }catch(Exception e) {
+                    System.out.println("Cannot search in the bottom of the page");
+                    e.printStackTrace();
+                    found1 = false;
                 }
                 contentStream.close();
             }
             if(!found1){
-                System.out.println("The word may be written in vertical at this point");
+                System.out.println("Searching match in vertical text...");
 
                 boolean found2 = false;
                 for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
