@@ -14,26 +14,27 @@ object BMJDAL {
 		maxSize = 15,
 		connectionTimeoutMillis = 3000L,
 		validationQuery = "select 1 as one")
-	ConnectionPool.singleton("jdbc:mysql://127.0.0.1/openreviewcrawl?autoReconnect=true&failOverReadOnly=false&maxReconnects=10", "root", "", settings)
+	ConnectionPool.singleton("jdbc:mysql://127.0.0.1/openreviewcrawl?autoReconnect=true", "root", "", settings)
 
 	implicit val session = AutoSession
 
 	def getPapersContainingTerm(term: String) = DB readOnly { implicit session =>
 		val likeTerm = s"%${term.toLowerCase}%"
 
-		sql"""SELECT DISTINCT p.id, t.body, p.url, left(issue,4) AS y
-		FROM bmjpdftext t INNER JOIN bmjpaper p
+		sql"""SELECT DISTINCT p.id,  t.body, p.url, left(issue,4) AS y
+		FROM bmjpdftext t INNER JOIN bmjpaper p ON t.paperId = p.id
 		WHERE LOWER(t.body) LIKE $likeTerm"""
 			.map(r => new BMJPaperBody(r.long(1), WeakReference(r.string(2)), r.string(3), r.int(4))).list().apply()
 	}
 
 	def getPaperBody(id: Long) = DB readOnly { implicit session => sql"SELECT body FROM bmjpdftext WHERE paperId = $id"
-		.map(r => r.string(1)).single().apply().get
+		.map(r => r.string(1)).single().apply().getOrElse(throw new IllegalArgumentException(s"couldnt find $id"))
 	}
 }
 
 class BMJPaperBody(id: Long, var _body: WeakReference[String], url: String, year: Int) extends DBPaperBody(id, "", url, year) {
 	override def body: String = _body.get.getOrElse({
+		println("refetching " + id)
 		val b: String = BMJDAL.getPaperBody(id)
 		_body = WeakReference(b)
 		b

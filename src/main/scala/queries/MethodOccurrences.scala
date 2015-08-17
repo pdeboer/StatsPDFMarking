@@ -2,7 +2,6 @@ package queries
 
 import java.util.regex.Pattern
 
-import ch.uzh.ifi.pdeboer.pplib.process.entities.FileProcessMemoizer
 import input.bmc.{BMJDAL, DBPaperBody}
 
 import scala.io.Source
@@ -11,7 +10,7 @@ import scala.io.Source
  * Created by pdeboer on 30/07/15.
  */
 object MethodOccurrences extends App {
-	val occurrences: List[MethodOccurrence] = new FileProcessMemoizer("sqldata").mem("bmj4")(Source.fromFile("methodlist.csv").getLines().toList.par.map(l => {
+	val occurrences: List[MethodOccurrence] = Source.fromFile("methodlist.csv").getLines().toList.par.map(l => {
 		val terms = l.split(",").map(_.trim())
 		val papersWithTermVariations = terms.flatMap(t => {
 			val targetTerms = if (t.length < 7) addWordBoundaries(t) else List(t)
@@ -22,12 +21,12 @@ object MethodOccurrences extends App {
 		}
 
 		MethodOccurrence(l, termOccurrences.toList)
-	}).toList)
+	}).toList
 
-	val methodNumbers = occurrences.map(mo => {
-		val yearly: List[MethodCountPerYear] = (2014 to 2014).map(year => countOccurrencePerYear(mo, year)).toList
+	val methodNumbers = occurrences.par.map(mo => {
+		//val yearly: List[MethodCountPerYear] = (2009 to 2014).map(year => countOccurrencePerYear(mo, year)).toList
 		val overview = countOccurrencePerYear(mo)
-		MethodCounts(mo, overview, yearly)
+		MethodCounts(mo, overview, Nil)
 	})
 
 	def countOccurrencePerYear(mo: MethodOccurrence, year: Int = -1): MethodCountPerYear = {
