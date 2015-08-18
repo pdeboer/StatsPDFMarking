@@ -73,9 +73,14 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 
   def getDelta(seqUniqueStrings: Seq[PDFHighlightInstruction], firstMethodIndex: Int, secondMethodIndex: Int): Int = {
 
-    val startFirstMethod = seqUniqueStrings(firstMethodIndex).startSearchStringIndex +
+    val lengthBeforeFirstMethodPage : Int = txt.zipWithIndex.filter(t => {t._2 < seqUniqueStrings(firstMethodIndex).pageNr}).map(_._1.length).sum
+    val lengthBeforeSecondMethodPage : Int = txt.zipWithIndex.filter(t => {t._2 < seqUniqueStrings(secondMethodIndex).pageNr}).map(_._1.length).sum
+
+    val startFirstMethod = lengthBeforeFirstMethodPage+
+      seqUniqueStrings(firstMethodIndex).startSearchStringIndex +
       seqUniqueStrings(firstMethodIndex).startHighlightStringIndex
-    val startSecondMethod = seqUniqueStrings(secondMethodIndex).startSearchStringIndex +
+    val startSecondMethod = lengthBeforeSecondMethodPage+
+      seqUniqueStrings(secondMethodIndex).startSearchStringIndex +
       seqUniqueStrings(secondMethodIndex).startHighlightStringIndex
 
     Math.abs(startFirstMethod - startSecondMethod)
