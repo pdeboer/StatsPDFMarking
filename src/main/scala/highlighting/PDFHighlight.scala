@@ -42,9 +42,8 @@ object PDFTextExtractor extends LazyLogging{
 
 class PDFPermuter(pdfPath: String) extends LazyLogging {
 
-  val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = 5
-
 	lazy val txt = PDFTextExtractor.extract(pdfPath)
+  val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = 5
 
   def findAllMethodsInPaper(permutationDefinition: Map[Color, List[String]]): List[PDFHighlightInstruction] = {
     val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
@@ -69,6 +68,35 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
     }
   }
 
+  def isHighlightAssumptionOutsideMethod(seqUniqueStrings: Seq[PDFHighlightInstruction], methodIndex: Int, assumptionIndex: Int): Boolean = {
+    val startSearchIndexMethod = seqUniqueStrings(methodIndex).startSearchStringIndex
+    val endSearchIndexMethod = startSearchIndexMethod + seqUniqueStrings(methodIndex).searchString.length
+
+    val startHighlightIndexMethod = startSearchIndexMethod + seqUniqueStrings(methodIndex).startHighlightStringIndex
+    val endHighlightIndexMethod = endSearchIndexMethod + seqUniqueStrings(methodIndex).highlightString.length
+
+    val startSearchIndexAssumption = seqUniqueStrings(assumptionIndex).startSearchStringIndex
+    val endSearchIndexAssumption = startSearchIndexAssumption + seqUniqueStrings(assumptionIndex).searchString.length
+
+    val startHighlightIndexAssumption = startSearchIndexAssumption + seqUniqueStrings(assumptionIndex).startHighlightStringIndex
+    val endHighlightIndexAssumption = startHighlightIndexAssumption + seqUniqueStrings(assumptionIndex).highlightString.length
+
+    if (startSearchIndexMethod <= startSearchIndexAssumption && endSearchIndexMethod <= startSearchIndexAssumption && endSearchIndexAssumption >= endSearchIndexMethod) {
+      true
+    }
+    else if (startHighlightIndexMethod <= startHighlightIndexAssumption && endHighlightIndexMethod <= startHighlightIndexAssumption && endHighlightIndexAssumption >= endHighlightIndexMethod) {
+      true
+    }
+    else if (startSearchIndexAssumption <= startSearchIndexMethod && endSearchIndexAssumption <= startSearchIndexMethod && endSearchIndexAssumption <= endSearchIndexMethod) {
+      true
+    } else if (startHighlightIndexAssumption <= startHighlightIndexMethod && endHighlightIndexAssumption <= startHighlightIndexMethod && endHighlightIndexAssumption <= endHighlightIndexMethod) {
+      true
+    }
+    else {
+      false
+    }
+  }
+
   def isUniquePairValidCandidate(method: PDFHighlightInstruction, assumption: PDFHighlightInstruction): Boolean = {
     val terms = new HighlightTermloader
 
@@ -78,35 +106,6 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
       terms.methodsAndSynonyms.exists(m => method.highlightString.contains(m)) &&
       terms.assumptionsAndSynonyms.exists(a => assumption.highlightString.contains(a) &&
         method.color != assumption.color)
-  }
-
-  def isHighlightAssumptionOutsideMethod(seqUniqueStrings: Seq[PDFHighlightInstruction],  methodIndex: Int, assumptionIndex: Int): Boolean = {
-    val startSearchIndexMethod = seqUniqueStrings(methodIndex).startSearchStringIndex
-    val endSearchIndexMethod = startSearchIndexMethod + seqUniqueStrings(methodIndex).searchString.length
-
-    val startHighlightIndexMethod = startSearchIndexMethod+seqUniqueStrings(methodIndex).startHighlightStringIndex
-    val endHighlightIndexMethod = endSearchIndexMethod + seqUniqueStrings(methodIndex).highlightString.length
-
-    val startSearchIndexAssumption = seqUniqueStrings(assumptionIndex).startSearchStringIndex
-    val endSearchIndexAssumption = startSearchIndexAssumption + seqUniqueStrings(assumptionIndex).searchString.length
-
-    val startHighlightIndexAssumption = startSearchIndexAssumption+seqUniqueStrings(assumptionIndex).startHighlightStringIndex
-    val endHighlightIndexAssumption = startHighlightIndexAssumption + seqUniqueStrings(assumptionIndex).highlightString.length
-
-    if(startSearchIndexMethod <= startSearchIndexAssumption && endSearchIndexMethod <= startSearchIndexAssumption && endSearchIndexAssumption >= endSearchIndexMethod){
-      true
-    }
-    else if(startHighlightIndexMethod <= startHighlightIndexAssumption && endHighlightIndexMethod <= startHighlightIndexAssumption && endHighlightIndexAssumption >= endHighlightIndexMethod){
-      true
-    }
-    else if(startSearchIndexAssumption <= startSearchIndexMethod && endSearchIndexAssumption <= startSearchIndexMethod && endSearchIndexAssumption <= endSearchIndexMethod){
-      true
-    }else if(startHighlightIndexAssumption <= startHighlightIndexMethod && endHighlightIndexAssumption <= startHighlightIndexMethod && endHighlightIndexAssumption <= endHighlightIndexMethod){
-      true
-    }
-    else {
-      false
-    }
   }
 
   def escapeSearchString(searchString: String): String = {
@@ -176,19 +175,10 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstruction]) extends LazyLogging {
 
 
-  def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r\\.]{0,3}[\\s]*").mkString("")
-    if(searchString.length <= 5 || searchString.contains(" ")){
-      "(?i)(\\b"+search+"\\b)"
-    } else {
-      "(?i)("+search+")"
-    }
-  }
-
-	/**
-	 * taken from Mattia's code and adapted
-	 */
-	def highlight(): Array[Byte] = {
+  /**
+   * taken from Mattia's code and adapted
+   */
+  def highlight(): Array[Byte] = {
     try {
       val file = pdfPath
       val parser: PDFParser = new PDFParser(new FileInputStream(file))
@@ -209,21 +199,30 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 
       val byteArrayOutputStream = new ByteArrayOutputStream()
 
-			if (pdDoc != null) {
-				pdDoc.save(byteArrayOutputStream)
-				pdDoc.close()
-			}
-			if (parser.getDocument != null) {
-				parser.getDocument.close()
-			}
+      if (pdDoc != null) {
+        pdDoc.save(byteArrayOutputStream)
+        pdDoc.close()
+      }
+      if (parser.getDocument != null) {
+        parser.getDocument.close()
+      }
 
 
-		  byteArrayOutputStream.toByteArray()
+      byteArrayOutputStream.toByteArray()
     } catch {
       case e: Exception => {
         logger.error(s"Cannot store highlighted version of pdf: $pdfPath.", e)
         Array.empty[Byte]
       }
     }
-	}
+  }
+
+  def escapeSearchString(searchString: String): String = {
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\n\\r\\.]{0,3}\\s*").mkString("")
+    if(searchString.length <= 5 || searchString.contains(" ")){
+      "(?i)(\\b"+search+"\\b)"
+    } else {
+      "(?i)("+search+")"
+    }
+  }
 }

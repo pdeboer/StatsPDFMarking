@@ -1,2 +1,1 @@
-println("Χ".toCharArray.head.toInt)
-println("X".toCharArray.head.toInt)
+println("i[\\.]{0,2}\\s*d".r.findAllIn("hi. du.. na?").mkString(","))
