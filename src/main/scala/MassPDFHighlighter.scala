@@ -106,7 +106,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.par.foreach(method => {
+    terms.termNames.foreach(method => {
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
@@ -137,8 +137,9 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def createHighlightedPDF(methodList: List[PDFHighlightInstruction], method: String, f: File) = {
-    logger.debug(s"Start highlight ${methodList.length} permutations for method $method")
-    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList).zipWithIndex.par.foreach(highlighter => {
+    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList).zipWithIndex.foreach(highlighter => {
+
+      logger.debug(s"Highlighting: ${highlighter._1._2}")
 
       val methodName = method.replaceAll(" ", "_")
       val year = f.getName.substring(0, f.getName.indexOf("_"))
@@ -148,26 +149,6 @@ object MassPDFHighlighter extends App with LazyLogging {
       new File(pathToSavePDFs).mkdirs()
 
       Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + highlighter._1._1 + "-D-" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 +".pdf"))).foreach(s => {
-        s.write(highlighter._1._2.highlight())
-        s.close()
-      })
-    })
-  }
-
-  def createHighlightedPDFMerge(methodList2: List[StatMethod], method: String, f: File) = {
-    logger.debug(s"Start highlight ${methodList2.length} permutations for method $method")
-    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList2.map(m => m.superMethodenIndex)).zipWithIndex.par.foreach(highlighter => {
-
-      logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1._2.instructions}")
-
-      val methodName = method.replaceAll(" ", "_")
-      val year = f.getName.substring(0, f.getName.indexOf("_"))
-      val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
-
-      val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
-      new File(pathToSavePDFs).mkdirs()
-
-      Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + highlighter._1._1 + "-D-" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 +"pdf"))).foreach(s => {
         s.write(highlighter._1._2.highlight())
         s.close()
       })

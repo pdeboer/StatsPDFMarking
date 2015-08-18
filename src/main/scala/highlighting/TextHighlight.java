@@ -163,14 +163,12 @@ public class TextHighlight extends PDFTextStripper {
 		highlight(pattern, pattern, Color.yellow);
 	}
 
-	public void highlight(final Pattern searchText, final Pattern markingPattern, Color color)
-			throws IOException {
+	public void highlight(final Pattern searchText, final Pattern markingPattern, Color color) {
 		if (textCache == null || document == null) {
 			throw new IllegalArgumentException("TextCache was not initilized");
 		}
 
 		final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
-
 
         boolean found = false;
         try {
@@ -207,7 +205,7 @@ public class TextHighlight extends PDFTextStripper {
             }
             // Try to search in the last sentence of each page
             if (!found) {
-                System.out.println("The word may be in the last sentence of the page at this point");
+                System.out.println("Checking last words..");
 
                 boolean found1 = false;
                 for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
@@ -227,7 +225,8 @@ public class TextHighlight extends PDFTextStripper {
                     resources.setGraphicsStates(graphicsStateDictionary);
 
                     String pageText = textCache.getText(pageIndex + 1);
-                    String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length()-150), pageText.length());
+
+                    String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length()-100), pageText.length());
 
                     List<Match> matches = textCache.match(pageIndex + 1, Pattern.compile("\\Q" + lastCharsOnPage + "\\E"));
 
@@ -245,7 +244,7 @@ public class TextHighlight extends PDFTextStripper {
                     contentStream.close();
                 }
                 if (!found1) {
-                    System.out.println("The word may be written in vertical at this point");
+                    System.out.println("Checking if vertical match...");
 
                     boolean found2 = false;
                     for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
@@ -269,7 +268,7 @@ public class TextHighlight extends PDFTextStripper {
                         List<Match> matches = textCache.match(pageIndex + 1, searchText);
 
                         for (Match searchMatch : matches) {
-                            List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile("/.*\\S.*/"));
+                            List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile(".+"));
                             for (Match markingMatch : markingMatches) {
                                 markupMatch(color, contentStream, markingMatch);
                                 found2 = true;
