@@ -226,7 +226,7 @@ public class TextHighlight extends PDFTextStripper {
                 resources.setGraphicsStates(graphicsStateDictionary);
 
                 String pageText = textCache.getText(pageIndex + 1);
-                String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length() - searchText.toString().replaceAll("\\Q[\\-\\n\\r\\.]{0,3}[\\s]*\\E", "").length()), pageText.length());
+                String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length() - searchText.toString().replaceAll("\\Q[\\-\\n\\r]{0,3}\\s*\\E", "").length()), pageText.length());
 
                 List<Match> matches = textCache.match(pageIndex + 1, Pattern.compile("\\Q" + lastCharsOnPage + "\\E"));
 
