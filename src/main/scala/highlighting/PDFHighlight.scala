@@ -215,7 +215,6 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 				parser.getDocument.close()
 			}
 
-
 		  byteArrayOutputStream.toByteArray()
     } catch {
       case e: Exception => {
