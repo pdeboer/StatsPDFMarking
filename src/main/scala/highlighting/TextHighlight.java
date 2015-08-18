@@ -528,7 +528,7 @@ public class TextHighlight extends PDFTextStripper {
         public List<Match> match(List<TextPosition> textPositions, String text, final Pattern pattern) {
             try {
                 final Matcher matcher = pattern.matcher(text);
-                final List<Match> matches = new ArrayList<Match>();
+                final List<Match> matches = new ArrayList<>();
 
                 while (matcher.find()) {
                     final List<TextPosition> elements = textPositions.subList(
@@ -539,12 +539,12 @@ public class TextHighlight extends PDFTextStripper {
             }catch(Error e){
                 System.out.println("An error occurred while searching for: " + pattern.toString());
                 e.printStackTrace();
-                List<Match> emptyList = new ArrayList<Match>();
+                List<Match> emptyList = new ArrayList<>();
                 return emptyList;
             }catch(Exception e1) {
                 System.out.println("An exception occurred while seraching for: " + pattern.toString());
                 e1.printStackTrace();
-                List<Match> emptyList = new ArrayList<Match>();
+                List<Match> emptyList = new ArrayList<>();
                 return emptyList;
             }
         }
