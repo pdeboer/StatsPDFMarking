@@ -269,7 +269,7 @@ public class TextHighlight extends PDFTextStripper {
                         List<Match> matches = textCache.match(pageIndex + 1, searchText);
 
                         for (Match searchMatch : matches) {
-                            List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile(".+"));
+                            List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile("/.*\\S.*/"));
                             for (Match markingMatch : markingMatches) {
                                 markupMatch(color, contentStream, markingMatch);
                                 found2 = true;
