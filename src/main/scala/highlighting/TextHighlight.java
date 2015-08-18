@@ -192,7 +192,7 @@ public class TextHighlight extends PDFTextStripper {
                 for (Match searchMatch : matches) {
                     List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
                     for (Match markingMatch : markingMatches) {
-                        if(markupMatch(color, contentStream, markingMatch)){
+                        if(!found && markupMatch(color, contentStream, markingMatch)){
                             found = true;
                             break;
                         }
@@ -229,7 +229,7 @@ public class TextHighlight extends PDFTextStripper {
                     for (Match searchMatch : matches) {
                         List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
                         for (Match markingMatch : markingMatches) {
-                            if (markupMatch(color, contentStream, markingMatch)) {
+                            if (!found1 && markupMatch(color, contentStream, markingMatch)) {
                                 found1 = true;
                                 break;
                             }
