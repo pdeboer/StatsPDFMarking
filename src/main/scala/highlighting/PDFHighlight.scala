@@ -162,7 +162,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   def isSmallestMatch(it: Int, indexPosition: Int, inputStringLength: Int, pageTxt: String): Int = {
 
     val subTxt = pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputStringLength + it))
-    if(escapeSearchString(subTxt).r.findAllMatchIn(pageTxt).length == 1){
+    if(escapeSearchString(subTxt).r.findAllMatchIn(txt.mkString("")).length == 1){
       it
     }else {
       isSmallestMatch(it+1, indexPosition, inputStringLength, pageTxt)
