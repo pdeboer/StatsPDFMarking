@@ -124,7 +124,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def createHighlightedPDF(methodList: List[PDFHighlightInstruction], method: String, f: File) = {
     new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList).zipWithIndex.foreach(highlighter => {
 
-      logger.debug(s"Highlighting: ${highlighter._1._2}")
+      logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1._2.instructions}")
 
       val methodName = method.replaceAll(" ", "_")
       val year = f.getName.substring(0, f.getName.indexOf("_"))
