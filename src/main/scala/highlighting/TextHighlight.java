@@ -169,9 +169,8 @@ public class TextHighlight extends PDFTextStripper {
 		}
 
 		final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
-
-        boolean found = false;
         try {
+            boolean found = false;
             for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
                     && pageIndex < pages.size(); pageIndex++) {
                 final PDPage page = pages.get(pageIndex);
@@ -197,15 +196,15 @@ public class TextHighlight extends PDFTextStripper {
                         found = true;
                         break;
                     }
-                    if (found) {
+                    if(found){
                         break;
                     }
                 }
                 contentStream.close();
             }
             // Try to search in the last sentence of each page
-            if (!found) {
-                System.out.println("Checking last words..");
+            if(!found){
+                System.out.println("The word may be in the last sentence of the page at this point");
 
                 boolean found1 = false;
                 for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
@@ -225,8 +224,7 @@ public class TextHighlight extends PDFTextStripper {
                     resources.setGraphicsStates(graphicsStateDictionary);
 
                     String pageText = textCache.getText(pageIndex + 1);
-
-                    String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length()-100), pageText.length());
+                    String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length() - searchText.toString().replaceAll("\\Q[\\-\\n\\r\\.]{0,3}[\\s]*\\E", "").length()), pageText.length());
 
                     List<Match> matches = textCache.match(pageIndex + 1, Pattern.compile("\\Q" + lastCharsOnPage + "\\E"));
 
@@ -237,14 +235,14 @@ public class TextHighlight extends PDFTextStripper {
                             found1 = true;
                             break;
                         }
-                        if (found1) {
+                        if(found1){
                             break;
                         }
                     }
                     contentStream.close();
                 }
-                if (!found1) {
-                    System.out.println("Checking if vertical match...");
+                if(!found1) {
+                    System.out.println("The word may be written in vertical at this point");
 
                     boolean found2 = false;
                     for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()

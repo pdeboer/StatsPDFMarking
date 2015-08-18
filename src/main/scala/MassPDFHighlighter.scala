@@ -31,20 +31,6 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   highlightPDFFile
 
-  logger.debug("Starting conversion PDF2PNG...")
-
-  /*val allPdfFiles :List[File] = new File(snippetsDir).listFiles(filterDirectories).par.flatMap(yearDir => {
-    yearDir.listFiles(filterDirectories).par.flatMap(methodDir => {
-      methodDir.listFiles(filterDirectories).par.flatMap(pdfDir => {
-        pdfDir.listFiles(new FilenameFilter {
-          override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
-        }).map(file => file)
-      }).toList
-    }).toList
-  }).toList
-
-  allPdfFiles.par.foreach(convertPDFtoPNG(_))*/
-
   logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
 
@@ -59,7 +45,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def highlightPDFFile = {
-    new FolderPDFSource(pdfsDir).get().foreach(f => {
+    new FolderPDFSource(pdfsDir).get().par.foreach(f => {
       highlightFile(f)
       logger.info(s"processed $f")
     })
@@ -77,7 +63,6 @@ object MassPDFHighlighter extends App with LazyLogging {
             mergeIfMergeable(left._1, right._1)
           }
       } flatten
-
 
     if(newList.length>=2){
       newList.splitAt(newList.length-2)._1 ::: mergeIfMergeable(newList(newList.length-2), newList(newList.length-1))
@@ -106,7 +91,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.foreach(method => {
+    terms.termNames.par.foreach(method => {
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
@@ -115,7 +100,7 @@ object MassPDFHighlighter extends App with LazyLogging {
         val permuter = new PDFPermuter(f.getAbsolutePath)
         val maxLengthPDF=permuter.txt.length
 
-        val methodList = permuter.findAllMethodsInPaper(colorToStrings).sortBy(method  => method.startSearchStringIndex+method.startHighlightStringIndex)
+        val methodList = permuter.findAllMethodsInPaper(colorToStrings)
 
         if(methodList.length>1){
           createHighlightedPDF(methodList, method, f)
