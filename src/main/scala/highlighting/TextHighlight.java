@@ -41,7 +41,7 @@ import java.util.regex.Pattern;
  * instead write to a TextCache that keeps data on the position of the TextPositions. From this information we can then
  * derive bounding boxes (and quads) that can be used to write the annotations. See the main method for example usage
  *
- * @author JoÃ«l Kuiper <me@joelkuiper.eu>
+ * @author J. Kuiper <me@joelkuiper.eu>
  */
 public class TextHighlight extends PDFTextStripper {
 
@@ -192,9 +192,10 @@ public class TextHighlight extends PDFTextStripper {
                 for (Match searchMatch : matches) {
                     List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
                     for (Match markingMatch : markingMatches) {
-                        markupMatch(color, contentStream, markingMatch);
-                        found = true;
-                        break;
+                        if(markupMatch(color, contentStream, markingMatch)){
+                            found = true;
+                            break;
+                        }
                     }
                     if(found){
                         break;
@@ -212,7 +213,7 @@ public class TextHighlight extends PDFTextStripper {
         }
     }
 
-    private void markupMatch(Color color, PDPageContentStream contentStream, Match markingMatch) throws IOException {
+    private boolean markupMatch(Color color, PDPageContentStream contentStream, Match markingMatch) throws IOException {
         final List<PDRectangle> textBoundingBoxes = getTextBoundingBoxes(markingMatch.positions);
 
         if (textBoundingBoxes.size() > 0) {
@@ -221,7 +222,9 @@ public class TextHighlight extends PDFTextStripper {
             for(int i=0; i < textBoundingBoxes.size(); i++){
                 contentStream.fillRect(textBoundingBoxes.get(i).getLowerLeftX(), textBoundingBoxes.get(i).getLowerLeftY(), Math.max(textBoundingBoxes.get(i).getUpperRightX() - textBoundingBoxes.get(i).getLowerLeftX(), 10), 10);
             }
+            return true;
         }
+        return false;
     }
 
     /**
