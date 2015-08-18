@@ -1,7 +1,7 @@
 package highlighting;
 
 /*
- * Copyright 2014 JoÃ«l Kuiper
+ * Copyright 2014 J. Kuiper
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -528,7 +528,7 @@ public class TextHighlight extends PDFTextStripper {
         public List<Match> match(List<TextPosition> textPositions, String text, final Pattern pattern) {
             try {
                 final Matcher matcher = pattern.matcher(text);
-                final List<Match> matches = new ArrayList<>();
+                final List<Match> matches = new ArrayList<Match>();
 
                 while (matcher.find()) {
                     final List<TextPosition> elements = textPositions.subList(
@@ -539,12 +539,12 @@ public class TextHighlight extends PDFTextStripper {
             }catch(Error e){
                 System.out.println("An error occurred while searching for: " + pattern.toString());
                 e.printStackTrace();
-                List<Match> emptyList = new ArrayList<>();
+                final List<Match> emptyList = new ArrayList<Match>();
                 return emptyList;
             }catch(Exception e1) {
                 System.out.println("An exception occurred while seraching for: " + pattern.toString());
                 e1.printStackTrace();
-                List<Match> emptyList = new ArrayList<>();
+                final List<Match> emptyList = new ArrayList<Match>();
                 return emptyList;
             }
         }
