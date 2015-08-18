@@ -141,7 +141,6 @@ object MassPDFHighlighter extends App with LazyLogging {
             val assumptionsAndSynonyms : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
               List[String](assumption.name) ::: assumption.synonym
             })
-
             val assumptionList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsAndSynonyms))
             if(assumptionList.nonEmpty) {
               val methodsList: List[PDFHighlightInstruction] = methodList2.map(_.superMethodenIndex)
