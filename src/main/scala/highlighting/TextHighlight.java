@@ -172,9 +172,7 @@ public class TextHighlight extends PDFTextStripper {
         try {
             boolean found = false;
 
-            System.out.println("Highlighting on page " + pageNr + " pattern " + markingPattern + "\nSearch text " + searchText);
-
-            final PDPage page = pages.get(pageNr);
+            final PDPage page = pages.get(pageNr+1);
             PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
 
             PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
