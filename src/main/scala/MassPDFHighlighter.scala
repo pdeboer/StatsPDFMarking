@@ -58,14 +58,14 @@ object MassPDFHighlighter extends App with LazyLogging {
     val zipped2 = myList.zipWithIndex.filter(m => m._2 % 2 == 1)
 
     val newList : List[StatMethod] =
-      zipped1 zip zipped2 map {
+      zipped1 zip zipped2 flatMap {
           case (left, right) => {
             mergeIfMergeable(left._1, right._1)
           }
-      } flatten
+      }
 
     if(newList.length>=2){
-      newList.splitAt(newList.length-2)._1 ::: mergeIfMergeable(newList(newList.length-2), newList(newList.length-1))
+      newList.splitAt(newList.length-2)._1 ::: mergeIfMergeable(newList(newList.length-2), newList.last)
     }else {
       newList
     }

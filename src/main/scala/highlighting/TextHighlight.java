@@ -276,6 +276,9 @@ public class TextHighlight extends PDFTextStripper {
                                 break;
                             }
                         }
+
+
+
                         contentStream.close();
                     }
                 }
@@ -296,7 +299,6 @@ public class TextHighlight extends PDFTextStripper {
             for(int i=0; i < textBoundingBoxes.size(); i++){
                 contentStream.fillRect(textBoundingBoxes.get(i).getLowerLeftX(), textBoundingBoxes.get(i).getLowerLeftY(), Math.max(textBoundingBoxes.get(i).getUpperRightX() - textBoundingBoxes.get(i).getLowerLeftX(), 10), 10);
             }
-
 		}
 	}
 
@@ -602,16 +604,25 @@ public class TextHighlight extends PDFTextStripper {
 		}
 
 		public List<Match> match(List<TextPosition> textPositions, String text, final Pattern pattern) {
+            try {
+                final Matcher matcher = pattern.matcher(text);
+                final List<Match> matches = new ArrayList<Match>();
 
-			final Matcher matcher = pattern.matcher(text);
-			final List<Match> matches = new ArrayList<Match>();
-
-			while (matcher.find()) {
-				final List<TextPosition> elements = textPositions.subList(
-						matcher.start(), matcher.end());
-				matches.add(new Match(matcher.group(), elements));
-			}
-			return matches;
+                while (matcher.find()) {
+                    final List<TextPosition> elements = textPositions.subList(
+                            matcher.start(), matcher.end());
+                    matches.add(new Match(matcher.group(), elements));
+                }
+                return matches;
+            }catch(Error e){
+                System.out.println("An error occurred while searching for: " + pattern.toString());
+                e.printStackTrace();
+                return new ArrayList<Match>();
+            }catch(Exception e1) {
+                System.out.println("An exception occurred while seraching for: " + pattern.toString());
+                e1.printStackTrace();
+                return new ArrayList<Match>();
+            }
 		}
 	}
 
