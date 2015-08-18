@@ -172,6 +172,8 @@ public class TextHighlight extends PDFTextStripper {
         try {
             boolean found = false;
 
+            System.out.println("Highlighting on page " + pageNr + " pattern " + markingPattern + "\nSearch text " + searchText);
+
             final PDPage page = pages.get(pageNr);
             PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
 
@@ -186,12 +188,12 @@ public class TextHighlight extends PDFTextStripper {
             graphicsStateDictionary.put("highlights", graphicsState);
             resources.setGraphicsStates(graphicsStateDictionary);
 
-            List<Match> matches = textCache.match(pageNr + 1, searchText);
+            List<Match> matches = textCache.match(pageNr, searchText);
 
             for (Match searchMatch : matches) {
                 List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
                 for (Match markingMatch : markingMatches) {
-                    if(!found && markupMatch(color, contentStream, markingMatch)){
+                    if(markupMatch(color, contentStream, markingMatch)){
                         found = true;
                         break;
                     }
@@ -205,6 +207,7 @@ public class TextHighlight extends PDFTextStripper {
             e.printStackTrace();
         }catch(Error e1) {
             e1.printStackTrace();
+            throw e1;
         }
     }
 
