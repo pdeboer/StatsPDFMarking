@@ -206,44 +206,6 @@ public class TextHighlight extends PDFTextStripper {
                 }
                 contentStream.close();
             }
-            /*if(!found) {
-                // Look on the last part of each single page
-                boolean found1 = false;
-                for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
-                        && pageIndex < pages.size(); pageIndex++) {
-                    final PDPage page = pages.get(pageIndex);
-                    PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
-
-                    PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
-                    graphicsState.setNonStrokingAlphaConstant(0.5f);
-                    PDResources resources = page.findResources();
-                    Map graphicsStateDictionary = resources.getGraphicsStates();
-                    if (graphicsStateDictionary == null) {
-                        // There is no graphics state dictionary in the resources dictionary, create one.
-                        graphicsStateDictionary = new TreeMap();
-                    }
-                    graphicsStateDictionary.put("highlights", graphicsState);
-                    resources.setGraphicsStates(graphicsStateDictionary);
-
-                    String pageTxt = textCache.getText(pageIndex + 1);
-
-                    List<Match> matches = textCache.match(pageIndex + 1, Pattern.compile("\\Q" + pageTxt.substring(Math.max(0, pageTxt.length() - 150), pageTxt.length()) + "\\E"));
-
-                    for (Match searchMatch : matches) {
-                        List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
-                        for (Match markingMatch : markingMatches) {
-                            if (!found1 && markupMatch(color, contentStream, markingMatch)) {
-                                found1 = true;
-                                break;
-                            }
-                        }
-                        if (found1) {
-                            break;
-                        }
-                    }
-                    contentStream.close();
-                }
-            }*/
         }catch (Exception e) {
             e.printStackTrace();
         }catch(Error e1) {
