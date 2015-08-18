@@ -10,7 +10,7 @@ import org.apache.pdfbox.pdmodel.PDDocument
 
 import scala.collection.immutable.Iterable
 
-case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String, startSearchStringIndex: Int, startHighlightStringIndex: Int)
+case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String, startSearchStringIndex: Int, startHighlightStringIndex: Int, pageNr: Int)
 
 object PDFTextExtractor extends LazyLogging{
   def extract(pdfPath: String): List[String] = {
@@ -127,25 +127,25 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 		highlightTerms.flatMap {
 			case (color, patterns) => patterns.map(pattern => {
 
-        txt.flatMap(pageTxt => {
-          val allIndicesOfThesePatterns : Iterator[Int] = escapeSearchString(pattern).r.findAllMatchIn(pageTxt).map(_.start)
+        txt.zipWithIndex.flatMap(pageTxt => {
+          val allIndicesOfThesePatterns : Iterator[Int] = escapeSearchString(pattern).r.findAllMatchIn(pageTxt._1).map(_.start)
 
           val substringIndices: Iterator[(Int, Int)] = allIndicesOfThesePatterns.map(index => {
-            extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt)
+            extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt._1)
           })
 
-          val substrings = substringIndices.map(i => pageTxt.substring(i._1, i._2))
+          val substrings = substringIndices.map(i => pageTxt._1.substring(i._1, i._2))
           substrings.map(substring => {
 
             //TODO: What if the searchStringMatch contains two times the word to highlight? which one is to highlight?
             try {
-              val searchStringMatch = ("\\Q"+substring+"\\E").r.findFirstMatchIn(pageTxt).get
+              val searchStringMatch = ("\\Q"+substring+"\\E").r.findFirstMatchIn(pageTxt._1).get
               val start = if (escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
                 escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
               } else {
                 0
               }
-              PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start)
+              PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start, pageTxt._2)
             }catch {
               case e: Exception => {
                 logger.error("Cannot find term " + pattern + " in pdf "+ pdfPath,e)
@@ -212,7 +212,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 
         val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(escapeSearchString(s)))
 
-        pdfHighlight.highlight(patterns.head, patterns(1), i.color)
+        pdfHighlight.highlight(patterns.head, patterns(1), i.color, i.pageNr)
       })
 
 

@@ -134,9 +134,9 @@ public class TextHighlight extends PDFTextStripper {
      * @param pattern String that will be converted to Regex pattern
      * @throws IOException
      */
-    public void highlightDefault(final String pattern, Color color) throws IOException {
+    public void highlightDefault(final String pattern, Color color, int pageNr) throws IOException {
         Pattern compiledPattern = Pattern.compile("\\Q" + pattern + "\\E", Pattern.CASE_INSENSITIVE);
-        this.highlightDefault(compiledPattern, color);
+        this.highlightDefault(compiledPattern, color, pageNr);
     }
 
     /**
@@ -148,22 +148,22 @@ public class TextHighlight extends PDFTextStripper {
      * @param pattern Pattern (regex)
      * @throws IOException
      */
-    public void highlightDefault(final Pattern pattern, Color color) throws IOException {
-        this.highlight(pattern, pattern, color);
+    public void highlightDefault(final Pattern pattern, Color color, int pageNr) throws IOException {
+        this.highlight(pattern, pattern, color, pageNr);
     }
 
-    public void highlight(final String pattern)
+    public void highlight(final String pattern, int pageNr)
             throws IOException {
         Pattern p = Pattern.compile("\\b(" + pattern + ")\\b", Pattern.CASE_INSENSITIVE);
-        this.highlight(p);
+        this.highlight(p, pageNr);
     }
 
 
-    public void highlight(final Pattern pattern) throws IOException {
-        highlight(pattern, pattern, Color.yellow);
+    public void highlight(final Pattern pattern, int pageNr) throws IOException {
+        highlight(pattern, pattern, Color.yellow, pageNr);
     }
 
-    public void highlight(final Pattern searchText, final Pattern markingPattern, Color color) {
+    public void highlight(final Pattern searchText, final Pattern markingPattern, Color color, int pageNr) {
         if (textCache == null || document == null) {
             throw new IllegalArgumentException("TextCache was not initilized");
         }
@@ -171,41 +171,36 @@ public class TextHighlight extends PDFTextStripper {
         final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
         try {
             boolean found = false;
-            for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
-                    && pageIndex < pages.size(); pageIndex++) {
-                final PDPage page = pages.get(pageIndex);
-                PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
 
-                PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
-                graphicsState.setNonStrokingAlphaConstant(0.5f);
-                PDResources resources = page.findResources();
-                Map graphicsStateDictionary = resources.getGraphicsStates();
-                if (graphicsStateDictionary == null) {
-                    // There is no graphics state dictionary in the resources dictionary, create one.
-                    graphicsStateDictionary = new TreeMap();
-                }
-                graphicsStateDictionary.put("highlights", graphicsState);
-                resources.setGraphicsStates(graphicsStateDictionary);
+            final PDPage page = pages.get(pageNr);
+            PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
 
-                List<Match> matches = textCache.match(pageIndex + 1, searchText);
+            PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
+            graphicsState.setNonStrokingAlphaConstant(0.5f);
+            PDResources resources = page.findResources();
+            Map graphicsStateDictionary = resources.getGraphicsStates();
+            if (graphicsStateDictionary == null) {
+                // There is no graphics state dictionary in the resources dictionary, create one.
+                graphicsStateDictionary = new TreeMap();
+            }
+            graphicsStateDictionary.put("highlights", graphicsState);
+            resources.setGraphicsStates(graphicsStateDictionary);
 
-                for (Match searchMatch : matches) {
-                    List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
-                    for (Match markingMatch : markingMatches) {
-                        if(!found && markupMatch(color, contentStream, markingMatch)){
-                            found = true;
-                            break;
-                        }
-                    }
-                    if(found){
+            List<Match> matches = textCache.match(pageNr + 1, searchText);
+
+            for (Match searchMatch : matches) {
+                List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
+                for (Match markingMatch : markingMatches) {
+                    if(!found && markupMatch(color, contentStream, markingMatch)){
+                        found = true;
                         break;
                     }
                 }
                 if(found){
                     break;
                 }
-                contentStream.close();
             }
+            contentStream.close();
         }catch (Exception e) {
             e.printStackTrace();
         }catch(Error e1) {
