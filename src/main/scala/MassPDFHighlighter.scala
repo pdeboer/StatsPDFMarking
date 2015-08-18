@@ -33,7 +33,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   logger.debug("Starting conversion PDF2PNG...")
 
-  val allPdfFiles :List[File] = new File(snippetsDir).listFiles(filterDirectories).par.flatMap(yearDir => {
+  /*val allPdfFiles :List[File] = new File(snippetsDir).listFiles(filterDirectories).par.flatMap(yearDir => {
     yearDir.listFiles(filterDirectories).par.flatMap(methodDir => {
       methodDir.listFiles(filterDirectories).par.flatMap(pdfDir => {
         pdfDir.listFiles(new FilenameFilter {
@@ -43,7 +43,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     }).toList
   }).toList
 
-  //allPdfFiles.par.foreach(convertPDFtoPNG(_))
+  allPdfFiles.par.foreach(convertPDFtoPNG(_))*/
 
   logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
@@ -117,29 +117,6 @@ object MassPDFHighlighter extends App with LazyLogging {
 
         val methodList = permuter.findAllMethodsInPaper(colorToStrings).sortBy(method  => method.startSearchStringIndex+method.startHighlightStringIndex)
 
-        /*
-        var methodList2 = methodList.map(m => {
-          StatMethod(
-            Math.max(0, m.startSearchStringIndex + m.startHighlightStringIndex - 10000),
-            Math.min(maxLengthPDF, m.startSearchStringIndex + m.startHighlightStringIndex + 10000),
-            List.empty[StatMethod],
-            m)
-        })
-
-        logger.debug(s"Found ${methodList2.length} matches for method: $method")
-        if(methodList.length > 1) {
-          var changedSomething = false
-          do {
-            val tmpList = combine(methodList2)
-            changedSomething = !(tmpList equals methodList2)
-            methodList2 = tmpList
-          }while(changedSomething)
-
-          if(methodList2.length > 1) {
-            createHighlightedPDFMerge(methodList2, method, f)
-          }
-        }
-        */
         if(methodList.length>1){
           createHighlightedPDF(methodList, method, f)
         }
@@ -162,8 +139,6 @@ object MassPDFHighlighter extends App with LazyLogging {
   def createHighlightedPDF(methodList: List[PDFHighlightInstruction], method: String, f: File) = {
     logger.debug(s"Start highlight ${methodList.length} permutations for method $method")
     new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList).zipWithIndex.par.foreach(highlighter => {
-
-      //  logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1._2.instructions}")
 
       val methodName = method.replaceAll(" ", "_")
       val year = f.getName.substring(0, f.getName.indexOf("_"))

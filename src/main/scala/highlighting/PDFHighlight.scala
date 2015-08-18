@@ -182,7 +182,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 
 
   def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r\\.]{0,3}[\\s]*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r\\.]{0,3}+[\\s]*+").mkString("")
     if(searchString.length <= 5 || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
@@ -227,6 +227,10 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
     } catch {
       case e: Exception => {
         logger.error(s"Cannot store highlighted version of pdf: $pdfPath.", e)
+        Array.empty[Byte]
+      }
+      case e1: Error => {
+        logger.error("", e1)
         Array.empty[Byte]
       }
     }
