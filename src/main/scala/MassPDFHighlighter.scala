@@ -14,7 +14,7 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs2/"
+  val pdfsDir = "../pdfs/"
 	val snippetsDir = "../snippets/"
 
 	val pathConvert = "/opt/local/bin/convert"
@@ -33,7 +33,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
 	logger.debug("Starting conversion PDF2PNG...")
 
-  val allPdfFiles :List[File] = new File(snippetsDir).listFiles(filterDirectories).par.flatMap(yearDir => {
+  /*val allPdfFiles :List[File] = new File(snippetsDir).listFiles(filterDirectories).par.flatMap(yearDir => {
     yearDir.listFiles(filterDirectories).par.flatMap(methodDir => {
       methodDir.listFiles(filterDirectories).par.flatMap(pdfDir => {
         pdfDir.listFiles(new FilenameFilter {
@@ -43,7 +43,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     }).toList
   }).toList
 
-  allPdfFiles.par.foreach(convertPDFtoPNG(_))
+  allPdfFiles.par.foreach(convertPDFtoPNG(_))*/
 
 	logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
@@ -100,16 +100,12 @@ object MassPDFHighlighter extends App with LazyLogging {
     method1.maxIndex > method2.minIndex
   }
 
-
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
     terms.termNames.par.foreach(method => {
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
-      val assumptionsAndSynonyms : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
-				List[String](assumption.name) ::: assumption.synonym
-			})
 
       val onlyMethods: Map[Color, List[String]] = Map(Color.yellow -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms))
 
@@ -142,11 +138,17 @@ object MassPDFHighlighter extends App with LazyLogging {
           }while(changedSomething)
 
           if(methodList2.nonEmpty) {
+            val assumptionsAndSynonyms : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
+              List[String](assumption.name) ::: assumption.synonym
+            })
 
-            val colorToStrings: Map[Color, List[String]] = Map(Color.green -> assumptionsAndSynonyms)
-            val assumptionList = permuter.findAllMethodsInPaper(colorToStrings)
+            val assumptionList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsAndSynonyms))
+            if(assumptionList.nonEmpty) {
+              val methodsList: List[PDFHighlightInstruction] = methodList2.map(_.superMethodenIndex)
+              val permutations: List[PDFHighlightInstruction] = List.concat(methodsList,assumptionList)
 
-            createHighlightedPDF(methodList2.map(_.superMethodenIndex) ::: assumptionList, method, f)
+              createHighlightedPDF(permutations, method, f)
+            }
           }
         }
       } catch {
@@ -165,7 +167,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def createHighlightedPDF(methodList: List[PDFHighlightInstruction], method: String, f: File) = {
-    logger.debug(s"Start highlight ${methodList.length} permutations for method $method")
+    logger.debug(s"Start highlight permutations for method $method")
     new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList).zipWithIndex.par.foreach(highlighter => {
 
       val methodName = method.replaceAll(" ", "_")
