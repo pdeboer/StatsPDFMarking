@@ -163,14 +163,17 @@ public class TextHighlight extends PDFTextStripper {
 		highlight(pattern, pattern, Color.yellow);
 	}
 
-	public void highlight(final Pattern searchText, final Pattern markingPattern, Color color)
+	public int highlight(final Pattern searchText, final Pattern markingPattern, Color color)
 			throws IOException {
 		if (textCache == null || document == null) {
 			throw new IllegalArgumentException("TextCache was not initilized");
 		}
 
-		final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
+        final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
 
+        int normalMatch = -1;
+        int lastSentenceMatch = -1;
+        int verticalMatch = -1;
 
         boolean found = false;
 		for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
@@ -194,6 +197,7 @@ public class TextHighlight extends PDFTextStripper {
 			for (Match searchMatch : matches) {
 				List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
 				for (Match markingMatch : markingMatches) {
+                    normalMatch = pageIndex;
 					markupMatch(color, contentStream, markingMatch);
                     found = true;
                     break;
@@ -233,6 +237,7 @@ public class TextHighlight extends PDFTextStripper {
                 for (Match searchMatch : matches) {
                     List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
                     for (Match markingMatch : markingMatches) {
+                        lastSentenceMatch = pageIndex;
                         markupMatch(color, contentStream, markingMatch);
                         found1 = true;
                         break;
@@ -270,6 +275,7 @@ public class TextHighlight extends PDFTextStripper {
                     for (Match searchMatch : matches) {
                         List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile(".+"));
                         for (Match markingMatch : markingMatches) {
+                            verticalMatch = pageIndex;
                             markupMatch(color, contentStream, markingMatch);
                             found2 = true;
                             break;
@@ -281,6 +287,16 @@ public class TextHighlight extends PDFTextStripper {
                     contentStream.close();
                 }
             }
+        }
+
+        if(normalMatch > -1){
+            return normalMatch;
+        }else if(lastSentenceMatch > -1){
+            return lastSentenceMatch;
+        }else if(verticalMatch > -1){
+            return verticalMatch;
+        }else {
+            return -1;
         }
     }
 

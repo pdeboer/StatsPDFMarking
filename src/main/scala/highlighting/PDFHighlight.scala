@@ -191,7 +191,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 	/**
 	 * taken from Mattia's code and adapted
 	 */
-	def highlight(): Array[Byte] = {
+	def highlight(): (HighlightPage, Array[Byte]) = {
     try {
       val file = pdfPath
       val parser: PDFParser = new PDFParser(new FileInputStream(file))
@@ -202,7 +202,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
       pdfHighlight.setLineSeparator(" ")
       pdfHighlight.initialize(pdDoc)
 
-      instructions.foreach(i => {
+      val pages : List[Int] = instructions.map(i => {
 
         val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(escapeSearchString(s)))
 
@@ -220,12 +220,11 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 				parser.getDocument.close()
 			}
 
-
-		  byteArrayOutputStream.toByteArray()
+      (HighlightPage(pages.min, pages.max), byteArrayOutputStream.toByteArray())
     } catch {
       case e: Exception => {
         logger.error(s"Cannot store highlighted version of pdf: $pdfPath.", e)
-        Array.empty[Byte]
+        (HighlightPage(-1, -1), Array.empty[Byte])
       }
     }
 	}

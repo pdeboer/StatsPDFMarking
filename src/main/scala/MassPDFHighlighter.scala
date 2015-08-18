@@ -2,7 +2,7 @@ import java.awt.Color
 import java.io._
 
 import com.typesafe.scalalogging.LazyLogging
-import highlighting.{HighlightTermloader, PDFPermuter}
+import highlighting.{HighlightPage, HighlightTermloader, PDFPermuter}
 import input.folder.FolderPDFSource
 import org.codehaus.plexus.util.FileUtils
 import org.joda.time.DateTime
@@ -31,23 +31,6 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   highlightPDFFile
 
-	logger.debug("Starting conversion PDF2PNG...")
-
-  val allPdfFiles :List[File] = new File(snippetsDir).listFiles(filterDirectories).par.flatMap(yearDir => {
-    yearDir.listFiles(filterDirectories).par.flatMap(methodDir => {
-      methodDir.listFiles(filterDirectories).par.flatMap(pdfDir => {
-        pdfDir.listFiles(new FilenameFilter {
-          override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
-        }).map(file => file)
-      }).toList
-    }).toList
-  }).toList
-
-  allPdfFiles.par.foreach(convertPDFtoPNG(_))
-
-	logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
-
-
   def emptySnippetsDir(dir: File): Boolean = {
     dir.listFiles().foreach(file => {
       if (file.isDirectory) {
@@ -65,6 +48,8 @@ object MassPDFHighlighter extends App with LazyLogging {
     })
   }
 
+  logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
+
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
@@ -80,6 +65,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       try {
         new PDFPermuter(f.getAbsolutePath).permuteForEachCombinationOf(colorToStrings).zipWithIndex.par.foreach(
           highlighter => {
+
             logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
             val methodName = terms.getMethodFromSynonymOrMethod(highlighter._1.instructions.head.highlightString).get.name.replaceAll(" ", "_")
@@ -89,10 +75,16 @@ object MassPDFHighlighter extends App with LazyLogging {
             val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
             new File(pathToSavePDFs).mkdirs()
 
-            Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + ".pdf"))).foreach(s => {
-              s.write(highlighter._1.highlight())
+            val highlightedPaper = highlighter._1.highlight()
+
+            val file = new File(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + ".pdf")
+            Some(new BufferedOutputStream(new FileOutputStream(file))).foreach(s => {
+              s.write(highlightedPaper._2)
               s.close()
             })
+
+            logger.debug(s"Converting $file to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
+            convertPDFtoPNG(file, highlightedPaper._1)
           })
 
       } catch {
@@ -110,13 +102,18 @@ object MassPDFHighlighter extends App with LazyLogging {
     })
   }
 
-  def convertPDFtoPNG(pdfFile: File) = {
+  def convertPDFtoPNG(pdfFile: File, pages: HighlightPage) = {
     val pathPDFFile = pdfFile.getPath
     val pathConvertedPNGFile: String = pdfFile.getParentFile.getPath+"/"+createPNGFileName(pdfFile.getName)
 
     val convertCommandWithParams = "nice -n 5 " + pathConvert + " -density 200 -append "
+    val range = if(pages.start != pages.end){
+      "["+pages.start+"-"+pages.end+"] "
+    }else {
+      "["+pages.start+"] "
+    }
 
-    if((convertCommandWithParams + pathPDFFile.replaceAll(" ", "\\ ") + " " + pathConvertedPNGFile.replaceAll(" ", "\\ ")).! != 0){
+    if((convertCommandWithParams + pathPDFFile.replaceAll(" ", "\\ ") + range + pathConvertedPNGFile.replaceAll(" ", "\\ ")).! != 0){
         logger.error(s"File: ${pdfFile.getName} cannot be converted to PNG")
         new File("../errors_convertPDFtoPNG").mkdir()
         val pdf = new File("../errors_convertPDFtoPNG/"+pdfFile.getName)
