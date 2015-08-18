@@ -172,7 +172,7 @@ public class TextHighlight extends PDFTextStripper {
         try {
             boolean found = false;
 
-            final PDPage page = pages.get(pageNr-2);
+            final PDPage page = pages.get(pageNr-1);
             PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
 
             PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
