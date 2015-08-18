@@ -201,9 +201,12 @@ public class TextHighlight extends PDFTextStripper {
                         break;
                     }
                 }
+                if(found){
+                    break;
+                }
                 contentStream.close();
             }
-            if(!found) {
+            /*if(!found) {
                 // Look on the last part of each single page
                 boolean found1 = false;
                 for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
@@ -240,7 +243,7 @@ public class TextHighlight extends PDFTextStripper {
                     }
                     contentStream.close();
                 }
-            }
+            }*/
         }catch (Exception e) {
             e.printStackTrace();
         }catch(Error e1) {
