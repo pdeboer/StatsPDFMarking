@@ -115,7 +115,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   }
 
   def escapeSearchString(searchString: String): String = {
-    val search = "\\Q"+searchString+"\\E" //searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\n\\r\\.]{0,3}\\s*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}\\s*").mkString("")
     if(searchString.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
@@ -183,19 +183,10 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstruction]) extends LazyLogging {
 
 
-  def escapeSearchString(searchString: String): String = {
-    val search = "\\Q"+searchString+"\\E" //searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\n\\r\\.]{0,3}\\s*").mkString("")
-    if(searchString.length <= 5 || searchString.contains(" ")){
-      "(?i)(\\b"+search+"\\b)"
-    } else {
-      "(?i)("+search+")"
-    }
-  }
-
-	/**
-	 * taken from Mattia's code and adapted
-	 */
-	def highlight(): Array[Byte] = {
+  /**
+   * taken from Mattia's code and adapted
+   */
+  def highlight(): Array[Byte] = {
     try {
       val file = pdfPath
       val parser: PDFParser = new PDFParser(new FileInputStream(file))
@@ -231,10 +222,15 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
         logger.error(s"Cannot store highlighted version of pdf: $pdfPath.", e)
         Array.empty[Byte]
       }
-      case e1: Error => {
-        logger.error("", e1)
-        Array.empty[Byte]
-      }
     }
-	}
+  }
+
+  def escapeSearchString(searchString: String): String = {
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\n\\r]{0,3}\\s*").mkString("")
+    if(searchString.length <= 5 || searchString.contains(" ")){
+      "(?i)(\\b"+search+"\\b)"
+    } else {
+      "(?i)("+search+")"
+    }
+  }
 }

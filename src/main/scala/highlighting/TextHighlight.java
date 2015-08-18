@@ -202,45 +202,8 @@ public class TextHighlight extends PDFTextStripper {
                 }
                 contentStream.close();
             }
-            if(!found) {
-                System.out.println("The word may be written in vertical at this point");
-
-                boolean found2 = false;
-                for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
-                        && pageIndex < pages.size(); pageIndex++) {
-                    final PDPage page = pages.get(pageIndex);
-                    PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
-
-                    PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
-                    graphicsState.setNonStrokingAlphaConstant(0.5f);
-                    PDResources resources = page.findResources();
-                    Map graphicsStateDictionary = resources.getGraphicsStates();
-                    if (graphicsStateDictionary == null) {
-                        // There is no graphics state dictionary in the resources dictionary, create one.
-                        graphicsStateDictionary = new TreeMap();
-                    }
-                    graphicsStateDictionary.put("highlights", graphicsState);
-                    resources.setGraphicsStates(graphicsStateDictionary);
-
-                    String pageText = textCache.getText(pageIndex + 1);
-
-                    List<Match> matches = textCache.match(pageIndex + 1, Pattern.compile(searchText.toString().replaceAll("\\Q[\\-\\n\\r]{0,3}\\s*\\E", "")));
-
-                    for (Match searchMatch : matches) {
-                        List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile(".+"));
-                        for (Match markingMatch : markingMatches) {
-                            markupMatch(color, contentStream, markingMatch);
-                            found2 = true;
-                            break;
-                        }
-                        if (found2) {
-                            break;
-                        }
-                    }
-
-                    contentStream.close();
-                }
-
+            if(!found){
+                System.out.println("Cannot find and highlight pattern: " +searchText.toString() + "\n"+ markingPattern.toString());
             }
         }catch (Exception e) {
             e.printStackTrace();
@@ -576,11 +539,13 @@ public class TextHighlight extends PDFTextStripper {
             }catch(Error e){
                 System.out.println("An error occurred while searching for: " + pattern.toString());
                 e.printStackTrace();
-                return new ArrayList<Match>();
+                List<Match> emptyList = new ArrayList<Match>();
+                return emptyList;
             }catch(Exception e1) {
                 System.out.println("An exception occurred while seraching for: " + pattern.toString());
                 e1.printStackTrace();
-                return new ArrayList<Match>();
+                List<Match> emptyList = new ArrayList<Match>();
+                return emptyList;
             }
         }
     }
