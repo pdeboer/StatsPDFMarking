@@ -24,7 +24,7 @@ object WordOccurrences extends App {
     methodsAndSynonyms.foreach(t => {
 
         try {
-          val txt = PDFTextExtractor.extract(pdfFile.getPath)
+          val txt = PDFTextExtractor.extract(pdfFile.getPath).mkString("")
 
           val allMatches = t.r.findAllMatchIn(txt).map(_.start).foreach(position => {
 

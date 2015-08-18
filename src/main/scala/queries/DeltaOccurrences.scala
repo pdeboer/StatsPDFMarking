@@ -18,7 +18,7 @@ object DeltaOccurrences extends App{
     override def accept(pathname: File): Boolean = pathname.getName.endsWith(".pdf")
   }).foreach(pdfFile => {
 
-    val txt = PDFTextExtractor.extract(pdfFile.getPath)
+    val txt = PDFTextExtractor.extract(pdfFile.getPath).mkString("")
     var allMatches = List.empty[Int]
 
     methodsAndSynonyms.foreach(t1 => {
