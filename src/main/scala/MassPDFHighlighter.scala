@@ -15,9 +15,9 @@ import scala.sys.process._
 object MassPDFHighlighter extends App with LazyLogging {
 
   val pdfsDir = "../pdfs/"
-	val snippetsDir = "../snippets/"
+	val snippetsDir = "../test_merge_method_snippets/"
 
-	val pathConvert = "/opt/local/bin/convert"
+	val pathConvert = "/usr/bin/convert"
 
 	val startTime = new DateTime().getMillis
 
@@ -103,7 +103,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.par.foreach(method => {
+    terms.termNames.foreach(method => {
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
@@ -120,7 +120,7 @@ object MassPDFHighlighter extends App with LazyLogging {
         val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
 
 
-        var methodList2 = methodList.map(m => {
+        val methodList2 = methodList.map(m => {
           StatMethod(
             Math.max(0, m.startSearchStringIndex + m.startHighlightStringIndex - 10000),
             Math.min(maxLengthPDF, m.startSearchStringIndex + m.startHighlightStringIndex + 10000),
@@ -130,20 +130,16 @@ object MassPDFHighlighter extends App with LazyLogging {
 
         logger.debug(s"Found ${methodList2.length} matches for method: $method")
         if(methodList.nonEmpty) {
-          var changedSomething = false
-          do {
-            val tmpList = combine(methodList2)
-            changedSomething = !(tmpList equals methodList2)
-            methodList2 = tmpList
-          }while(changedSomething)
 
-          if(methodList2.nonEmpty) {
+          val newMethods = combineRecursive(methodList2)
+
+          if(newMethods.nonEmpty) {
             val assumptionsAndSynonyms : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
               List[String](assumption.name) ::: assumption.synonym
             })
             val assumptionList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsAndSynonyms))
             if(assumptionList.nonEmpty) {
-              val methodsList: List[PDFHighlightInstruction] = methodList2.map(_.superMethodenIndex)
+              val methodsList: List[PDFHighlightInstruction] = newMethods.map(_.superMethodenIndex)
               val permutations: List[PDFHighlightInstruction] = List.concat(methodsList,assumptionList)
 
               createHighlightedPDF(permutations, method, f)
@@ -163,6 +159,15 @@ object MassPDFHighlighter extends App with LazyLogging {
         }
       }
     })
+  }
+
+  def combineRecursive(methods: List[StatMethod]): List[StatMethod] ={
+    val newMethods = combine(methods)
+    if(methods != newMethods){
+      combineRecursive(newMethods)
+    }else {
+      newMethods
+    }
   }
 
   def createHighlightedPDF(methodList: List[PDFHighlightInstruction], method: String, f: File) = {
