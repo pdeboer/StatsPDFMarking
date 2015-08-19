@@ -186,11 +186,8 @@ public class TextHighlight extends PDFTextStripper {
 			graphicsStateDictionary.put("highlights", graphicsState);
 			resources.setGraphicsStates(graphicsStateDictionary);
 
-            List<Match> matches = textCache.match(pageNr, searchText);
-
-            for (Match searchMatch : matches) {
-                List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
-                for (Match markingMatch : markingMatches) {
+            for (Match searchMatch : textCache.match(pageNr, searchText)) {
+                for (Match markingMatch : textCache.match(searchMatch.positions, markingPattern)) {
                     if(markupMatch(color, contentStream, markingMatch)){
                         found = true;
                         break;

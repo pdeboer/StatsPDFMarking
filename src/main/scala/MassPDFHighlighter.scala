@@ -14,7 +14,7 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs/"
+  val pdfsDir = "../pdfs2/"
 	val snippetsDir = "../merge_method_snippets/"
 
 	val pathConvert = "/opt/local/bin/convert"
@@ -99,7 +99,6 @@ object MassPDFHighlighter extends App with LazyLogging {
         val permuter = new PDFPermuter(f.getAbsolutePath)
         val maxLengthPDF = permuter.txt.map(_.length).sum
 
-        //TODO: add page padding
         val methodList = permuter.findAllMethodsInPaper(onlyMethods).sortBy(m => {
           permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum +
             m.startHighlightStringIndex + m.startHighlightStringIndex
@@ -110,7 +109,7 @@ object MassPDFHighlighter extends App with LazyLogging {
         val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
 
 
-        var methodList2 = methodList.map(m => {
+        var mergedMethods = methodList.map(m => {
           StatMethod(
             Math.max(0, permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex - 10000),
             Math.min(maxLengthPDF, permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex + 10000),
@@ -121,22 +120,21 @@ object MassPDFHighlighter extends App with LazyLogging {
         if(methodList.nonEmpty) {
           var changedSomething = false
           do {
-            val tmpList = combine(methodList2)
-            changedSomething = !(tmpList equals methodList2)
-            methodList2 = tmpList
+            val tmpList = combine(mergedMethods)
+            changedSomething = !(tmpList equals mergedMethods)
+            mergedMethods = tmpList
           }while(changedSomething)
 
-          if(methodList2.nonEmpty) {
-            val assumptionsAndSynonyms : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
+          if(mergedMethods.nonEmpty) {
+            val assumptionsForMethod : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
               List[String](assumption.name) ::: assumption.synonym
             })
 
-            val assumptionList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsAndSynonyms))
-            if(assumptionList.nonEmpty) {
-              val groupedMethodList: List[PDFHighlightInstruction] = methodList2.flatMap(_.superMethodenIndex)
-              val permutations: List[PDFHighlightInstruction] = List.concat(groupedMethodList,assumptionList)
+            val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
+            if(assumptionsList.nonEmpty) {
+              val groupedMethodList: List[PDFHighlightInstruction] = mergedMethods.flatMap(_.superMethodenIndex)
 
-              createHighlightedPDF(permutations, method, f)
+              createHighlightedPDF(groupedMethodList, assumptionsList, method, f)
             }
           }
         }
@@ -155,8 +153,8 @@ object MassPDFHighlighter extends App with LazyLogging {
     })
   }
 
-  def createHighlightedPDF(methodList: List[PDFHighlightInstruction], method: String, f: File) = {
-    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList).zipWithIndex.par.foreach(highlighter => {
+  def createHighlightedPDF(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String, f: File) = {
+    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList).zipWithIndex.par.foreach(highlighter => {
 
       logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
