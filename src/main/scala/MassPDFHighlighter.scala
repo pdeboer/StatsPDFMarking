@@ -131,9 +131,9 @@ object MassPDFHighlighter extends App with LazyLogging {
 
             val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
             if(assumptionsList.nonEmpty) {
-              val groupedMethodList: List[PDFHighlightInstruction] = mergedMethods.flatMap(_.superMethodenIndex)
-
-              createHighlightedPDF(groupedMethodList, assumptionsList, method, f)
+              mergedMethods.map(groupedMethods => {
+                createHighlightedPDF(groupedMethods.superMethodenIndex, assumptionsList, method, f)
+              })
             }
           }
         }
@@ -153,27 +153,27 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def createHighlightedPDF(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String, f: File) = {
-    val highlighter = new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList)
+    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList).zipWithIndex.foreach( highlighter => {
 
-    logger.debug(s"${0}_${f.getName}: highlighting combination of ${highlighter.instructions}")
+      logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
-    val methodName = method.replaceAll(" ", "_")
-    val year = f.getName.substring(0, f.getName.indexOf("_"))
-    val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
+      val methodName = method.replaceAll(" ", "_")
+      val year = f.getName.substring(0, f.getName.indexOf("_"))
+      val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
 
-    val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
-    new File(pathToSavePDFs).mkdirs()
+      val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
+      new File(pathToSavePDFs).mkdirs()
 
-    val highlightedPaper = highlighter.highlight()
+      val highlightedPaper = highlighter._1.highlight()
 
-    Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + 0 +".pdf"))).foreach(s => {
-      s.write(highlightedPaper._2)
-      s.close()
+      Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + 0 + ".pdf"))).foreach(s => {
+        s.write(highlightedPaper._2)
+        s.close()
+      })
+
+      logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
+      convertPDFtoPNG(f, highlightedPaper._1)
     })
-
-    logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
-    convertPDFtoPNG(f, highlightedPaper._1)
-
   }
 
   def convertPDFtoPNG(pdfFile: File, pages: HighlightPage) = {

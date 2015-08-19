@@ -51,8 +51,8 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
     uniqueStrings.toList
 	}
 
-  def getUniquePairsForSearchTerms(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction]): PDFHighlight = {
-    new PDFHighlight(pdfPath, methodsList.toList ::: assumptionsList)
+  def getUniquePairsForSearchTerms(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction]): List[PDFHighlight] = {
+    assumptionsList.map(p => new PDFHighlight(pdfPath, methodsList.toList ::: List(p)))
   }
 
   def cleanUniquePairsCandidate(seqUniqueStrings: Seq[PDFHighlightInstruction], methodIndex: Int, assumptionIndex: Int): Option[(PDFHighlightInstruction, PDFHighlightInstruction)] = {
