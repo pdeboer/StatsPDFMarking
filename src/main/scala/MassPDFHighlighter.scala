@@ -51,7 +51,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     })
   }
 
-  case class StatMethod(minIndex:Int, maxIndex:Int, children:List[StatMethod], superMethodenIndex: PDFHighlightInstruction)
+  case class StatMethod(minIndex:Int, maxIndex:Int, children:List[StatMethod], superMethodenIndex: List[PDFHighlightInstruction])
 
   def combine(myList: List[StatMethod]) : List[StatMethod] = {
     val zipped1 = myList.zipWithIndex.filter(m => m._2 % 2 == 0)
@@ -75,7 +75,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       List[StatMethod](StatMethod(
         Math.min(method1.minIndex, method2.minIndex),
         Math.max(method1.maxIndex, method2.maxIndex),
-        List[StatMethod](method1, method2) ::: method1.children ::: method2.children, method1.superMethodenIndex))
+        List[StatMethod](method1, method2) ::: method1.children ::: method2.children, method1.superMethodenIndex ::: method2.superMethodenIndex))
     }
     else {
       List[StatMethod](method1, method2)
@@ -97,10 +97,13 @@ object MassPDFHighlighter extends App with LazyLogging {
 
       try {
         val permuter = new PDFPermuter(f.getAbsolutePath)
-        //TODO: calculate text length
-        val maxLengthPDF=permuter.txt.length
+        val maxLengthPDF = permuter.txt.map(_.length).sum
+
         //TODO: add page padding
-        val methodList = permuter.findAllMethodsInPaper(onlyMethods).sortBy(m => m.startHighlightStringIndex+m.startHighlightStringIndex)
+        val methodList = permuter.findAllMethodsInPaper(onlyMethods).sortBy(m => {
+          permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum +
+            m.startHighlightStringIndex + m.startHighlightStringIndex
+        })
 
         val methodName = method.replaceAll(" ", "_")
         val year = f.getName.substring(0, f.getName.indexOf("_"))
@@ -109,10 +112,10 @@ object MassPDFHighlighter extends App with LazyLogging {
 
         var methodList2 = methodList.map(m => {
           StatMethod(
-            Math.max(0, m.startSearchStringIndex + m.startHighlightStringIndex - 10000),
-            Math.min(maxLengthPDF, m.startSearchStringIndex + m.startHighlightStringIndex + 10000),
+            Math.max(0, permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex - 10000),
+            Math.min(maxLengthPDF, permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex + 10000),
             List.empty[StatMethod],
-            m)
+            List[PDFHighlightInstruction](m))
         })
 
         if(methodList.nonEmpty) {
@@ -130,8 +133,8 @@ object MassPDFHighlighter extends App with LazyLogging {
 
             val assumptionList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsAndSynonyms))
             if(assumptionList.nonEmpty) {
-              val methodsList: List[PDFHighlightInstruction] = methodList2.map(_.superMethodenIndex)
-              val permutations: List[PDFHighlightInstruction] = List.concat(methodsList,assumptionList)
+              val groupedMethodList: List[PDFHighlightInstruction] = methodList2.flatMap(_.superMethodenIndex)
+              val permutations: List[PDFHighlightInstruction] = List.concat(groupedMethodList,assumptionList)
 
               createHighlightedPDF(permutations, method, f)
             }

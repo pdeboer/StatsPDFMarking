@@ -26,7 +26,7 @@ object WordOccurrences extends App {
         try {
           val txt = PDFTextExtractor.extract(pdfFile.getPath)
 
-          val allMatches = t.r.findAllMatchIn(txt).map(_.start).foreach(position => {
+          val allMatches = t.r.findAllMatchIn(txt.mkString("")).map(_.start).foreach(position => {
 
             if(words.get(position).isDefined) {
               words.update(position, words.get(position).get+1)
