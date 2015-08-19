@@ -166,13 +166,13 @@ object MassPDFHighlighter extends App with LazyLogging {
       new File(pathToSavePDFs).mkdirs()
 
       val highlightedPaper = highlighter._1.highlight()
-      Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + 0 + ".pdf"))).foreach(s => {
+      Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + ".pdf"))).foreach(s => {
         s.write(highlightedPaper._2)
         s.close()
       })
 
       logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
-      //convertPDFtoPNG(f, highlightedPaper._1)
+      convertPDFtoPNG(f, highlightedPaper._1)
     })
   }
 
