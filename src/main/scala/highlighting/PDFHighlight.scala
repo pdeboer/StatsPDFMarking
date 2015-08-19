@@ -51,8 +51,8 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
     uniqueStrings.toList
 	}
 
-  def getUniquePairsForSearchTerms(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction]): List[PDFHighlight] = {
-    assumptionsList.map(p => new PDFHighlight(pdfPath, methodsList.toList ::: List(p))).toList
+  def getUniquePairsForSearchTerms(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction]): PDFHighlight = {
+    new PDFHighlight(pdfPath, methodsList.toList ::: assumptionsList)
   }
 
   def cleanUniquePairsCandidate(seqUniqueStrings: Seq[PDFHighlightInstruction], methodIndex: Int, assumptionIndex: Int): Option[(PDFHighlightInstruction, PDFHighlightInstruction)] = {
@@ -186,7 +186,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
   /**
    * taken from Mattia's code and adapted
    */
-  def highlight(): Array[Byte] = {
+  def highlight(): (HighlightPage, Array[Byte]) = {
     try {
       val file = pdfPath
       val parser: PDFParser = new PDFParser(new FileInputStream(file))
@@ -197,13 +197,12 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
       pdfHighlight.setLineSeparator(" ")
       pdfHighlight.initialize(pdDoc)
 
-      instructions.foreach(i => {
+      val pages : List[Int] = instructions.map(i => {
 
         val patterns = List(i.searchString, i.highlightString).zipWithIndex.map(s => if(s._2%2==0){Pattern.compile("\\Q"+s._1+"\\E")}else {Pattern.compile(escapeSearchString(s._1))})
-
         pdfHighlight.highlight(patterns.head, patterns(1), i.color, i.pageNr)
+        i.pageNr
       })
-
 
       val byteArrayOutputStream = new ByteArrayOutputStream()
 
@@ -215,11 +214,11 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 				parser.getDocument.close()
 			}
 
-		  byteArrayOutputStream.toByteArray()
+      (HighlightPage(pages.min, pages.max), byteArrayOutputStream.toByteArray())
     } catch {
       case e: Exception => {
         logger.error(s"Cannot store highlighted version of pdf: $pdfPath.", e)
-        Array.empty[Byte]
+        (HighlightPage(-1, -1), Array.empty[Byte])
       }
     }
   }

@@ -2,7 +2,7 @@ import java.awt.Color
 import java.io._
 
 import com.typesafe.scalalogging.LazyLogging
-import highlighting.{HighlightTermloader, PDFHighlightInstruction, PDFPermuter}
+import highlighting.{HighlightPage, HighlightTermloader, PDFHighlightInstruction, PDFPermuter}
 import input.folder.FolderPDFSource
 import org.codehaus.plexus.util.FileUtils
 import org.joda.time.DateTime
@@ -14,12 +14,12 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs2/"
-	val snippetsDir = "../merge_method_snippets/"
+  val pdfsDir = "../pdfs/"
+  val snippetsDir = "../merge_method_snippets/"
 
-	val pathConvert = "/opt/local/bin/convert"
+  val pathConvert = "/usr/bin/convert"
 
-	val startTime = new DateTime().getMillis
+  val startTime = new DateTime().getMillis
 
   val filterDirectories = new FilenameFilter {
     override def accept(dir: File, name: String): Boolean = new File(dir,name).isDirectory
@@ -30,9 +30,6 @@ object MassPDFHighlighter extends App with LazyLogging {
   emptySnippetsDir(new File(snippetsDir))
 
   highlightPDFFile
-
-  logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
-
 
   def emptySnippetsDir(dir: File): Boolean = {
     dir.listFiles().foreach(file => {
@@ -51,6 +48,8 @@ object MassPDFHighlighter extends App with LazyLogging {
     })
   }
 
+  logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
+
   case class StatMethod(minIndex:Int, maxIndex:Int, children:List[StatMethod], superMethodenIndex: List[PDFHighlightInstruction])
 
   def combine(myList: List[StatMethod]) : List[StatMethod] = {
@@ -59,7 +58,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
     val newList : List[StatMethod] =
       zipped1 zip zipped2 flatMap {
-          case (left, right) => mergeIfMergeable(left._1, right._1)
+        case (left, right) => mergeIfMergeable(left._1, right._1)
       }
 
 
@@ -154,31 +153,42 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def createHighlightedPDF(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String, f: File) = {
-    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList).zipWithIndex.par.foreach(highlighter => {
+    val highlighter = new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList)
 
-      logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
+    logger.debug(s"${0}_${f.getName}: highlighting combination of ${highlighter.instructions}")
 
-      val methodName = method.replaceAll(" ", "_")
-      val year = f.getName.substring(0, f.getName.indexOf("_"))
-      val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
+    val methodName = method.replaceAll(" ", "_")
+    val year = f.getName.substring(0, f.getName.indexOf("_"))
+    val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
 
-      val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
-      new File(pathToSavePDFs).mkdirs()
+    val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
+    new File(pathToSavePDFs).mkdirs()
 
-      Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 +".pdf"))).foreach(s => {
-        s.write(highlighter._1.highlight())
-        s.close()
-      })
+    val highlightedPaper = highlighter.highlight()
+
+    Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + 0 +".pdf"))).foreach(s => {
+      s.write(highlightedPaper._2)
+      s.close()
     })
+
+    logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
+    convertPDFtoPNG(f, highlightedPaper._1)
+
   }
 
-  def convertPDFtoPNG(pdfFile: File) = {
+  def convertPDFtoPNG(pdfFile: File, pages: HighlightPage) = {
     val pathPDFFile = pdfFile.getPath
     val pathConvertedPNGFile: String = pdfFile.getParentFile.getPath+"/"+createPNGFileName(pdfFile.getName)
 
     val convertCommandWithParams = "nice -n 5 " + pathConvert + " -density 200 -append "
 
-    if((convertCommandWithParams + pathPDFFile.replaceAll(" ", "\\ ") + " " + pathConvertedPNGFile.replaceAll(" ", "\\ ")).! != 0){
+    val range = if(pages.start != pages.end){
+      "["+pages.start+"-"+pages.end+"] "
+    }else {
+      "["+pages.start+"] "
+    }
+
+    if((convertCommandWithParams + pathPDFFile.replaceAll(" ", "\\ ") + range + pathConvertedPNGFile.replaceAll(" ", "\\ ")).! != 0){
       logger.error(s"File: ${pdfFile.getName} cannot be converted to PNG")
       new File("../errors_convertPDFtoPNG").mkdir()
       val pdf = new File("../errors_convertPDFtoPNG/"+pdfFile.getName)
