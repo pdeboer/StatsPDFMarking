@@ -50,7 +50,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
-  case class StatMethod(minIndex:Int, maxIndex:Int, children:List[StatMethod], superMethodenIndex: List[PDFHighlightInstruction])
+  case class StatMethod(minIndex:Int, maxIndex:Int, children:List[StatMethod], instructions: List[PDFHighlightInstruction])
 
   def combine(myList: List[StatMethod]) : List[StatMethod] = {
     val zipped1 = myList.zipWithIndex.filter(m => m._2 % 2 == 0)
@@ -74,7 +74,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       List[StatMethod](StatMethod(
         Math.min(method1.minIndex, method2.minIndex),
         Math.max(method1.maxIndex, method2.maxIndex),
-        List[StatMethod](method1, method2) ::: method1.children ::: method2.children, method1.superMethodenIndex ::: method2.superMethodenIndex))
+        List[StatMethod](method1, method2) ::: method1.children ::: method2.children, method1.instructions ::: method2.instructions))
     }
     else {
       List[StatMethod](method1, method2)
@@ -100,7 +100,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
         val methodList = permuter.findAllMethodsInPaper(onlyMethods).sortBy(m => {
           permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum +
-            m.startHighlightStringIndex + m.startHighlightStringIndex
+            m.startSearchStringIndex + m.startHighlightStringIndex
         })
 
         val methodName = method.replaceAll(" ", "_")
@@ -131,8 +131,9 @@ object MassPDFHighlighter extends App with LazyLogging {
 
             val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
             if(assumptionsList.nonEmpty) {
-              mergedMethods.map(groupedMethods => {
-                createHighlightedPDF(groupedMethods.superMethodenIndex, assumptionsList, method, f)
+              logger.debug(s"Result after merging method: $method => ${mergedMethods.length} different groups.")
+              mergedMethods.par.foreach(groupedMethods => {
+                createHighlightedPDF(groupedMethods.instructions, assumptionsList, method, f)
               })
             }
           }
@@ -165,14 +166,13 @@ object MassPDFHighlighter extends App with LazyLogging {
       new File(pathToSavePDFs).mkdirs()
 
       val highlightedPaper = highlighter._1.highlight()
-
       Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + 0 + ".pdf"))).foreach(s => {
         s.write(highlightedPaper._2)
         s.close()
       })
 
       logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
-      convertPDFtoPNG(f, highlightedPaper._1)
+      //convertPDFtoPNG(f, highlightedPaper._1)
     })
   }
 
