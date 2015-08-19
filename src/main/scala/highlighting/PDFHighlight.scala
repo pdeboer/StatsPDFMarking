@@ -201,7 +201,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 
         val patterns = List(i.searchString, i.highlightString).zipWithIndex.map(s => if(s._2%2==0){Pattern.compile("\\Q"+s._1+"\\E")}else {Pattern.compile(escapeSearchString(s._1))})
         pdfHighlight.highlight(patterns.head, patterns(1), i.color, i.pageNr)
-        i.pageNr
+        i.pageNr-1
       })
 
       val byteArrayOutputStream = new ByteArrayOutputStream()
