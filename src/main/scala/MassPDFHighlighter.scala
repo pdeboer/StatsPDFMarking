@@ -17,7 +17,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   val pdfsDir = "../pdfs/"
   val snippetsDir = "../merge_method_snippets/"
 
-  val pathConvert = "/usr/bin/convert"
+  val pathConvert = "/opt/local/bin/convert"
 
   val startTime = new DateTime().getMillis
 
@@ -165,14 +165,16 @@ object MassPDFHighlighter extends App with LazyLogging {
       val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
       new File(pathToSavePDFs).mkdirs()
 
+      val highlightedFile = new File(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + ".pdf")
+
       val highlightedPaper = highlighter._1.highlight()
-      Some(new BufferedOutputStream(new FileOutputStream(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + ".pdf"))).foreach(s => {
+      Some(new BufferedOutputStream(new FileOutputStream(highlightedFile))).foreach(s => {
         s.write(highlightedPaper._2)
         s.close()
       })
 
       logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
-      convertPDFtoPNG(f, highlightedPaper._1)
+      convertPDFtoPNG(highlightedFile, highlightedPaper._1)
     })
   }
 
@@ -180,15 +182,16 @@ object MassPDFHighlighter extends App with LazyLogging {
     val pathPDFFile = pdfFile.getPath
     val pathConvertedPNGFile: String = pdfFile.getParentFile.getPath+"/"+createPNGFileName(pdfFile.getName)
 
-    val convertCommandWithParams = "nice -n 5 " + pathConvert + " -density 200 -append "
-
     val range = if(pages.start != pages.end){
-      "["+pages.start+"-"+pages.end+"] "
+      "["+pages.start+"-"+pages.end+"]"
     }else {
-      "["+pages.start+"] "
+      "["+pages.start+"]"
     }
 
-    if((convertCommandWithParams + pathPDFFile.replaceAll(" ", "\\ ") + range + pathConvertedPNGFile.replaceAll(" ", "\\ ")).! != 0){
+    val convertCommandWithParams =
+      Seq("bash", "-c", s"nice -n 5 $pathConvert -density 200 -append ${pathPDFFile + range} ${pathConvertedPNGFile}")
+
+    if(convertCommandWithParams.! != 0){
       logger.error(s"File: ${pdfFile.getName} cannot be converted to PNG")
       new File("../errors_convertPDFtoPNG").mkdir()
       val pdf = new File("../errors_convertPDFtoPNG/"+pdfFile.getName)
