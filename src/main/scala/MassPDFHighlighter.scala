@@ -15,7 +15,7 @@ import scala.sys.process._
 object MassPDFHighlighter extends App with LazyLogging {
 
   val pdfsDir = "../pdfs/"
-	val snippetsDir = "../snippets/"
+	val snippetsDir = "../merge_method_snippets/"
 
 	val pathConvert = "/opt/local/bin/convert"
 
@@ -31,21 +31,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   highlightPDFFile
 
-	logger.debug("Starting conversion PDF2PNG...")
-
-  /*val allPdfFiles :List[File] = new File(snippetsDir).listFiles(filterDirectories).par.flatMap(yearDir => {
-    yearDir.listFiles(filterDirectories).par.flatMap(methodDir => {
-      methodDir.listFiles(filterDirectories).par.flatMap(pdfDir => {
-        pdfDir.listFiles(new FilenameFilter {
-          override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
-        }).map(file => file)
-      }).toList
-    }).toList
-  }).toList
-
-  allPdfFiles.par.foreach(convertPDFtoPNG(_))*/
-
-	logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
+  logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 
 
   def emptySnippetsDir(dir: File): Boolean = {
@@ -78,7 +64,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
 
     if(newList.length>=2){
-      newList.splitAt(newList.length-2)._1 ::: mergeIfMergeable(newList(newList.length-2), newList(newList.length-1))
+      newList.splitAt(newList.length-2)._1 ::: mergeIfMergeable(newList(newList.length-2), newList.last)
     }else {
       newList
     }
@@ -111,9 +97,10 @@ object MassPDFHighlighter extends App with LazyLogging {
 
       try {
         val permuter = new PDFPermuter(f.getAbsolutePath)
+        //TODO: calculate text length
         val maxLengthPDF=permuter.txt.length
-
-        val methodList = permuter.findAllMethodsInPaper(onlyMethods).sortBy(method  => method.startSearchStringIndex+method.startHighlightStringIndex)
+        //TODO: add page padding
+        val methodList = permuter.findAllMethodsInPaper(onlyMethods).sortBy(m => m.startHighlightStringIndex+m.startHighlightStringIndex)
 
         val methodName = method.replaceAll(" ", "_")
         val year = f.getName.substring(0, f.getName.indexOf("_"))
@@ -128,7 +115,6 @@ object MassPDFHighlighter extends App with LazyLogging {
             m)
         })
 
-        logger.debug(s"Found ${methodList2.length} matches for method: $method")
         if(methodList.nonEmpty) {
           var changedSomething = false
           do {
@@ -167,8 +153,9 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def createHighlightedPDF(methodList: List[PDFHighlightInstruction], method: String, f: File) = {
-    logger.debug(s"Start highlight permutations for method $method")
     new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodList).zipWithIndex.par.foreach(highlighter => {
+
+      logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
       val methodName = method.replaceAll(" ", "_")
       val year = f.getName.substring(0, f.getName.indexOf("_"))
@@ -183,7 +170,6 @@ object MassPDFHighlighter extends App with LazyLogging {
       })
     })
   }
-
 
   def convertPDFtoPNG(pdfFile: File) = {
     val pathPDFFile = pdfFile.getPath
