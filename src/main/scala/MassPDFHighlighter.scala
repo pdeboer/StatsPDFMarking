@@ -14,10 +14,10 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs2/"
+  val pdfsDir = "../pdfs/"
   val snippetsDir = "../merge_method_snippets/"
 
-  val pathConvert = "/opt/local/bin/convert"
+  val pathConvert = "/usr/bin/convert"
 
   val startTime = new DateTime().getMillis
 
@@ -32,7 +32,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   highlightPDFFile
 
   def emptySnippetsDir(dir: File): Boolean = {
-    dir.listFiles().foreach(file => {
+    dir.listFiles().par.foreach(file => {
       if (file.isDirectory) {
         emptySnippetsDir(file)
       }
@@ -42,7 +42,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def highlightPDFFile = {
-    new FolderPDFSource(pdfsDir).get().foreach(f => {
+    new FolderPDFSource(pdfsDir).get().par.foreach(f => {
       highlightFile(f)
       logger.info(s"processed $f")
     })
@@ -88,7 +88,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.foreach(method => {
+    terms.termNames.par.foreach(method => {
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
@@ -132,7 +132,7 @@ object MassPDFHighlighter extends App with LazyLogging {
             val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
             if(assumptionsList.nonEmpty) {
               logger.debug(s"Result after merging method: $method => ${mergedMethods.length} different groups.")
-              mergedMethods.foreach(groupedMethods => {
+              mergedMethods.par.foreach(groupedMethods => {
                 createHighlightedPDF(groupedMethods.instructions, assumptionsList, method, f)
               })
             }
@@ -154,7 +154,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def createHighlightedPDF(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String, f: File) = {
-    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList).zipWithIndex.foreach( highlighter => {
+    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList).zipWithIndex.par.foreach( highlighter => {
 
       logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
