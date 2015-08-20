@@ -19,6 +19,8 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   val pathConvert = "/opt/local/bin/convert"
 
+  val PERMUTATIONS_CSV_FILENAME = "permutations.csv"
+
   val startTime = new DateTime().getMillis
 
   val filterDirectories = new FilenameFilter {
@@ -88,7 +90,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.par.foreach(method => {
+    val permutations: List[Option[List[Permutation]]] = terms.termNames.par.map(method => {
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
@@ -132,29 +134,55 @@ object MassPDFHighlighter extends App with LazyLogging {
             val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
             if(assumptionsList.nonEmpty) {
               logger.debug(s"Result after merging method: $method => ${mergedMethods.length} different groups.")
-              mergedMethods.par.foreach(groupedMethods => {
+              Some(mergedMethods.par.flatMap(groupedMethods => {
                 createHighlightedPDF(groupedMethods.instructions, assumptionsList, method, f)
-              })
+              }).toList)
+            }else {
+              None
             }
+          }else{
+            None
           }
+        }else {
+          None
         }
       } catch {
         case e: Exception => {
           logger.error(s"Error while highlighting permutations for file $f", e)
           new File("../errors_whilePermuting").mkdir()
           val pdf = new File("../errors_whilePermuting/"+f.getName)
+
           try{
             FileUtils.copyFile(f, pdf)
           }catch {
-            case e: Exception => logger.error(s"Cannot copy file $f to ../errors_whilePermuting/ directory!", e)
+            case e: Exception => {
+              logger.error(s"Cannot copy file $f to ../errors_whilePermuting/ directory!", e)
+              None
+            }
           }
+          None
         }
       }
+    }).toList
+
+    val writer = new PrintWriter(new File(PERMUTATIONS_CSV_FILENAME))
+    writer.write("pdf_name, method_up, permutation_group, state\n")
+    permutations.foreach(p => {
+      if(p.isDefined){
+        p.get.foreach(pe => {
+          writer.write(pe.pdfName + "," + pe.methodUp + "," + pe.group + ","+ "-1\n")
+        })
+      }
     })
+
+    writer.close()
   }
 
-  def createHighlightedPDF(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String, f: File) = {
-    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList).zipWithIndex.foreach( highlighter => {
+  case class Permutation(pdfName: String, methodUp: Boolean, group: String)
+
+  def createHighlightedPDF(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String, f: File): List[Permutation] = {
+
+    new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList).zipWithIndex.par.flatMap( highlighter => {
 
       logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
@@ -175,7 +203,19 @@ object MassPDFHighlighter extends App with LazyLogging {
 
       logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
       convertPDFtoPNG(highlightedFile, highlightedPaper._1)
-    })
+
+      val methodInstruction = highlighter._1.instructions.filter(f => f.color==Color.yellow).head
+      val methodPosition = methodInstruction.pageNr+":"+(methodInstruction.startSearchStringIndex+methodInstruction.startHighlightStringIndex)
+
+      val permutations = highlighter._1.instructions.map( i => {
+        if(i.color==Color.green) {
+          val assumptionPosition = i.pageNr+":"+(i.startSearchStringIndex+i.startHighlightStringIndex)
+          Permutation(f.getName.substring(0, f.getName.indexOf(".pdf")+4), false, highlighter._2+"$"+methodName + "-" + methodPosition + "/" + i.highlightString+"-"+assumptionPosition)
+        }
+      })
+
+      permutations.filter(p => p.isInstanceOf[Permutation]).map(_.asInstanceOf[Permutation])
+    }).toList
   }
 
   def convertPDFtoPNG(pdfFile: File, pages: HighlightPage) = {
