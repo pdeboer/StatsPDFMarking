@@ -186,12 +186,12 @@ public class TextHighlight extends PDFTextStripper {
 			}
 			graphicsStateDictionary.put("highlights", graphicsState);
 			resources.setGraphicsStates(graphicsStateDictionary);
+            int spaceOccurrences = searchText.toString().split(" ").length > 0 ? searchText.toString().split(" ").length-1 : 0;
 
             for (Match searchMatch : textCache.match(pageNr, searchText)) {
                 for (Match markingMatch : textCache.match(searchMatch.positions, markingPattern)) {
-                    if(markupMatch(color, contentStream, markingMatch)){
+                        if(markupMatch(color, contentStream, markingMatch)){
                         found = true;
-                        break;
                     }
                 }
                 if(found){

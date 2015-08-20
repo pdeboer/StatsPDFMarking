@@ -105,7 +105,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   }
 
   def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}\\s*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,5}\\s*").mkString("")
     if(searchString.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
@@ -150,18 +150,33 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 	}
 
   def isSmallestMatch(it: Int, indexPosition: Int, inputStringLength: Int, pageTxt: String): Int = {
+
     val subTxt = pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputStringLength + it))
-    if(("\\Q"+subTxt+"\\E").r.findAllMatchIn(txt.mkString("")).length == 1){
-      it
+    if(subTxt.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || subTxt.contains(" ")){
+      if(("(?i)(\\b\\Q"+subTxt+"\\E\\b)").r.findAllMatchIn(txt.mkString("")).length == 1){
+        it
+      }else {
+        isSmallestMatch(it+1, indexPosition, inputStringLength, pageTxt)
+      }
     }else {
-      isSmallestMatch(it+1, indexPosition, inputStringLength, pageTxt)
+      if(("(?i)(\\Q"+subTxt+"\\E)").r.findAllMatchIn(txt.mkString("")).length == 1){
+        it
+      }else {
+        isSmallestMatch(it+1, indexPosition, inputStringLength, pageTxt)
+      }
     }
   }
 
   def extractSmallestBoundaryForSingleMatch(inputString: String, indexPosition: Int, pageTxt: String): (Int, Int) = {
     try{
       val it = isSmallestMatch(0, indexPosition, inputString.length, pageTxt)
-      (Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it))
+
+      if(pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it)).contains(" ")){
+        (Math.max(0, indexPosition - it),
+          Math.min(pageTxt.length, indexPosition + inputString.length + pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it)).split(" ").length -1 + it))
+      }else {
+        (Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it))
+      }
     }catch{
       case e: Exception => {
         e.printStackTrace()
@@ -224,7 +239,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
   }
 
   def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\n\\r]{0,3}\\s*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\n\\r]{0,5}\\s*").mkString("")
     if(searchString.length <= 5 || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {

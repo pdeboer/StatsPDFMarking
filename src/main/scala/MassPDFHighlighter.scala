@@ -42,7 +42,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def highlightPDFFile = {
-    new FolderPDFSource(pdfsDir).get().par.foreach(f => {
+    new FolderPDFSource(pdfsDir).get().foreach(f => {
       highlightFile(f)
       logger.info(s"processed $f")
     })
@@ -88,7 +88,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def highlightFile(f: File) = {
     val terms = new HighlightTermloader
 
-    terms.termNames.par.foreach(method => {
+    terms.termNames.foreach(method => {
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
@@ -132,7 +132,7 @@ object MassPDFHighlighter extends App with LazyLogging {
             val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
             if(assumptionsList.nonEmpty) {
               logger.debug(s"Result after merging method: $method => ${mergedMethods.length} different groups.")
-              mergedMethods.par.foreach(groupedMethods => {
+              mergedMethods.foreach(groupedMethods => {
                 createHighlightedPDF(groupedMethods.instructions, assumptionsList, method, f)
               })
             }
