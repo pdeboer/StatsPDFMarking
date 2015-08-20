@@ -44,10 +44,22 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def highlightPDFFile = {
-    new FolderPDFSource(pdfsDir).get().par.foreach(f => {
+    val permutations : List[Option[List[Permutation]]] = new FolderPDFSource(pdfsDir).get().par.flatMap(f => {
       highlightFile(f)
-      logger.info(s"processed $f")
+    }).toList
+
+    val writer = new PrintWriter(new File(PERMUTATIONS_CSV_FILENAME))
+    writer.write("pdf_name, method_up, group_nr, permutation_group, state\n")
+    permutations.foreach(p => {
+      if(p.isDefined){
+        p.get.foreach(pe => {
+          writer.append(pe.pdfName + "," + pe.methodUp + "," + pe.group+ "," + pe.permutationGroup + ","+ "-1\n")
+        })
+      }
     })
+
+    writer.close()
+
   }
 
   logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
@@ -87,7 +99,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     method1.maxIndex > method2.minIndex
   }
 
-  def highlightFile(f: File) = {
+  def highlightFile(f: File) : List[Option[List[Permutation]]] = {
     val terms = new HighlightTermloader
 
     val permutations: List[Option[List[Permutation]]] = terms.termNames.par.map(method => {
@@ -165,17 +177,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       }
     }).toList
 
-    val writer = new PrintWriter(new File(PERMUTATIONS_CSV_FILENAME))
-    writer.write("pdf_name, method_up, group_nr, permutation_group, state\n")
-    permutations.foreach(p => {
-      if(p.isDefined){
-        p.get.foreach(pe => {
-          writer.write(pe.pdfName + "," + pe.methodUp + "," + pe.group + ","+ "-1\n")
-        })
-      }
-    })
-
-    writer.close()
+    permutations
   }
 
   case class Permutation(pdfName: String, methodUp: Boolean, group: Int, permutationGroup: String)
@@ -202,7 +204,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       })
 
       logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
-      convertPDFtoPNG(highlightedFile, highlightedPaper._1)
+      //convertPDFtoPNG(highlightedFile, highlightedPaper._1)
 
       val methodInstruction = highlighter._1.instructions.filter(f => f.color==Color.yellow).head
       val methodPosition = methodInstruction.pageNr+":"+(methodInstruction.startSearchStringIndex+methodInstruction.startHighlightStringIndex)
