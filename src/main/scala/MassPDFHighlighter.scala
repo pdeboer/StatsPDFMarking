@@ -134,8 +134,8 @@ object MassPDFHighlighter extends App with LazyLogging {
             val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
             if(assumptionsList.nonEmpty) {
               logger.debug(s"Result after merging method: $method => ${mergedMethods.length} different groups.")
-              Some(mergedMethods.par.flatMap(groupedMethods => {
-                createHighlightedPDF(groupedMethods.instructions, assumptionsList, method, f)
+              Some(mergedMethods.par.zipWithIndex.flatMap(groupedMethods => {
+                createHighlightedPDF(groupedMethods._2, groupedMethods._1.instructions, assumptionsList, method, f)
               }).toList)
             }else {
               None
@@ -166,7 +166,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     }).toList
 
     val writer = new PrintWriter(new File(PERMUTATIONS_CSV_FILENAME))
-    writer.write("pdf_name, method_up, permutation_group, state\n")
+    writer.write("pdf_name, method_up, group_nr, permutation_group, state\n")
     permutations.foreach(p => {
       if(p.isDefined){
         p.get.foreach(pe => {
@@ -178,9 +178,9 @@ object MassPDFHighlighter extends App with LazyLogging {
     writer.close()
   }
 
-  case class Permutation(pdfName: String, methodUp: Boolean, group: String)
+  case class Permutation(pdfName: String, methodUp: Boolean, group: Int, permutationGroup: String)
 
-  def createHighlightedPDF(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String, f: File): List[Permutation] = {
+  def createHighlightedPDF(groupId: Int, methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String, f: File): List[Permutation] = {
 
     new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList).zipWithIndex.par.flatMap( highlighter => {
 
@@ -210,7 +210,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       val permutations = highlighter._1.instructions.map( i => {
         if(i.color==Color.green) {
           val assumptionPosition = i.pageNr+":"+(i.startSearchStringIndex+i.startHighlightStringIndex)
-          Permutation(f.getName.substring(0, f.getName.indexOf(".pdf")+4), false, highlighter._2+"$"+methodName + "-" + methodPosition + "/" + i.highlightString+"-"+assumptionPosition)
+          Permutation(f.getName.substring(0, f.getName.indexOf(".pdf")+4), false, groupId, methodName + "-" + methodPosition + "/" + i.highlightString+"-"+assumptionPosition)
         }
       })
 
