@@ -7,6 +7,7 @@ import java.io.{File, FilenameFilter}
 import javax.imageio.ImageIO
 
 import com.typesafe.scalalogging.LazyLogging
+import org.codehaus.plexus.util.FileUtils
 
 /**
  * Created by mattia on 13.07.15.
@@ -19,7 +20,7 @@ object MainSnippet extends App with LazyLogging {
   val PADDING_SNIPPET = 200
   val MINIMAL_SNIPPET_HEIGHT = 300
 
-  val SNIPPET_DIR = "../snippets/"
+  val SNIPPET_DIR = "../merge_method_snippets/"
 
   val filterDirectories = new FilenameFilter {
     override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
@@ -76,6 +77,9 @@ object MainSnippet extends App with LazyLogging {
   def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D], greenCoords: List[Point2D]): Boolean = {
 
     if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
+
+      //multiple yellow, single green
+
       val inputImage = ImageIO.read(pngImage)
       val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, greenCoords, inputImage.getHeight)
       val snippetHeight = endY - startY
@@ -88,7 +92,12 @@ object MainSnippet extends App with LazyLogging {
           snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
         }
       }
-      val methodOnTop: Boolean = if(yellowCoords.minBy(_.getY).getY < greenCoords.minBy(_.getY).getY){ true } else {false}
+      val methodOnTop: Boolean = if(yellowCoords.map(y => (Math.abs(greenCoords.minBy(_.getY).getY - y.getY), y)).minBy(_._1)._2.getY < greenCoords.minBy(_.getY).getY){
+          true
+        } else {
+          false
+        }
+
       var suffix = "methodOnTop"
       if(!methodOnTop){
         suffix = "prerequisiteOnTop"
@@ -101,19 +110,24 @@ object MainSnippet extends App with LazyLogging {
       true
     } else {
       logger.error(s"Cannot create snippet. No highlight found in file: ${pngImage.getName}")
+      new File("../errors_cutting_snippets").mkdir()
+      val snippet = new File("../errors_cutting_snippets/"+pngImage.getName)
+      try{
+        FileUtils.copyFile(pngImage, snippet)
+      }catch {
+        case e: Exception => logger.error(s"Cannot copy file $pngImage to ../errors_cutting_snippets/ directory!", e)
+      }
       false
     }
   }
 
   def extractImageBoundaries(coordsYellow: List[Point2D], coordsGreen: List[Point2D], maxHeight: Int): (Int, Int) = {
-    val minGreen = coordsGreen.minBy(_.getY)
-    val minYellow = coordsYellow.minBy(_.getY)
 
-    val maxGreen = coordsGreen.maxBy(_.getY)
-    val maxYellow = coordsYellow.maxBy(_.getY)
+    val minGreen = coordsGreen.minBy(_.getY)
+    val minYellow = coordsYellow.map(y => (Math.abs(minGreen.getY - y.getY), y)).minBy(_._1)._2
 
     val startY = Math.min(minYellow.getY,minGreen.getY) - PADDING_SNIPPET
-    val endY = Math.max(maxYellow.getY, maxGreen.getY) + PADDING_SNIPPET
+    val endY = Math.max(minYellow.getY, minGreen.getY) + PADDING_SNIPPET
 
     checkMinimalBoundaries(startY.toInt, endY.toInt, maxHeight)
   }

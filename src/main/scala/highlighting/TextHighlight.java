@@ -1,7 +1,7 @@
 package highlighting;
 
 /*
- * Copyright 2014 JoÃ«l Kuiper
+ * Copyright 2014 J. Kuiper
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import java.util.regex.Pattern;
  * instead write to a TextCache that keeps data on the position of the TextPositions. From this information we can then
  * derive bounding boxes (and quads) that can be used to write the annotations. See the main method for example usage
  *
- * @author JoÃ«l Kuiper <me@joelkuiper.eu>
+ * @author J. Kuiper <me@joelkuiper.eu>
  */
 public class TextHighlight extends PDFTextStripper {
 
@@ -125,58 +125,56 @@ public class TextHighlight extends PDFTextStripper {
 		return boundingBox;
 	}
 
-	/**
-	 * Highlights a pattern within the PDF with the default color.
-	 * Returns the list of added annotations for further modification
-	 * Note: it will process every page, but cannot process patterns that span multiple pages
-	 * Note: it will not work for top-bottom text (such as Chinese)
-	 *
-	 * @param pattern String that will be converted to Regex pattern
-	 * @throws IOException
-	 */
-	public void highlightDefault(final String pattern, Color color) throws IOException {
-		Pattern compiledPattern = Pattern.compile("\\Q" + pattern + "\\E", Pattern.CASE_INSENSITIVE);
-		this.highlightDefault(compiledPattern, color);
-	}
+    /**
+     * Highlights a pattern within the PDF with the default color.
+     * Returns the list of added annotations for further modification
+     * Note: it will process every page, but cannot process patterns that span multiple pages
+     * Note: it will not work for top-bottom text (such as Chinese)
+     *
+     * @param pattern String that will be converted to Regex pattern
+     * @throws IOException
+     */
+    public void highlightDefault(final String pattern, Color color, int pageNr) throws IOException {
+        Pattern compiledPattern = Pattern.compile("\\Q" + pattern + "\\E", Pattern.CASE_INSENSITIVE);
+        this.highlightDefault(compiledPattern, color, pageNr);
+    }
 
-	/**
-	 * Highlights a pattern within the PDF with the default color.
-	 * Returns the list of added annotations for further modification.
-	 * Note: it will process every page, but cannot process patterns that span multiple pages.
-	 * Note: it will not work for top-bottom text (such as Chinese)
-	 *
-	 * @param pattern Pattern (regex)
-	 * @throws IOException
-	 */
-	public void highlightDefault(final Pattern pattern, Color color) throws IOException {
-		this.highlight(pattern, pattern, color);
-	}
+    /**
+     * Highlights a pattern within the PDF with the default color.
+     * Returns the list of added annotations for further modification.
+     * Note: it will process every page, but cannot process patterns that span multiple pages.
+     * Note: it will not work for top-bottom text (such as Chinese)
+     *
+     * @param pattern Pattern (regex)
+     * @throws IOException
+     */
+    public void highlightDefault(final Pattern pattern, Color color, int pageNr) throws IOException {
+        this.highlight(pattern, pattern, color, pageNr);
+    }
 
-	public void highlight(final String pattern)
-			throws IOException {
-		Pattern p = Pattern.compile("\\b(" + pattern + ")\\b", Pattern.CASE_INSENSITIVE);
-		this.highlight(p);
-	}
-
-
-	public void highlight(final Pattern pattern) throws IOException {
-		highlight(pattern, pattern, Color.yellow);
-	}
-
-	public void highlight(final Pattern searchText, final Pattern markingPattern, Color color)
-			throws IOException {
-		if (textCache == null || document == null) {
-			throw new IllegalArgumentException("TextCache was not initilized");
-		}
-
-		final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
+    public void highlight(final String pattern, int pageNr)
+            throws IOException {
+        Pattern p = Pattern.compile("\\b(" + pattern + ")\\b", Pattern.CASE_INSENSITIVE);
+        this.highlight(p, pageNr);
+    }
 
 
-        boolean found = false;
-		for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
-				&& pageIndex < pages.size(); pageIndex++) {
-			final PDPage page = pages.get(pageIndex);
-			PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
+    public void highlight(final Pattern pattern, int pageNr) throws IOException {
+        highlight(pattern, pattern, Color.yellow, pageNr);
+    }
+
+    public void highlight(final Pattern searchText, final Pattern markingPattern, Color color, int pageNr) {
+        if (textCache == null || document == null) {
+            throw new IllegalArgumentException("TextCache was not initilized");
+        }
+
+        final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
+
+        try {
+            boolean found = false;
+
+            final PDPage page = pages.get(pageNr-1);
+            PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
 
 			PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
 			graphicsState.setNonStrokingAlphaConstant(0.5f);
@@ -189,113 +187,39 @@ public class TextHighlight extends PDFTextStripper {
 			graphicsStateDictionary.put("highlights", graphicsState);
 			resources.setGraphicsStates(graphicsStateDictionary);
 
-			List<Match> matches = textCache.match(pageIndex + 1, searchText);
-
-			for (Match searchMatch : matches) {
-				List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
-				for (Match markingMatch : markingMatches) {
-					markupMatch(color, contentStream, markingMatch);
-                    found = true;
-                    break;
-				}
+            for (Match searchMatch : textCache.match(pageNr, searchText)) {
+                for (Match markingMatch : textCache.match(searchMatch.positions, markingPattern)) {
+                    if(markupMatch(color, contentStream, markingMatch)){
+                        found = true;
+                        break;
+                    }
+                }
                 if(found){
                     break;
                 }
-			}
-			contentStream.close();
-		}
-        // Try to search in the last sentence of each page
-        if(!found){
-            System.out.println("The word may be in the last sentence of the page at this point");
-
-            boolean found1 = false;
-            for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
-                    && pageIndex < pages.size(); pageIndex++) {
-                final PDPage page = pages.get(pageIndex);
-                PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
-
-                PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
-                graphicsState.setNonStrokingAlphaConstant(0.5f);
-                PDResources resources = page.findResources();
-                Map graphicsStateDictionary = resources.getGraphicsStates();
-                if (graphicsStateDictionary == null) {
-                    // There is no graphics state dictionary in the resources dictionary, create one.
-                    graphicsStateDictionary = new TreeMap();
-                }
-                graphicsStateDictionary.put("highlights", graphicsState);
-                resources.setGraphicsStates(graphicsStateDictionary);
-
-                String pageText = textCache.getText(pageIndex + 1);
-                String lastCharsOnPage = pageText.substring(Math.max(0, pageText.length() - searchText.toString().replaceAll("\\Q[\\-\\n\\r\\.]{0,3}[\\s]*\\E", "").length()), pageText.length());
-
-                List<Match> matches = textCache.match(pageIndex + 1, Pattern.compile("\\Q" + lastCharsOnPage + "\\E"));
-
-                for (Match searchMatch : matches) {
-                    List<Match> markingMatches = textCache.match(searchMatch.positions, markingPattern);
-                    for (Match markingMatch : markingMatches) {
-                        markupMatch(color, contentStream, markingMatch);
-                        found1 = true;
-                        break;
-                    }
-                    if(found1){
-                        break;
-                    }
-                }
-                contentStream.close();
             }
-            if(!found1){
-                System.out.println("The word may be written in vertical at this point");
-
-                boolean found2 = false;
-                for (int pageIndex = getStartPage() - 1; pageIndex < getEndPage()
-                        && pageIndex < pages.size(); pageIndex++) {
-                    final PDPage page = pages.get(pageIndex);
-                    PDPageContentStream contentStream = new PDPageContentStream(document, page, true, true);
-
-                    PDExtendedGraphicsState graphicsState = new PDExtendedGraphicsState();
-                    graphicsState.setNonStrokingAlphaConstant(0.5f);
-                    PDResources resources = page.findResources();
-                    Map graphicsStateDictionary = resources.getGraphicsStates();
-                    if (graphicsStateDictionary == null) {
-                        // There is no graphics state dictionary in the resources dictionary, create one.
-                        graphicsStateDictionary = new TreeMap();
-                    }
-                    graphicsStateDictionary.put("highlights", graphicsState);
-                    resources.setGraphicsStates(graphicsStateDictionary);
-
-                    String pageText = textCache.getText(pageIndex + 1);
-
-                    List<Match> matches = textCache.match(pageIndex + 1, searchText);
-
-                    for (Match searchMatch : matches) {
-                        List<Match> markingMatches = textCache.match(searchMatch.positions, Pattern.compile(".+"));
-                        for (Match markingMatch : markingMatches) {
-                            markupMatch(color, contentStream, markingMatch);
-                            found2 = true;
-                            break;
-                        }
-                        if(found2){
-                            break;
-                        }
-                    }
-                    contentStream.close();
-                }
-            }
+            contentStream.close();
+        }catch (Exception e) {
+            e.printStackTrace();
+        }catch(Error e1) {
+            e1.printStackTrace();
+            throw e1;
         }
     }
 
-	private void markupMatch(Color color, PDPageContentStream contentStream, Match markingMatch) throws IOException {
-		final List<PDRectangle> textBoundingBoxes = getTextBoundingBoxes(markingMatch.positions);
+    private boolean markupMatch(Color color, PDPageContentStream contentStream, Match markingMatch) throws IOException {
+        final List<PDRectangle> textBoundingBoxes = getTextBoundingBoxes(markingMatch.positions);
 
-		if (textBoundingBoxes.size() > 0) {
-			contentStream.appendRawCommands("/highlights gs\n");
-			contentStream.setNonStrokingColor(color);
+        if (textBoundingBoxes.size() > 0) {
+            contentStream.appendRawCommands("/highlights gs\n");
+            contentStream.setNonStrokingColor(color);
             for(int i=0; i < textBoundingBoxes.size(); i++){
                 contentStream.fillRect(textBoundingBoxes.get(i).getLowerLeftX(), textBoundingBoxes.get(i).getLowerLeftY(), Math.max(textBoundingBoxes.get(i).getUpperRightX() - textBoundingBoxes.get(i).getLowerLeftX(), 10), 10);
             }
-
-		}
-	}
+            return true;
+        }
+        return false;
+    }
 
 	/**
 	 * The vertical tolerance determines whether a character is still on the same line
@@ -598,18 +522,29 @@ public class TextHighlight extends PDFTextStripper {
 			return match(textPositions, sb.toString(), pattern);
 		}
 
-		public List<Match> match(List<TextPosition> textPositions, String text, final Pattern pattern) {
+        public List<Match> match(List<TextPosition> textPositions, String text, final Pattern pattern) {
+            try {
+                final Matcher matcher = pattern.matcher(text);
+                final List<Match> matches = new ArrayList<Match>();
 
-			final Matcher matcher = pattern.matcher(text);
-			final List<Match> matches = new ArrayList<Match>();
-
-			while (matcher.find()) {
-				final List<TextPosition> elements = textPositions.subList(
-						matcher.start(), matcher.end());
-				matches.add(new Match(matcher.group(), elements));
-			}
-			return matches;
-		}
-	}
+                while (matcher.find()) {
+                    final List<TextPosition> elements = textPositions.subList(
+                            matcher.start(), matcher.end());
+                    matches.add(new Match(matcher.group(), elements));
+                }
+                return matches;
+            }catch(Error e){
+                System.out.println("An error occurred while searching for: " + pattern.toString());
+                e.printStackTrace();
+                final List<Match> emptyList = new ArrayList<Match>();
+                return emptyList;
+            }catch(Exception e1) {
+                System.out.println("An exception occurred while seraching for: " + pattern.toString());
+                e1.printStackTrace();
+                final List<Match> emptyList = new ArrayList<Match>();
+                return emptyList;
+            }
+        }
+    }
 
 }

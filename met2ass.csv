@@ -16,22 +16,22 @@ Multiple regression,multicollinearity
 Multiple regression,linearity
 Logistic regression,Independen
 Logistic regression,linearity of independent variable
-t-test,Normal
-t-test,Independen
-t-test,Homogeneity of variance
-t-test,linearity
+t test,Normal
+t test,Independen
+t test,Homogeneity of variance
+t test,linearity
 U test,Independen
 U test,ordinal
 Kappa,Independen
-Kruskal-Wallis test,Independen
+Kruskal Wallis test,Independen
 ANCOVA,Normal
 ANCOVA,Homogeneity of variance
 ANCOVA,Independen
 ANCOVA,linearity
 ANCOVA,homogeneity of regression slopes
 ANCOVA,Homoscedasticity
-Wilcoxon Signed-Ranks test,ordinal
-Wilcoxon Signed-Ranks test,Independen
+Wilcoxon Signed Ranks test,ordinal
+Wilcoxon Signed Ranks test,Independen
 Dum's test,Independen
 Dum's test,Normal
 Dum's test,Homogeneity of variance

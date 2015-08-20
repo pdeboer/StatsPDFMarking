@@ -22,7 +22,7 @@ object DeltaOccurrences extends App{
     var allMatches = List.empty[Int]
 
     methodsAndSynonyms.foreach(t1 => {
-      t1.r.findAllMatchIn(txt).foreach(m => {
+      t1.r.findAllMatchIn(txt.mkString("")).foreach(m => {
         allMatches ::= m.start
       })
     })

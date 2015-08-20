@@ -5,12 +5,12 @@ Correlation,R square,R squared,R 2 adjusted
 Linear regression,Regression analysis,Ordinary least squares regression
 Multiple regression,Multiple Linear Regression
 Logistic regression
-t-test
+t test
 U test,Mann-Whitney
 Kappa,Kendall Tau,Bland Altman,Youden J
-Kruskal-Wallis test
+Kruskal Wallis test
 ANCOVA,Analysis of covariance
-Wilcoxon Signed-Ranks test
+Wilcoxon Signed Ranks test
 Dum's test,Dum test
 MANOVA,multivariate Analysis of variance
 Mantel Haenszel

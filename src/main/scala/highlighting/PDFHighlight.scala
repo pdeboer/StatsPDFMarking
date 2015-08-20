@@ -10,10 +10,10 @@ import org.apache.pdfbox.pdmodel.PDDocument
 
 import scala.collection.immutable.Iterable
 
-case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String, startSearchStringIndex: Int, startHighlightStringIndex: Int)
+case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String, startSearchStringIndex: Int, startHighlightStringIndex: Int, pageNr: Int)
 
 object PDFTextExtractor extends LazyLogging{
-  def extract(pdfPath: String): String = {
+  def extract(pdfPath: String): List[String] = {
     try {
       val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
       parser.parse()
@@ -23,7 +23,7 @@ object PDFTextExtractor extends LazyLogging{
       pdfHighlight.setLineSeparator(" ")
       pdfHighlight.initialize(pdDoc)
 
-      val txt = (0 to pdDoc.getNumberOfPages).map(pdfHighlight.textCache.getText(_)).mkString("")
+      val txt: List[String] = (0 to pdDoc.getNumberOfPages).map(pdfHighlight.textCache.getText(_)).toList
       pdDoc.close()
 
       txt
@@ -42,21 +42,17 @@ object PDFTextExtractor extends LazyLogging{
 
 class PDFPermuter(pdfPath: String) extends LazyLogging {
 
-	lazy val txt = PDFTextExtractor.extract(pdfPath)
   val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = 5
 
-  def findAllMethodsInPaper(permutationDefinition: Map[Color, List[String]]): List[PDFHighlightInstruction] = {
-    val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
+	lazy val txt = PDFTextExtractor.extract(pdfPath)
+
+	def findAllMethodsInPaper(permutationDefinition: Map[Color, List[String]]): List[PDFHighlightInstruction] = {
+		val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
     uniqueStrings.toList
-  }
+	}
 
-  def getUniquePairsForSearchTerms(uniqueStrings: Iterable[PDFHighlightInstruction]): Iterable[PDFHighlight] = {
-    val uniquePairs : IndexedSeq[Option[(PDFHighlightInstruction,PDFHighlightInstruction)]] =
-      for (i <- 0 until uniqueStrings.toSeq.length; j <- i until uniqueStrings.toSeq.length; if(isUniquePairValidCandidate(uniqueStrings.toSeq(i), uniqueStrings.toSeq(j)))) yield {
-        cleanUniquePairsCandidate(uniqueStrings.toSeq, i, j)
-      }
-
-    uniquePairs.filter(f=> f.isDefined).map(p => new PDFHighlight(pdfPath, List(p.get._1, p.get._2))).toList
+  def getUniquePairsForSearchTerms(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction]): List[PDFHighlight] = {
+    assumptionsList.map(p => new PDFHighlight(pdfPath, methodsList.toList ::: List(p)))
   }
 
   def cleanUniquePairsCandidate(seqUniqueStrings: Seq[PDFHighlightInstruction], methodIndex: Int, assumptionIndex: Int): Option[(PDFHighlightInstruction, PDFHighlightInstruction)] = {
@@ -109,7 +105,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   }
 
   def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r\\.]{0,3}[\\s]*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,3}\\s*").mkString("")
     if(searchString.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
@@ -121,49 +117,61 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 		highlightTerms.flatMap {
 			case (color, patterns) => patterns.map(pattern => {
 
-        val allIndicesOfThesePatterns : Iterator[Int] = escapeSearchString(pattern).r.findAllMatchIn(txt).map(_.start)
+        txt.zipWithIndex.flatMap(pageTxt => {
+          val allIndicesOfThesePatterns : Iterator[Int] = escapeSearchString(pattern).r.findAllMatchIn(pageTxt._1).map(_.start)
 
-        val substringIndices: Iterator[(Int, Int)] = allIndicesOfThesePatterns.map(index => {
-          extractSmallestBoundaryForSingleMatch(pattern, index)
-        })
+          val substringIndices: Iterator[(Int, Int)] = allIndicesOfThesePatterns.map(index => {
+            extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt._1)
+          })
 
-				val substrings = substringIndices.map(i => txt.substring(i._1, i._2))
-				substrings.map(substring => {
+          val substrings = substringIndices.map(i => pageTxt._1.substring(i._1, i._2))
+          substrings.map(substring => {
 
-          //TODO: What if the searchStringMatch contains two times the word to highlight? which one is to highlight?
-          try {
-            val searchStringMatch = escapeSearchString(substring).r.findFirstMatchIn(txt).get
-            val start = if (escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
-              escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
-            } else {
-              0
+            //TODO: What if the searchStringMatch contains two times the word to highlight? which one is to highlight?
+            try {
+              val searchStringMatch = ("\\Q"+substring+"\\E").r.findFirstMatchIn(pageTxt._1).get
+              val start = if (escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
+                escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
+              } else {
+                0
+              }
+              PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start, pageTxt._2)
+            }catch {
+              case e: Exception => {
+                logger.error("Cannot find term " + pattern + " in pdf "+ pdfPath,e)
+                null
+              }
             }
-            PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start)
-          }catch {
-            case e: Exception => {
-              logger.error("Cannot find term " + pattern + " in pdf "+ pdfPath,e)
-              null
-            }
-          }
+          })
         })
 
       })
 		}.flatten
 	}
 
-  def isSmallestMatch(it: Int, indexPosition: Int, inputStringLength: Int): Int = {
-    val subTxt = txt.substring(Math.max(0, indexPosition - it), Math.min(txt.length, indexPosition + inputStringLength + it))
-    if(escapeSearchString(subTxt).r.findAllMatchIn(txt).length == 1){
+  def isSmallestMatch(it: Int, indexPosition: Int, inputStringLength: Int, pageTxt: String): Int = {
+    val subTxt = pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputStringLength + it))
+    if(("\\Q"+subTxt+"\\E").r.findAllMatchIn(txt.mkString("")).length == 1){
       it
     }else {
-      isSmallestMatch(it+1, indexPosition, inputStringLength)
+      isSmallestMatch(it+1, indexPosition, inputStringLength, pageTxt)
     }
   }
 
-  def extractSmallestBoundaryForSingleMatch(inputString: String, indexPosition: Int): (Int, Int) = {
-
-    val it = isSmallestMatch(0, indexPosition, inputString.length)
-    (Math.max(0, indexPosition - it), Math.min(txt.length, indexPosition + inputString.length + it))
+  def extractSmallestBoundaryForSingleMatch(inputString: String, indexPosition: Int, pageTxt: String): (Int, Int) = {
+    try{
+      val it = isSmallestMatch(0, indexPosition, inputString.length, pageTxt)
+      (Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it))
+    }catch{
+      case e: Exception => {
+        e.printStackTrace()
+        (0, pageTxt.length)
+      }
+      case e1: Error => {
+        e1.printStackTrace()
+        (0, pageTxt.length)
+      }
+    }
 
   }
 }
@@ -178,7 +186,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
   /**
    * taken from Mattia's code and adapted
    */
-  def highlight(): Array[Byte] = {
+  def highlight(): (HighlightPage, Array[Byte]) = {
     try {
       val file = pdfPath
       val parser: PDFParser = new PDFParser(new FileInputStream(file))
@@ -189,36 +197,34 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
       pdfHighlight.setLineSeparator(" ")
       pdfHighlight.initialize(pdDoc)
 
-      instructions.foreach(i => {
+      val pages : List[Int] = instructions.map(i => {
 
-        val patterns = List(i.searchString, i.highlightString).map(s => Pattern.compile(escapeSearchString(s)))
-
-        pdfHighlight.highlight(patterns.head, patterns(1), i.color)
+        val patterns = List(i.searchString, i.highlightString).zipWithIndex.map(s => if(s._2%2==0){Pattern.compile("\\Q"+s._1+"\\E")}else {Pattern.compile(escapeSearchString(s._1))})
+        pdfHighlight.highlight(patterns.head, patterns(1), i.color, i.pageNr)
+        i.pageNr-1
       })
-
 
       val byteArrayOutputStream = new ByteArrayOutputStream()
 
-      if (pdDoc != null) {
-        pdDoc.save(byteArrayOutputStream)
-        pdDoc.close()
-      }
-      if (parser.getDocument != null) {
-        parser.getDocument.close()
-      }
+			if (pdDoc != null) {
+				pdDoc.save(byteArrayOutputStream)
+				pdDoc.close()
+			}
+			if (parser.getDocument != null) {
+				parser.getDocument.close()
+			}
 
-
-      byteArrayOutputStream.toByteArray()
+      (HighlightPage(pages.min, pages.max), byteArrayOutputStream.toByteArray())
     } catch {
       case e: Exception => {
         logger.error(s"Cannot store highlighted version of pdf: $pdfPath.", e)
-        Array.empty[Byte]
+        (HighlightPage(-1, -1), Array.empty[Byte])
       }
     }
   }
 
   def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\n\\r\\.]{0,3}\\s*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\n\\r]{0,3}\\s*").mkString("")
     if(searchString.length <= 5 || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
