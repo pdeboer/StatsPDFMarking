@@ -165,8 +165,13 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
       val selectedTxt = pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it))
       if(selectedTxt.contains(" ") || selectedTxt.contains("-")){
 
+        val doubleSpaces = if(selectedTxt.contains("  ")){
+          selectedTxt.split("  ").length-1
+        } else {0}
+
         (Math.max(0, indexPosition - it),
           Math.min(pageTxt.length, indexPosition + inputString.length +
+            doubleSpaces +
             pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it)).split(" ").length -1 +
             pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it)).split("-").length -1 + it))
       }else {

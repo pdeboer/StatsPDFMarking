@@ -214,7 +214,7 @@ public class TextHighlight extends PDFTextStripper {
             contentStream.appendRawCommands("/highlights gs\n");
             contentStream.setNonStrokingColor(color);
             for(int i=0; i < textBoundingBoxes.size(); i++){
-                contentStream.fillRect(textBoundingBoxes.get(i).getLowerLeftX(), textBoundingBoxes.get(i).getLowerLeftY(), Math.max(textBoundingBoxes.get(i).getUpperRightX() - textBoundingBoxes.get(i).getLowerLeftX(), 10), 10);
+                contentStream.fillRect(textBoundingBoxes.get(i).getLowerLeftX(), textBoundingBoxes.get(i).getLowerLeftY(), Math.max(Math.abs(textBoundingBoxes.get(i).getUpperRightX() - textBoundingBoxes.get(i).getLowerLeftX()), 10), 10);
             }
             return true;
         }
