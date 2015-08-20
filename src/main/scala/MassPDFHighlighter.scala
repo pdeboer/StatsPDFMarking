@@ -174,7 +174,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       })
 
       logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
-      convertPDFtoPNG(highlightedFile, highlightedPaper._1)
+      //convertPDFtoPNG(highlightedFile, highlightedPaper._1)
     })
   }
 
