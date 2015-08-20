@@ -126,8 +126,8 @@ object MainSnippet extends App with LazyLogging {
     val minGreen = coordsGreen.minBy(_.getY)
     val minYellow = coordsYellow.map(y => (Math.abs(minGreen.getY - y.getY), y)).minBy(_._1)._2
 
-    val startY = Math.min(minYellow.getY,minGreen.getY) - PADDING_SNIPPET
-    val endY = Math.max(minYellow.getY, minGreen.getY) + PADDING_SNIPPET
+    val startY = Math.max(0, Math.min(minYellow.getY,minGreen.getY) - PADDING_SNIPPET)
+    val endY = Math.min(Math.max(minYellow.getY, minGreen.getY) + PADDING_SNIPPET, maxHeight)
 
     checkMinimalBoundaries(startY.toInt, endY.toInt, maxHeight)
   }
