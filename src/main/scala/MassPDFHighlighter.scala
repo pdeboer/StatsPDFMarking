@@ -107,7 +107,6 @@ object MassPDFHighlighter extends App with LazyLogging {
         val year = f.getName.substring(0, f.getName.indexOf("_"))
         val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
 
-
         var mergedMethods = methodList.map(m => {
           StatMethod(
             Math.max(0, permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex - 10000),
@@ -124,6 +123,8 @@ object MassPDFHighlighter extends App with LazyLogging {
             mergedMethods = tmpList
           }while(changedSomething)
 
+          logger.debug(s"Result after merging method: $method => ${mergedMethods.length} different groups for paper ${f.getName}.")
+
           if(mergedMethods.nonEmpty) {
             val assumptionsForMethod : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
               List[String](assumption.name) ::: assumption.synonym
@@ -131,7 +132,6 @@ object MassPDFHighlighter extends App with LazyLogging {
 
             val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
             if(assumptionsList.nonEmpty) {
-              logger.debug(s"Result after merging method: $method => ${mergedMethods.length} different groups.")
               mergedMethods.par.foreach(groupedMethods => {
                 createHighlightedPDF(groupedMethods.instructions, assumptionsList, method, f)
               })

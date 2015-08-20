@@ -32,7 +32,7 @@ object MainSnippet extends App with LazyLogging {
     yearDirs.listFiles(filterDirectories).flatMap(methodDirs => {
       methodDirs.listFiles(filterDirectories).flatMap(pdfDirs => {
         pdfDirs.listFiles(new FilenameFilter {
-          override def accept(dir: File, name: String): Boolean = name.endsWith(".png")
+          override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf.png")
         }).map(bigSnippet => bigSnippet)
       }).toList
     }).toList
