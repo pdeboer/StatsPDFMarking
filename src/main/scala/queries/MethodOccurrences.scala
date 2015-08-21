@@ -2,7 +2,7 @@ package queries
 
 import java.util.regex.Pattern
 
-import input.bmc.{DBPaperBody, MJADAL}
+import input.bmc.{DBPaperBody, EuGenDAL}
 
 import scala.io.Source
 
@@ -14,7 +14,7 @@ object MethodOccurrences extends App {
 		val terms = l.split(",").map(_.trim())
 		val papersWithTermVariations = terms.flatMap(t => {
 			val targetTerms = if (t.length < 7) addWordBoundaries(t) else List(t)
-			targetTerms.flatMap(tt => MJADAL.getPapersContainingTerm(tt).map(o => PaperOccurrence(o)(List(tt))))
+			targetTerms.flatMap(tt => EuGenDAL.getPapersContainingTerm(tt).map(o => PaperOccurrence(o)(List(tt))))
 		})
 		val termOccurrences = papersWithTermVariations.groupBy(_.dbp).map {
 			case (body, occurenceList) => PaperOccurrence(body)(occurenceList.map(po => po.terms).toList.flatten)
