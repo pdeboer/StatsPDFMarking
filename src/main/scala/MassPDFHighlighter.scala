@@ -15,12 +15,12 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs2/"
-  val snippetsDir = "../merge_method_snippets/"
+  val pdfsDir = "../pdfs3/"
+  val snippetsDir = "../merge_method_snippets3/"
 
   val pathConvert = "/opt/local/bin/convert"
 
-  val PERMUTATIONS_CSV_FILENAME = "permutations.csv"
+  val PERMUTATIONS_CSV_FILENAME = "permutations1.csv"
 
   val startTime = new DateTime().getMillis
 
@@ -50,11 +50,11 @@ object MassPDFHighlighter extends App with LazyLogging {
     }).toList
 
     val writer = new PrintWriter(new File(PERMUTATIONS_CSV_FILENAME))
-    writer.write("group_name, method_index, snippet_filename, pdf_path, state\n")
+    writer.write("group_name, method_index, snippet_filename, pdf_path\n")
     permutations.foreach(p => {
       if(p.isDefined){
         p.get.foreach(pe => {
-          writer.append(pe.groupName + "," + pe.methodIndex+ "," + pe.snippetPath + "," + pe.pdfPath + ", 0\n")
+          writer.append(pe.groupName + "," + pe.methodIndex+ "," + pe.snippetPath + "," + pe.pdfPath + "\n")
         })
       }
     })
@@ -207,8 +207,10 @@ object MassPDFHighlighter extends App with LazyLogging {
       logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
       val pdfToPngPath = convertPDFtoPNG(highlightedFile, highlightedPaper._1)
 
-      logger.debug("Cutting snippet...")
-      val snippetPath = MainSnippet.createSnippet(new File(pdfToPngPath))
+      val snippetPath = if(pdfToPngPath != null) {
+        logger.debug("Cutting snippet...")
+        MainSnippet.createSnippet(pdfToPngPath)
+      } else { "" }
 
       val methodInstructions = highlighter._1.instructions.filter(f => f.color==Color.yellow)
       val methodPositions = methodInstructions.map(methodInstruction => {
@@ -222,12 +224,11 @@ object MassPDFHighlighter extends App with LazyLogging {
           Permutation(f.getName.substring(0, f.getName.indexOf(".pdf")+4)+"/"+i.highlightString+"/"+assumptionPosition, methodName+"_"+methodPositions, snippetPath, highlightedFile.getPath)
         }
       })
-
       permutations.filter(p => p.isInstanceOf[Permutation]).map(_.asInstanceOf[Permutation])
     }).toList
   }
 
-  def convertPDFtoPNG(pdfFile: File, pages: HighlightPage) : String = {
+  def convertPDFtoPNG(pdfFile: File, pages: HighlightPage) : File = {
     val pathPDFFile = pdfFile.getPath
     val pathConvertedPNGFile: String = pdfFile.getParentFile.getPath+"/"+createPNGFileName(pdfFile.getName)
 
@@ -249,10 +250,10 @@ object MassPDFHighlighter extends App with LazyLogging {
       }catch {
         case e: Exception => logger.error(s"Cannot copy file $pdfFile to ../errors_convertToPNG/ directory!", e)
       }
-      ""
+      null
     }else {
       logger.debug(s"File: ${pdfFile.getName} successfully converted to PNG")
-      pathConvertedPNGFile
+      new File(pathConvertedPNGFile)
     }
   }
 

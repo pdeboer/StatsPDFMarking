@@ -3,7 +3,7 @@ package snippet
 import java.awt.Color
 import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
-import java.io.{File, FilenameFilter}
+import java.io.File
 import javax.imageio.ImageIO
 
 import com.typesafe.scalalogging.LazyLogging
@@ -12,7 +12,7 @@ import org.codehaus.plexus.util.FileUtils
 /**
  * Created by mattia on 13.07.15.
  */
-object MainSnippet extends App with LazyLogging {
+object MainSnippet extends LazyLogging{
 
   val YELLOW_RANGES= List[(Int, Int)]((200, 255), (200, 255), (100, 150))
   val GREEN_RANGES= List[(Int, Int)]((100, 150), (200, 255), (100, 150))
@@ -20,6 +20,7 @@ object MainSnippet extends App with LazyLogging {
   val PADDING_SNIPPET = 200
   val MINIMAL_SNIPPET_HEIGHT = 300
 
+  /*
   val SNIPPET_DIR = "../merge_method_snippets/"
 
   val filterDirectories = new FilenameFilter {
@@ -41,7 +42,7 @@ object MainSnippet extends App with LazyLogging {
   logger.debug(s"Found: ${allBigSnippets.length} png files")
   
   allBigSnippets.par.foreach(createSnippet(_))
-
+  */
 
   def createSnippet(pngImage: File): String = {
     logger.debug(s"Working file: $pngImage")
