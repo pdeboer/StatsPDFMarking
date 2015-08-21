@@ -43,7 +43,7 @@ object MainSnippet extends App with LazyLogging {
   allBigSnippets.par.foreach(createSnippet(_))
 
 
-  def createSnippet(pngImage: File): Unit = {
+  def createSnippet(pngImage: File): String = {
     logger.debug(s"Working file: $pngImage")
     try {
 
@@ -69,12 +69,15 @@ object MainSnippet extends App with LazyLogging {
       extractAndGenerateImage(pngImage, yellowCoords, greenCoords)
       
     }catch {
-      case e: Exception => logger.error("Error: ", e)
+      case e: Exception => {
+        logger.error("Error: ", e)
+        ""
+      }
     }
 
   }
 
-  def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D], greenCoords: List[Point2D]): Boolean = {
+  def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D], greenCoords: List[Point2D]): String = {
 
     if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
 
@@ -105,9 +108,11 @@ object MainSnippet extends App with LazyLogging {
 
       val storeSnippetPath = pngImage.getParentFile.getPath
 
-      ImageIO.write(snippetImage, "png", new File(storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"))
+      val snippetFile = new File(storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png")
+
+      ImageIO.write(snippetImage, "png", snippetFile)
       logger.debug(s"Snippet successfully written: ${storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"}")
-      true
+      snippetFile.getPath
     } else {
       logger.error(s"Cannot create snippet. No highlight found in file: ${pngImage.getName}")
       new File("../errors_cutting_snippets").mkdir()
@@ -117,7 +122,7 @@ object MainSnippet extends App with LazyLogging {
       }catch {
         case e: Exception => logger.error(s"Cannot copy file $pngImage to ../errors_cutting_snippets/ directory!", e)
       }
-      false
+      ""
     }
   }
 
