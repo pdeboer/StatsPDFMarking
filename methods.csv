@@ -2,7 +2,7 @@ ANOVA,analysis of variance
 Pearson,Pearson's correlation,Pearson's r,Pearson product-moment correlation,Pearson product moment correlation
 Spearman,Spearman's correlation,Spearman's Rank-Order Correlation
 Correlation,R square,R squared,R 2 adjusted
-Linear regression,Regression analysis,Ordinary least squares regression
+Linear regression,Ordinary least squares regression
 Multiple regression,Multiple Linear Regression
 Logistic regression
 t test

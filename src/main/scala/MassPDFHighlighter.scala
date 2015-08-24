@@ -6,6 +6,7 @@ import highlighting.{HighlightPage, HighlightTermloader, PDFHighlightInstruction
 import input.folder.FolderPDFSource
 import org.codehaus.plexus.util.FileUtils
 import org.joda.time.DateTime
+import snippet.MainSnippet
 
 import scala.sys.process._
 
