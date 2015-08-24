@@ -30,6 +30,10 @@ object EuGenDAL {
 	def getPaperBody(id: Long) = DB readOnly { implicit session => sql"SELECT body FROM eugenpracttext WHERE id = $id"
 		.map(r => r.string(1)).single().apply().getOrElse(throw new IllegalArgumentException(s"couldnt find $id"))
 	}
+
+	def getPaperFilename(id: Long) = DB readOnly { implicit session => sql"SELECT filename FROM eugenpracttext WHERE id = $id"
+		.map(r => r.string(1)).single().apply().getOrElse(throw new IllegalArgumentException(s"couldnt find $id"))
+	}
 }
 
 class EuGenPaperBody(id: Long, var _body: WeakReference[String]) extends DBPaperBody(id, "", "", 2014) {
