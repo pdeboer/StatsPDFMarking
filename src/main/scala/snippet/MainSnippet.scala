@@ -75,7 +75,25 @@ object MainSnippet extends LazyLogging{
         ""
       }
     }
+  }
 
+  def isMethodOnTop(path: String) : Boolean = {
+    val inputImage = ImageIO.read(new File(path))
+    var yellowCoords = List.empty[Point2D]
+    var greenCoords = List.empty[Point2D]
+
+    for (x <- 0 until inputImage.getWidth()) {
+      for (y <- 0 until inputImage.getHeight()) {
+        val color = new Color(inputImage.getRGB(x, y))
+        if (isSameColor(color, YELLOW_RANGES)) {
+          yellowCoords ::= new Point2D.Double(x, y)
+        } else if (isSameColor(color, GREEN_RANGES)) {
+          greenCoords ::= new Point2D.Double(x, y)
+        }
+      }
+    }
+
+    yellowCoords.map(y => (Math.abs(greenCoords.minBy(_.getY).getY - y.getY), y)).minBy(_._1)._2.getY < greenCoords.minBy(_.getY).getY
   }
 
   def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D], greenCoords: List[Point2D]): String = {
@@ -83,7 +101,6 @@ object MainSnippet extends LazyLogging{
     if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
 
       //multiple yellow, single green
-
       val inputImage = ImageIO.read(pngImage)
       val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, greenCoords, inputImage.getHeight)
       val snippetHeight = endY - startY
@@ -96,25 +113,16 @@ object MainSnippet extends LazyLogging{
           snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
         }
       }
-      val methodOnTop: Boolean = if(yellowCoords.map(y => (Math.abs(greenCoords.minBy(_.getY).getY - y.getY), y)).minBy(_._1)._2.getY < greenCoords.minBy(_.getY).getY){
-          true
-        } else {
-          false
-        }
 
-      var suffix = "methodOnTop"
-      if(!methodOnTop){
-        suffix = "prerequisiteOnTop"
-      }
 
       val storeSnippetPath = pngImage.getParentFile.getPath
 
-      val snippetFile = new File(storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png")
+      val snippetFile = new File(storeSnippetPath + "/" + pngImage.getName)
 
       ImageIO.write(snippetImage, "png", snippetFile)
-      logger.debug(s"Snippet successfully written: ${storeSnippetPath + "/" + pngImage.getName.substring(0, pngImage.getName.indexOf(".png"))+"-"+suffix+".png"}")
+      logger.debug(s"Snippet successfully written: $storeSnippetPath/${pngImage.getName}")
       snippetFile.getPath
-    } else {
+    }else {
       logger.error(s"Cannot create snippet. No highlight found in file: ${pngImage.getName}")
       new File("../errors_cutting_snippets").mkdir()
       val snippet = new File("../errors_cutting_snippets/"+pngImage.getName)

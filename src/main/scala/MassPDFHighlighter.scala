@@ -16,7 +16,7 @@ import scala.sys.process._
 object MassPDFHighlighter extends App with LazyLogging {
 
   val pdfsDir = "../pdfs2/"
-  val snippetsDir = "../merge_method_snippets/"
+  val snippetsDir = "../eujoupract_snippets/"
 
   val pathConvert = "/opt/local/bin/convert"
 
@@ -50,17 +50,16 @@ object MassPDFHighlighter extends App with LazyLogging {
     }).toList
 
     val writer = new PrintWriter(new File(PERMUTATIONS_CSV_FILENAME))
-    writer.write("group_name, method_index, snippet_filename, pdf_path\n")
+    writer.write("group_name, method_index, snippet_filename, pdf_path, method_on_top\n")
     permutations.foreach(p => {
       if(p.isDefined){
         p.get.foreach(pe => {
-          writer.append(pe.groupName + "," + pe.methodIndex+ "," + pe.snippetPath + "," + pe.pdfPath + "\n")
+          val methodOnTop = if(pe.methodOnTop) {1} else {0}
+          writer.append(pe.groupName + "," + pe.methodIndex+ "," + pe.snippetPath + "," + pe.pdfPath + "," + methodOnTop + "\n")
         })
       }
     })
-
     writer.close()
-
   }
 
   logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
@@ -68,18 +67,22 @@ object MassPDFHighlighter extends App with LazyLogging {
   case class StatMethod(minIndex:Int, maxIndex:Int, children:List[StatMethod], instructions: List[PDFHighlightInstruction])
 
   def combine(myList: List[StatMethod]) : List[StatMethod] = {
-    val zipped1 = myList.zipWithIndex.filter(m => m._2 % 2 == 0)
-    val zipped2 = myList.zipWithIndex.filter(m => m._2 % 2 == 1)
+    if(myList.length>= 2){
+      val zipped1 = myList.zipWithIndex.filter(m => m._2 % 2 == 0)
+      val zipped2 = myList.zipWithIndex.filter(m => m._2 % 2 == 1)
 
-    val newList : List[StatMethod] =
-      zipped1 zip zipped2 flatMap {
-        case (left, right) => mergeIfMergeable(left._1, right._1)
+      val newList : List[StatMethod] =
+        zipped1 zip zipped2 flatMap {
+          case (left, right) => mergeIfMergeable(left._1, right._1)
+        }
+
+      if(newList.length>=2){
+        newList.splitAt(newList.length-2)._1 ::: mergeIfMergeable(newList(newList.length-2), newList.last)
+      }else {
+        newList
       }
-
-    if(newList.length>=2){
-      newList.splitAt(newList.length-2)._1 ::: mergeIfMergeable(newList(newList.length-2), newList.last)
     }else {
-      newList
+      myList
     }
   }
 
@@ -118,8 +121,14 @@ object MassPDFHighlighter extends App with LazyLogging {
         })
 
         val methodName = method.replaceAll(" ", "_")
-        val year = f.getName.substring(0, f.getName.indexOf("_"))
-        val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
+
+        val year = try {
+          f.getName.substring(0, 4).toInt
+        } catch {
+          case e: Exception => 2014
+        }
+
+        val pdfDirName = f.getName.substring(5, f.getName.length - 4)
 
         var mergedMethods = methodList.map(m => {
           StatMethod(
@@ -181,7 +190,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     permutations
   }
 
-  case class Permutation(groupName: String, methodIndex: String, snippetPath: String, pdfPath: String)
+  case class Permutation(groupName: String, methodIndex: String, snippetPath: String, pdfPath: String, methodOnTop: Boolean)
 
   def createHighlightedPDF(groupId: Int, methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String, f: File): List[Permutation] = {
 
@@ -190,42 +199,58 @@ object MassPDFHighlighter extends App with LazyLogging {
       logger.debug(s"${highlighter._2}_${f.getName}: highlighting combination of ${highlighter._1.instructions}")
 
       val methodName = method.replaceAll(" ", "_")
-      val year = f.getName.substring(0, f.getName.indexOf("_"))
-      val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
+      val year = try{
+        f.getName.substring(0, 4).toInt
+      }catch {
+        case e: Exception => 2014
+      }
+        val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
 
-      val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
-      new File(pathToSavePDFs).mkdirs()
+        val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
+        new File(pathToSavePDFs).mkdirs()
 
-      val highlightedFile = new File(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + "_" + groupId + ".pdf")
+        val highlightedFile = new File(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + "_" + groupId + ".pdf")
 
-      val highlightedPaper = highlighter._1.highlight()
-      Some(new BufferedOutputStream(new FileOutputStream(highlightedFile))).foreach(s => {
-        s.write(highlightedPaper._2)
-        s.close()
-      })
+        val highlightedPaper = highlighter._1.highlight()
+        Some(new BufferedOutputStream(new FileOutputStream(highlightedFile))).foreach(s => {
+          s.write(highlightedPaper._2)
+          s.close()
+        })
 
-      logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
-      val pdfToPngPath = convertPDFtoPNG(highlightedFile, highlightedPaper._1)
+        logger.debug(s"Converting $f to PNG (pages: [${highlightedPaper._1.start},${highlightedPaper._1.end}])...")
+        val pdfToPngPath = convertPDFtoPNG(highlightedFile, highlightedPaper._1)
 
-      val snippetPath = if(pdfToPngPath != null) {
-        logger.debug("Cutting snippet...")
-        MainSnippet.createSnippet(pdfToPngPath)
-      } else { "" }
-
-      val methodInstructions = highlighter._1.instructions.filter(f => f.color==Color.yellow)
-      val methodPositions = methodInstructions.map(methodInstruction => {
-        methodInstruction.pageNr + ":" + (methodInstruction.startSearchStringIndex + methodInstruction.startHighlightStringIndex)
-      }).mkString("_")
-
-
-      val permutations = highlighter._1.instructions.map( i => {
-        if(i.color==Color.green) {
-          val assumptionPosition = i.pageNr+":"+(i.startSearchStringIndex+i.startHighlightStringIndex)
-          Permutation(f.getName.substring(0, f.getName.indexOf(".pdf")+4)+"/"+i.highlightString+"/"+assumptionPosition, methodName+"_"+methodPositions, snippetPath, highlightedFile.getPath)
+        val snippetPath = if (pdfToPngPath != null)
+          if (args.isDefinedAt(0) && args(0).equalsIgnoreCase("2")) {
+            pdfToPngPath.getPath
+          } else {
+            logger.debug("Cutting snippet...")
+            MainSnippet.createSnippet(pdfToPngPath)
+          }
+        else {
+          ""
         }
-      })
-      permutations.filter(p => p.isInstanceOf[Permutation]).map(_.asInstanceOf[Permutation])
-    }).toList
+
+        val methodInstructions = highlighter._1.instructions.filter(f => f.color==Color.yellow)
+
+        val methodPositions = methodInstructions.map(methodInstruction => {
+          methodInstruction.pageNr + ":" + (methodInstruction.startSearchStringIndex + methodInstruction.startHighlightStringIndex)
+        }).mkString("_")
+
+
+        val permutations = highlighter._1.instructions.map( i => {
+          if(i.color==Color.green) {
+            val assumptionPosition = i.pageNr+":"+(i.startSearchStringIndex+i.startHighlightStringIndex)
+            val methodOnTop = if(args.isDefinedAt(0) && args(0).equalsIgnoreCase("2")){
+              MainSnippet.isMethodOnTop(pdfToPngPath.getPath)
+            }else {
+              MainSnippet.isMethodOnTop(snippetPath)
+            }
+            Permutation(f.getName+"/"+i.highlightString+"/"+assumptionPosition, methodName+"_"+methodPositions, snippetPath, highlightedFile.getPath, methodOnTop)
+          }
+        })
+        permutations.filter(p => p.isInstanceOf[Permutation]).map(_.asInstanceOf[Permutation])
+      }).toList
   }
 
   def convertPDFtoPNG(pdfFile: File, pages: HighlightPage) : File = {
