@@ -3,7 +3,7 @@ package queries
 import java.io.{File, FileInputStream, FileOutputStream}
 import java.util.regex.Pattern
 
-import input.bmc.{BMJDAL, DBPaperBody}
+import input.bmc.{DBPaperBody, MJADAL}
 
 import scala.io.Source
 
@@ -15,7 +15,7 @@ object MethodOccurrences extends App {
 		val terms = l.split(",").map(_.trim())
 		val papersWithTermVariations = terms.flatMap(t => {
 			val targetTerms = if (t.length < 7) addWordBoundaries(t) else List(t)
-			targetTerms.flatMap(tt => BMJDAL.getPapersContainingTerm(tt).map(o => PaperOccurrence(o)(List(tt))))
+			targetTerms.flatMap(tt => MJADAL.getPapersContainingTerm(tt).map(o => PaperOccurrence(o)(List(tt))))
 		})
 		val termOccurrences = papersWithTermVariations.groupBy(_.dbp).map {
 			case (body, occurenceList) => PaperOccurrence(body)(occurenceList.map(po => po.terms).toList.flatten)
@@ -84,10 +84,11 @@ object MethodOccurrences extends App {
 	}
 
 	paperIDs.par.foreach(p => {
-		val url = BMJDAL.getPaperURL(p)
-		val fileName = "bmj" + url.substring("/content/".length).replaceAll("/", "_")
-		val sourceFile = new File("/Users/pdeboer/Documents/phd_local/OpenReviewCrawler/papers/bmj/" + fileName)
-		val targetFile = new File("/Users/pdeboer/Downloads/papers/bmj/" + fileName)
+		val (url, parentURL) = MJADAL.getPaperURL(p)
+		val rightFileName = url.split("/").reverse.headOption.getOrElse("")
+		val fileName = parentURL.hashCode + "_" + rightFileName
+		val sourceFile = new File("/Users/pdeboer/Documents/phd_local/OpenReviewCrawler/papers/mja/" + fileName)
+		val targetFile = new File("/Users/pdeboer/Downloads/papers/mja/" + fileName)
 
 		copy(sourceFile, targetFile)
 	})
