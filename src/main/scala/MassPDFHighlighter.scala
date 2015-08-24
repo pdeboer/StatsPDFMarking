@@ -15,12 +15,12 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs3/"
-  val snippetsDir = "../merge_method_snippets3/"
+  val pdfsDir = "../pdfs2/"
+  val snippetsDir = "../merge_method_snippets/"
 
   val pathConvert = "/opt/local/bin/convert"
 
-  val PERMUTATIONS_CSV_FILENAME = "permutations1.csv"
+  val PERMUTATIONS_CSV_FILENAME = "permutations.csv"
 
   val startTime = new DateTime().getMillis
 
@@ -75,7 +75,6 @@ object MassPDFHighlighter extends App with LazyLogging {
       zipped1 zip zipped2 flatMap {
         case (left, right) => mergeIfMergeable(left._1, right._1)
       }
-
 
     if(newList.length>=2){
       newList.splitAt(newList.length-2)._1 ::: mergeIfMergeable(newList(newList.length-2), newList.last)
@@ -196,7 +195,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
       new File(pathToSavePDFs).mkdirs()
 
-      val highlightedFile = new File(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + ".pdf")
+      val highlightedFile = new File(pathToSavePDFs + "/" + f.getName.substring(0, f.getName.length - 4) + "_" + highlighter._2 + "_" + groupId + ".pdf")
 
       val highlightedPaper = highlighter._1.highlight()
       Some(new BufferedOutputStream(new FileOutputStream(highlightedFile))).foreach(s => {
