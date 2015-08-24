@@ -186,12 +186,12 @@ public class TextHighlight extends PDFTextStripper {
 			}
 			graphicsStateDictionary.put("highlights", graphicsState);
 			resources.setGraphicsStates(graphicsStateDictionary);
+            int spaceOccurrences = searchText.toString().split(" ").length > 0 ? searchText.toString().split(" ").length-1 : 0;
 
             for (Match searchMatch : textCache.match(pageNr, searchText)) {
                 for (Match markingMatch : textCache.match(searchMatch.positions, markingPattern)) {
-                    if(markupMatch(color, contentStream, markingMatch)){
+                        if(markupMatch(color, contentStream, markingMatch)){
                         found = true;
-                        break;
                     }
                 }
                 if(found){
@@ -214,7 +214,7 @@ public class TextHighlight extends PDFTextStripper {
             contentStream.appendRawCommands("/highlights gs\n");
             contentStream.setNonStrokingColor(color);
             for(int i=0; i < textBoundingBoxes.size(); i++){
-                contentStream.fillRect(textBoundingBoxes.get(i).getLowerLeftX(), textBoundingBoxes.get(i).getLowerLeftY(), Math.max(textBoundingBoxes.get(i).getUpperRightX() - textBoundingBoxes.get(i).getLowerLeftX(), 10), 10);
+                contentStream.fillRect(textBoundingBoxes.get(i).getLowerLeftX(), textBoundingBoxes.get(i).getLowerLeftY(), Math.max(Math.abs(textBoundingBoxes.get(i).getUpperRightX() - textBoundingBoxes.get(i).getLowerLeftX()), 10), 10);
             }
             return true;
         }
