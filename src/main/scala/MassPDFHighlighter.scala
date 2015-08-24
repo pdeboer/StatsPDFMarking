@@ -15,7 +15,7 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs2/"
+  val pdfsDir = "../eujoupract/"
   val snippetsDir = "../eujoupract_snippets/"
 
   val pathConvert = "/opt/local/bin/convert"
@@ -200,7 +200,11 @@ object MassPDFHighlighter extends App with LazyLogging {
 
       val methodName = method.replaceAll(" ", "_")
       val year = try{
-        f.getName.substring(0, 4).toInt
+        if(f.getName.substring(0, 4).toInt>=2002 && f.getName.substring(0, 4).toInt <= DateTime.now().getYear){
+          f.getName.substring(0, 4).toInt
+        }else {
+          2014
+        }
       }catch {
         case e: Exception => 2014
       }

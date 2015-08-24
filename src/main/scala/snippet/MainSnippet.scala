@@ -92,8 +92,11 @@ object MainSnippet extends LazyLogging{
         }
       }
     }
-
-    yellowCoords.map(y => (Math.abs(greenCoords.minBy(_.getY).getY - y.getY), y)).minBy(_._1)._2.getY < greenCoords.minBy(_.getY).getY
+    try{
+      yellowCoords.map(y => (Math.abs(greenCoords.minBy(_.getY).getY - y.getY), y)).minBy(_._1)._2.getY < greenCoords.minBy(_.getY).getY
+    } catch {
+      case e: Exception => true
+    }
   }
 
   def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D], greenCoords: List[Point2D]): String = {
