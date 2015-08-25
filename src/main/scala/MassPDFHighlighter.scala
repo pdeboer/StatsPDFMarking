@@ -15,8 +15,8 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../eujoupract/"
-  val snippetsDir = "../eujoupract_snippets/"
+  val pdfsDir = "../mja/"
+  val snippetsDir = "../mja_snippets/"
 
   val pathConvert = "/opt/local/bin/convert"
 
@@ -196,7 +196,7 @@ object MassPDFHighlighter extends App with LazyLogging {
       }catch {
         case e: Exception => 2014
       }
-        val pdfDirName = f.getName.substring(f.getName.indexOf("_") + 1, f.getName.length - 4)
+        val pdfDirName = f.getName.substring(0, f.getName.length - 4)
 
         val pathToSavePDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
         new File(pathToSavePDFs).mkdirs()

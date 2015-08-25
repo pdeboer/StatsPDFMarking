@@ -8,11 +8,11 @@ import scala.io.Source
  */
 class HighlightTermloader {
 
-  lazy val deltas = {
+  val deltas = {
 
     val methodToDelta = Source.fromFile("deltas.csv").getLines().map(l => {
       val cols = l.split(",")
-      (cols(0), cols.drop(1).head.toInt)
+      (cols(0), cols(1).toInt)
     }).toList
 
     methodToDelta
@@ -56,7 +56,8 @@ class HighlightTermloader {
 
   def getDeltaForMethod(method: String) : Int = {
     try {
-      deltas.filter(_._1.equalsIgnoreCase(method)).head._2
+      val value = deltas.find(_._1.equalsIgnoreCase(method)).getOrElse((method , 5000))
+      value._2
     }catch{
       case e: Exception => 5000
     }

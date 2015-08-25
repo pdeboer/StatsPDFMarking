@@ -32,9 +32,9 @@ ANCOVA,homogeneity of regression slopes
 ANCOVA,Homoscedasticity
 Wilcoxon Signed Ranks test,ordinal
 Wilcoxon Signed Ranks test,Independen
-Dum's test,Independen
-Dum's test,Normal
-Dum's test,Homogeneity of variance
+Dum test,Independen
+Dum test,Normal
+Dum test,Homogeneity of variance
 MANOVA,linearity
 MANOVA,Normal
 Mantel Haenszel,categorical
