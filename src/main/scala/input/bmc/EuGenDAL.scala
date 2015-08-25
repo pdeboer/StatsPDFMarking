@@ -7,7 +7,7 @@ import scala.ref.WeakReference
 /**
  * Created by pdeboer on 15/08/15.
  */
-object BMJDAL {
+object EuGenDAL {
 	Class.forName("com.mysql.jdbc.Driver")
 	val settings = ConnectionPoolSettings(
 		initialSize = 5,
@@ -21,37 +21,37 @@ object BMJDAL {
 	def getPapersContainingTerm(term: String) = DB readOnly { implicit session =>
 		val likeTerm = s"%${term.toLowerCase}%"
 
-		sql"""SELECT DISTINCT p.id,  t.body, p.url, left(issue,4) AS y
-		FROM bmjpdftext t INNER JOIN bmjpaper p ON t.paperId = p.id
-		WHERE LOWER(t.body) LIKE $likeTerm"""
-			.map(r => new BMJPaperBody(r.long(1), WeakReference(r.string(2)), r.string(3), r.int(4))).list().apply()
+		sql"""SELECT DISTINCT id,  body
+		FROM eugenpracttext
+		WHERE LOWER(body) LIKE $likeTerm"""
+			.map(r => new EuGenPaperBody(r.long(1), WeakReference(r.string(2)))).list().apply()
 	}
 
-	def getPaperBody(id: Long) = DB readOnly { implicit session => sql"SELECT body FROM bmjpdftext WHERE paperId = $id"
+	def getPaperBody(id: Long) = DB readOnly { implicit session => sql"SELECT body FROM eugenpracttext WHERE id = $id"
 		.map(r => r.string(1)).single().apply().getOrElse(throw new IllegalArgumentException(s"couldnt find $id"))
 	}
 
-	def getPaperURL(id: Long) = DB readOnly { implicit session => sql"SELECT url FROM bmjpaper WHERE id = $id"
+	def getPaperFilename(id: Long) = DB readOnly { implicit session => sql"SELECT filename FROM eugenpracttext WHERE id = $id"
 		.map(r => r.string(1)).single().apply().getOrElse(throw new IllegalArgumentException(s"couldnt find $id"))
 	}
 }
 
-class BMJPaperBody(id: Long, var _body: WeakReference[String], url: String, year: Int) extends DBPaperBody(id, "", url, year) {
+class EuGenPaperBody(id: Long, var _body: WeakReference[String]) extends DBPaperBody(id, "", "", 2014) {
 	override def body: String = _body.get.getOrElse({
 		println("refetching " + id)
-		val b: String = BMJDAL.getPaperBody(id)
+		val b: String = EuGenDAL.getPaperBody(id)
 		_body = WeakReference(b)
 		b
 	})
 
 	override def equals(other: Any): Boolean = other match {
-		case that: BMJPaperBody =>
+		case that: MJAPaperBody =>
 			(that canEqual this) &&
 				id == that.id
 		case _ => false
 	}
 
-	override def canEqual(other: Any): Boolean = other.isInstanceOf[BMJPaperBody]
+	override def canEqual(other: Any): Boolean = other.isInstanceOf[MJAPaperBody]
 
 	override def hashCode(): Int = {
 		val state = Seq(id)

@@ -1,5 +1,6 @@
 package queries
 
+import java.io.{File, FileInputStream, FileOutputStream}
 import java.util.regex.Pattern
 
 import input.bmc.{DBPaperBody, MJADAL}
@@ -28,6 +29,7 @@ object MethodOccurrences extends App {
 		val overview = countOccurrencePerYear(mo)
 		MethodCounts(mo, overview, Nil)
 	})
+	val paperIDs: Set[Long] = occurrences.flatMap(_.po.map(_.dbp.id)).toSet
 
 	def countOccurrencePerYear(mo: MethodOccurrence, year: Int = -1): MethodCountPerYear = {
 		val occurrenceList = if (year == -1) mo else MethodOccurrence(mo.method, mo.po.filter(_.dbp.year == year))
@@ -53,6 +55,14 @@ object MethodOccurrences extends App {
 		})
 	}
 
+	def copy(source: File, target: File) {
+		assert(source.exists() && !target.exists())
+
+		target.createNewFile()
+		new FileOutputStream(target) getChannel() transferFrom(
+			new FileInputStream(source) getChannel, 0, Long.MaxValue)
+	}
+
 	case class MethodCounts(methodOccurrence: MethodOccurrence, overall: MethodCountPerYear, years: List[MethodCountPerYear]) extends Serializable {}
 
 	case class MethodCountPerYear(year: Int, numPapers: Int, numStringMatches: Int) extends Serializable {
@@ -64,12 +74,24 @@ object MethodOccurrences extends App {
 		override def toString = numPapers + "," + numStringMatches
 	}
 
+	/*
+	println(s"Method,${methodNumbers.head.overall.csvHeader},${methodNumbers.head.years.map(_.csvHeader).mkString(",")} ")
+	methodNumbers.foreach(mc => println(s"${mc.methodOccurrence},${mc.overall},${mc.years.mkString(",")} "))
+	*/
+
 	case class MethodOccurrence(method: String, po: List[PaperOccurrence]) extends Serializable {
 		override def toString = method.replaceAll(",", "/")
 	}
 
-	case class PaperOccurrence(dbp: DBPaperBody)(val terms: List[String]) extends Serializable
+	paperIDs.par.foreach(p => {
+		val (url, parentURL) = MJADAL.getPaperURL(p)
+		val rightFileName = url.split("/").reverse.headOption.getOrElse("")
+		val fileName = parentURL.hashCode + "_" + rightFileName
+		val sourceFile = new File("/Users/pdeboer/Documents/phd_local/OpenReviewCrawler/papers/mja/" + fileName)
+		val targetFile = new File("/Users/pdeboer/Downloads/papers/mja/" + fileName)
 
-	println(s"Method,${methodNumbers.head.overall.csvHeader},${methodNumbers.head.years.map(_.csvHeader).mkString(",")} ")
-	methodNumbers.foreach(mc => println(s"${mc.methodOccurrence},${mc.overall},${mc.years.mkString(",")} "))
+		copy(sourceFile, targetFile)
+	})
+
+	case class PaperOccurrence(dbp: DBPaperBody)(val terms: List[String]) extends Serializable
 }

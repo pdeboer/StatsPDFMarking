@@ -30,6 +30,10 @@ object MJADAL {
 	def getPaperBody(id: Long) = DB readOnly { implicit session => sql"SELECT body FROM mjapdftext WHERE paperId = $id"
 		.map(r => r.string(1)).single().apply().getOrElse(throw new IllegalArgumentException(s"couldnt find $id"))
 	}
+
+	def getPaperURL(id: Long) = DB readOnly { implicit session => sql"SELECT url, parentURL FROM mjapaper WHERE id = $id"
+		.map(r => (r.string(1), r.string(2))).single().apply().getOrElse(throw new IllegalArgumentException(s"couldnt find $id"))
+	}
 }
 
 class MJAPaperBody(id: Long, var _body: WeakReference[String], url: String, year: Int) extends DBPaperBody(id, "", url, year) {
