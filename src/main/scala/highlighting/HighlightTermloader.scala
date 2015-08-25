@@ -7,7 +7,18 @@ import scala.io.Source
  * Created by pdeboer on 16/06/15.
  */
 class HighlightTermloader {
-	lazy val terms = {
+
+  lazy val deltas = {
+
+    val methodToDelta = Source.fromFile("deltas.csv").getLines().map(l => {
+      val cols = l.split(",")
+      (cols(0), cols.drop(1).head.toInt)
+    }).toList
+
+    methodToDelta
+  }
+
+  lazy val terms = {
 
     val assumptionsInCSV = Source.fromFile("assumptions.csv").getLines().map(l => {
 			val cols = l.split(",")
@@ -42,6 +53,14 @@ class HighlightTermloader {
 	def methodsAndSynonyms = termNames ::: termSynonyms
 	def assumptionsAndSynonyms = termAssumptions ::: termAssumptionSynonyms
 	def allTerms = termNames ::: termSynonyms ::: termAssumptions ::: termAssumptionSynonyms
+
+  def getDeltaForMethod(method: String) : Int = {
+    try {
+      deltas.filter(_._1.equalsIgnoreCase(method)).head._2
+    }catch{
+      case e: Exception => 5000
+    }
+  }
 
   def getMethodFromSynonymOrMethod(synonymOrMethod: String) : Option[StatisticalMethod] = {
     terms.find(t => t.name.equalsIgnoreCase(synonymOrMethod) || t.synonyms.contains(synonymOrMethod))

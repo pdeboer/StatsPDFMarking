@@ -24,10 +24,6 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   val startTime = new DateTime().getMillis
 
-  val filterDirectories = new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean = new File(dir,name).isDirectory
-  }
-
   new File(snippetsDir).mkdir()
 
   emptySnippetsDir(new File(snippetsDir))
@@ -107,6 +103,8 @@ object MassPDFHighlighter extends App with LazyLogging {
 
     val permutations: List[Option[List[Permutation]]] = terms.termNames.par.map(method => {
 
+      val delta = (terms.getDeltaForMethod(method)/2)
+
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
       val onlyMethods: Map[Color, List[String]] = Map(Color.yellow -> (List[String](methodAndSynonyms.name) ::: methodAndSynonyms.synonyms))
@@ -120,20 +118,10 @@ object MassPDFHighlighter extends App with LazyLogging {
             m.startSearchStringIndex + m.startHighlightStringIndex
         })
 
-        val methodName = method.replaceAll(" ", "_")
-
-        val year = try {
-          f.getName.substring(0, 4).toInt
-        } catch {
-          case e: Exception => 2014
-        }
-
-        val pdfDirName = f.getName.substring(5, f.getName.length - 4)
-
         var mergedMethods = methodList.map(m => {
           StatMethod(
-            Math.max(0, permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex - 2500),
-            Math.min(maxLengthPDF, permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex + 2500),
+            Math.max(0, permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex - delta),
+            Math.min(maxLengthPDF, permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex + delta),
             List.empty[StatMethod],
             List[PDFHighlightInstruction](m))
         })

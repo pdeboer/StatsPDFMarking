@@ -1,0 +1,16 @@
+ANOVA,5000
+Pearson,5000
+Spearman,5000
+Correlation,5000
+Linear regression,5000
+Multiple regression,5000
+Logistic regression,5000
+t test,5000
+U test,5000
+Kappa,5000
+Kruskal Wallis test,5000
+ANCOVA,5000
+Wilcoxon Signed Ranks test,5000
+Dum's test,5000
+MANOVA,5000
+Mantel Haenszel,5000
