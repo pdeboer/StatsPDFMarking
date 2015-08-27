@@ -171,25 +171,14 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   def extractSmallestBoundaryForSingleMatch(inputString: String, indexPosition: Int, pageTxt: String): (Int, Int) = {
     try{
       val it = isSmallestMatch(0, indexPosition, inputString.length, pageTxt)
+
       val selectedTxt = pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it))
-      if(selectedTxt.contains(" ") || selectedTxt.contains("-")){
 
-        val doubleSpaces = if(selectedTxt.contains("  ")){
-          selectedTxt.split("  ").length-1
-        } else {0}
+      val spaces = selectedTxt.count( _ == ' ')
+      val dashes = selectedTxt.count(_ == '-')
 
-        val singleSpaces = if(selectedTxt.contains(" ")){
-          selectedTxt.split(" ").length-1
-        } else {0}
+      (Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length  + spaces + dashes + it))
 
-        val dashes = if(selectedTxt.contains("-")){
-          selectedTxt.split("-").length-1
-        } else {0}
-
-        (Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + doubleSpaces + singleSpaces + dashes + it))
-      }else {
-        (Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it))
-      }
     }catch{
       case e: Exception => {
         e.printStackTrace()
