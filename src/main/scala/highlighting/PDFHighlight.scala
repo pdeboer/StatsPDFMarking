@@ -122,14 +122,20 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
           val allIndicesOfThesePatterns : Iterator[Int] = escapeSearchString(pattern).r.findAllMatchIn(pageTxt._1).map(_.start)
 
           // Special case: check if there is no MULTIVARIATE before ANOVA or ANALYSIS OF VARIANCE
-          val indexesToDiscard: List[Int] = if(pattern.equalsIgnoreCase("ANOVA") || pattern.equalsIgnoreCase("analysis of variance")){
-            val indeces = escapeSearchString("multivariate").r.findAllMatchIn(pageTxt._1).map(_.start)
-            indeces.zip(allIndicesOfThesePatterns).filter(m => Math.abs(m._1 - m._2) < 20).map(_._2).toList
-          }else {
-            List.empty[Int]
-          }
+          val indexesToDiscard: List[Int] =
+            if(pattern.equalsIgnoreCase("ANOVA") || pattern.equalsIgnoreCase("analysis of variance")){
+              val indexes = escapeSearchString("multivariate").r.findAllMatchIn(pageTxt._1).map(_.start)
+              if(indexes.nonEmpty){
+                indexes.flatMap(i => allIndicesOfThesePatterns.map(j => (i, j))).filter(m => Math.abs(m._1 - m._2) < 20).map(_._2).toList
+              }else {
+                List.empty[Int]
+              }
+            }else {
+              List.empty[Int]
+            }
 
-          val substringIndices: Iterator[(Int, Int)] = allIndicesOfThesePatterns.filter(!indexesToDiscard.contains(_)).map(index => {
+          val substringIndices: Iterator[(Int, Int)] =
+            allIndicesOfThesePatterns.filter(!indexesToDiscard.contains(_)).map(index => {
             extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt._1)
           })
 
