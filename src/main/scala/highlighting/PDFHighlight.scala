@@ -177,7 +177,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
       val spaces = selectedTxt.count( _ == ' ')
       val dashes = selectedTxt.count(_ == '-')
 
-      (Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length  + spaces + dashes + it))
+      (Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length  + spaces + dashes + it + 1))
 
     }catch{
       case e: Exception => {

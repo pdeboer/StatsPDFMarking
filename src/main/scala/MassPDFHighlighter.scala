@@ -41,7 +41,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def highlightPDFFile = {
-    val permutations : List[Option[List[Permutation]]] = new FolderPDFSource(pdfsDir).get().par.flatMap(f => {
+    val permutations : List[Option[List[Permutation]]] = new FolderPDFSource(pdfsDir).get().flatMap(f => {
       highlightFile(f)
     }).toList
 
