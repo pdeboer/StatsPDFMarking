@@ -41,7 +41,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def highlightPDFFile = {
-    val permutations : List[Option[List[Permutation]]] = new FolderPDFSource(pdfsDir).get().par.flatMap(f => {
+    val permutations : List[Option[List[Permutation]]] = new FolderPDFSource(pdfsDir).get().flatMap(f => {
       highlightFile(f)
     }).toList
 
@@ -143,7 +143,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
             val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
             if(assumptionsList.nonEmpty) {
-              logger.debug(s"Result after merging method: $method => ${mergedMethods.length} different groups.")
+              logger.debug(s"There are: ${assumptionsList.length} different matches for the assumptions of method $method.")
               Some(mergedMethods.par.zipWithIndex.flatMap(groupedMethods => {
                 createHighlightedPDF(groupedMethods._2, groupedMethods._1.instructions, assumptionsList, method, f)
               }).toList)

@@ -253,7 +253,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
 
   def escapeSearchString(searchString: String): String = {
     val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\n\\r]{0,5}\\s*").mkString("")
-    if(searchString.length <= 5 || searchString.contains(" ")){
+    if(searchString.length <= 7 || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
       "(?i)("+search+")"

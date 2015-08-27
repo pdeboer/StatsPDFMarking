@@ -189,10 +189,20 @@ public class TextHighlight extends PDFTextStripper {
             int spaceOccurrences = searchText.toString().split(" ").length > 0 ? searchText.toString().split(" ").length-1 : 0;
 
             for (Match searchMatch : textCache.match(pageNr, searchText)) {
-                for (Match markingMatch : textCache.match(searchMatch.positions, markingPattern)) {
-                        if(markupMatch(color, contentStream, markingMatch)){
-                        found = true;
+                if(textCache.match(searchMatch.positions, markingPattern).size()>0) {
+                    for (Match markingMatch : textCache.match(searchMatch.positions, markingPattern)) {
+                        if (markupMatch(color, contentStream, markingMatch)) {
+                            found = true;
+                        }
                     }
+                }else if(markingPattern.toString().contains("\\b")){
+                    for (Match markingMatch : textCache.match(searchMatch.positions, Pattern.compile("(?i)("+markingPattern.toString().substring(7, markingPattern.toString().length()-3)+")"))) {
+                        if (markupMatch(color, contentStream, markingMatch)) {
+                            found = true;
+                        }
+                    }
+                }else {
+                    System.out.println("Cannot highlight: " + markingPattern.pattern() + " on page " + (pageNr-1));
                 }
                 if(found){
                     break;
