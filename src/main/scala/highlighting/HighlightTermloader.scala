@@ -56,10 +56,10 @@ class HighlightTermloader {
 
   def getDeltaForMethod(method: String) : Int = {
     try {
-      val value = deltas.find(_._1.equalsIgnoreCase(method)).getOrElse((method , 5000))
+      val value = deltas.find(_._1.equalsIgnoreCase(method)).getOrElse((method , 0))
       value._2
     }catch{
-      case e: Exception => 5000
+      case e: Exception => 0
     }
   }
 

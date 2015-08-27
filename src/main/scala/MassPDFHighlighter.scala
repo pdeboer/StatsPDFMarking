@@ -40,18 +40,20 @@ object MassPDFHighlighter extends App with LazyLogging {
     true
   }
 
+  case class Permutation(groupName: String, methodIndex: String, snippetPath: String, pdfPath: String, methodOnTop: Boolean, relativeTop: Double = 0, relativeBottom: Double = 0)
+
   def highlightPDFFile = {
-    val permutations : List[Option[List[Permutation]]] = new FolderPDFSource(pdfsDir).get().flatMap(f => {
+    val permutations : List[Option[List[Permutation]]] = new FolderPDFSource(pdfsDir).get().par.flatMap(f => {
       highlightFile(f)
     }).toList
 
     val writer = new PrintWriter(new File(PERMUTATIONS_CSV_FILENAME))
-    writer.write("group_name, method_index, snippet_filename, pdf_path, method_on_top\n")
+    writer.write("group_name, method_index, snippet_filename, pdf_path, method_on_top, relative_height_top, relative_height_bottom\n")
     permutations.foreach(p => {
       if(p.isDefined){
         p.get.foreach(pe => {
           val methodOnTop = if(pe.methodOnTop) {1} else {0}
-          writer.append(pe.groupName + "," + pe.methodIndex+ "," + pe.snippetPath + "," + pe.pdfPath + "," + methodOnTop + "\n")
+          writer.append(pe.groupName + "," + pe.methodIndex+ "," + pe.snippetPath + "," + pe.pdfPath + "," + methodOnTop + "," +  pe.relativeTop +","+ pe.relativeBottom+"\n")
         })
       }
     })
@@ -178,8 +180,6 @@ object MassPDFHighlighter extends App with LazyLogging {
     permutations
   }
 
-  case class Permutation(groupName: String, methodIndex: String, snippetPath: String, pdfPath: String, methodOnTop: Boolean)
-
   def createHighlightedPDF(groupId: Int, methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String, f: File): List[Permutation] = {
 
     new PDFPermuter(f.getAbsolutePath).getUniquePairsForSearchTerms(methodsList, assumptionsList).zipWithIndex.par.flatMap( highlighter => {
@@ -230,18 +230,26 @@ object MassPDFHighlighter extends App with LazyLogging {
         }).mkString("_")
 
 
-        val permutations = highlighter._1.instructions.map( i => {
+        val permutations : List[Option[Permutation]] = highlighter._1.instructions.map( i => {
           if(i.color==Color.green) {
             val assumptionPosition = i.pageNr+":"+(i.startSearchStringIndex+i.startHighlightStringIndex)
-            val methodOnTop = if(args.isDefinedAt(0) && args(0).equalsIgnoreCase("2")){
-              MainSnippet.isMethodOnTop(pdfToPngPath.getPath)
+            if(args.isDefinedAt(0) && args(0).equalsIgnoreCase("2")){
+              val matches = MainSnippet.extractColorCoords(new File(snippetPath))
+              val height = MainSnippet.getHeight(new File(snippetPath))
+              val methodOnTop = MainSnippet.isMethodOnTop(snippetPath)
+              Some(Permutation(f.getName+"/"+i.highlightString+"/"+assumptionPosition, methodName+"_"+methodPositions,
+                snippetPath, highlightedFile.getPath, methodOnTop, (Math.min(matches._1.minBy(_.getY).getY,
+                  matches._2.minBy(_.getY).getY)/height) * 100, (Math.max(matches._1.maxBy(_.getY).getY, matches._2.maxBy(_.getY).getY)/height * 100)))
             }else {
-              MainSnippet.isMethodOnTop(snippetPath)
+              val methodOnTop = MainSnippet.isMethodOnTop(snippetPath)
+              Some(Permutation(f.getName+"/"+i.highlightString+"/"+assumptionPosition, methodName+"_"+methodPositions,
+                snippetPath, highlightedFile.getPath, methodOnTop))
             }
-            Permutation(f.getName+"/"+i.highlightString+"/"+assumptionPosition, methodName+"_"+methodPositions, snippetPath, highlightedFile.getPath, methodOnTop)
+          }else {
+            None
           }
         })
-        permutations.filter(p => p.isInstanceOf[Permutation]).map(_.asInstanceOf[Permutation])
+        permutations.filter(p => p.isDefined).map(_.get)
       }).toList
   }
 

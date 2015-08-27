@@ -135,7 +135,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
             }
 
           val substringIndices: Iterator[(Int, Int)] =
-            allIndicesOfThesePatterns.filter(!indexesToDiscard.contains(_)).map(index => {
+            allIndicesOfThesePatterns.filterNot(indexesToDiscard.contains(_)).map(index => {
             extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt._1)
           })
 

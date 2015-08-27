@@ -20,55 +20,11 @@ object MainSnippet extends LazyLogging{
   val PADDING_SNIPPET = 200
   val MINIMAL_SNIPPET_HEIGHT = 300
 
-  /*
-  val SNIPPET_DIR = "../merge_method_snippets/"
-
-  val filterDirectories = new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
-  }
-
-  val snippetDir: File = new File(SNIPPET_DIR)
-
-  val allBigSnippets: List[File] = snippetDir.listFiles(filterDirectories).flatMap(yearDirs => {
-    yearDirs.listFiles(filterDirectories).flatMap(methodDirs => {
-      methodDirs.listFiles(filterDirectories).flatMap(pdfDirs => {
-        pdfDirs.listFiles(new FilenameFilter {
-          override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf.png")
-        }).map(bigSnippet => bigSnippet)
-      }).toList
-    }).toList
-  }).toList
-
-  logger.debug(s"Found: ${allBigSnippets.length} png files")
-  
-  allBigSnippets.par.foreach(createSnippet(_))
-  */
-
   def createSnippet(pngImage: File): String = {
     logger.debug(s"Working file: $pngImage")
     try {
-
-      val inputImage = ImageIO.read(pngImage)
-
-      val width = inputImage.getWidth
-      val height = inputImage.getHeight
-
-      var yellowCoords = List.empty[Point2D]
-      var greenCoords = List.empty[Point2D]
-
-      for (x <- 0 until width) {
-        for (y <- 0 until height) {
-          val color = new Color(inputImage.getRGB(x, y))
-          if (isSameColor(color, YELLOW_RANGES)) {
-            yellowCoords ::= new Point2D.Double(x, y)
-          } else if (isSameColor(color, GREEN_RANGES)) {
-            greenCoords ::= new Point2D.Double(x, y)
-          }
-        }
-      }
-
+      val (yellowCoords: List[Point2D], greenCoords: List[Point2D]) = extractColorCoords(pngImage)
       extractAndGenerateImage(pngImage, yellowCoords, greenCoords)
-      
     }catch {
       case e: Exception => {
         logger.error("Error: ", e)
@@ -77,13 +33,17 @@ object MainSnippet extends LazyLogging{
     }
   }
 
-  def isMethodOnTop(path: String) : Boolean = {
-    val inputImage = ImageIO.read(new File(path))
+  def extractColorCoords(pngImage: File): (List[Point2D], List[Point2D]) = {
+    val inputImage = ImageIO.read(pngImage)
+
+    val width = inputImage.getWidth
+    val height = inputImage.getHeight
+
     var yellowCoords = List.empty[Point2D]
     var greenCoords = List.empty[Point2D]
 
-    for (x <- 0 until inputImage.getWidth()) {
-      for (y <- 0 until inputImage.getHeight()) {
+    for (x <- 0 until width) {
+      for (y <- 0 until height) {
         val color = new Color(inputImage.getRGB(x, y))
         if (isSameColor(color, YELLOW_RANGES)) {
           yellowCoords ::= new Point2D.Double(x, y)
@@ -92,6 +52,25 @@ object MainSnippet extends LazyLogging{
         }
       }
     }
+    (yellowCoords, greenCoords)
+  }
+
+  def getHeight(png: File) : Int = {
+    try {
+
+      val inputImage = ImageIO.read(png)
+
+      inputImage.getHeight
+    }catch{
+      case e: Exception => {
+        logger.error(s"The png-file ${png.getName} doesn't exist")
+        0
+      }
+    }
+  }
+
+  def isMethodOnTop(path: String) : Boolean = {
+    val (yellowCoords: List[Point2D], greenCoords: List[Point2D]) = extractColorCoords(new File(path))
     try{
       yellowCoords.map(y => (Math.abs(greenCoords.minBy(_.getY).getY - y.getY), y)).minBy(_._1)._2.getY < greenCoords.minBy(_.getY).getY
     } catch {
@@ -117,9 +96,7 @@ object MainSnippet extends LazyLogging{
         }
       }
 
-
       val storeSnippetPath = pngImage.getParentFile.getPath
-
       val snippetFile = new File(storeSnippetPath + "/" + pngImage.getName)
 
       ImageIO.write(snippetImage, "png", snippetFile)

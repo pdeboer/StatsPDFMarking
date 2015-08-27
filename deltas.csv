@@ -1,16 +1,16 @@
-ANOVA,5000
-Pearson,5000
-Spearman,5000
-Correlation,5000
-Linear regression,5000
-Multiple regression,5000
-Logistic regression,5000
-t test,5000
-U test,5000
-Kappa,5000
-Kruskal Wallis test,5000
-ANCOVA,5000
-Wilcoxon Signed Ranks test,5000
-Dum s test,5000
-MANOVA,5000
-Mantel Haenszel,5000
+ANOVA,23064
+Pearson,27393
+Spearman,19234
+Correlation,0
+Linear regression,19517
+Multiple regression,16735
+Logistic regression,22061
+t test,17017
+U test,10469
+Kappa,2698
+Kruskal Wallis test,0
+ANCOVA,16722
+Wilcoxon Signed Ranks test,0
+Dum test,0
+MANOVA,0
+Mantel Haenszel,0
