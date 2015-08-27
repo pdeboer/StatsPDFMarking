@@ -15,12 +15,12 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../pdfs2/"
-  val snippetsDir = "../pdfs2_snippets/"
+  val pdfsDir = "../bmj/"
+  val snippetsDir = "../bmj_snippets/"
 
-  val pathConvert = "/opt/local/bin/convert"
+  val pathConvert = "/usr/bin/convert"
 
-  val PERMUTATIONS_CSV_FILENAME = "permutations.csv"
+  val PERMUTATIONS_CSV_FILENAME = "permutations_bmj.csv"
 
   val startTime = new DateTime().getMillis
 
@@ -41,7 +41,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   }
 
   def highlightPDFFile = {
-    val permutations : List[Option[List[Permutation]]] = new FolderPDFSource(pdfsDir).get().flatMap(f => {
+    val permutations : List[Option[List[Permutation]]] = new FolderPDFSource(pdfsDir).get().par.flatMap(f => {
       highlightFile(f)
     }).toList
 
