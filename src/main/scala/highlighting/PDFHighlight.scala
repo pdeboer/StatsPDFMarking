@@ -105,7 +105,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   }
 
   def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\n\\r]{0,5}\\s*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString("")
     if(searchString.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
@@ -175,7 +175,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
       val selectedTxt = pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it))
 
       val spaces = selectedTxt.count( _ == ' ')
-      val dashes = selectedTxt.count(_ == '-')
+      val dashes = selectedTxt.count(_ == '-') + selectedTxt.count(_ == '–') + selectedTxt.count(_ == '—') + selectedTxt.count(_ == '―')
 
       (Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length  + spaces + dashes + it + 1))
 
@@ -241,7 +241,7 @@ class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstr
   }
 
   def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\n\\r]{0,5}\\s*").mkString("")
+    val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString("")
     if(searchString.length <= 7 || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {

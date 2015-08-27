@@ -1,6 +1,6 @@
 ANOVA,analysis of variance
-Pearson,Pearson's correlation,Pearson's r,Pearson product-moment correlation,Pearson product moment correlation
-Spearman,Spearman's correlation,Spearman's Rank-Order Correlation
+Pearson,Pearson's correlation,Pearson’s correlation,Pearson's r,Pearson’s r,Pearson product moment correlation,Pearson product moment correlation
+Spearman,Spearman's correlation,Spearman’s correlation,Spearman's rank order correlation,Spearman’s rank order correlation
 Correlation,R square,R squared,R 2 adjusted
 Linear regression,Ordinary least squares regression
 Multiple regression,Multiple Linear Regression
@@ -11,6 +11,6 @@ Kappa,Kendall Tau,Bland Altman,Youden J
 Kruskal Wallis test
 ANCOVA,Analysis of covariance
 Wilcoxon Signed Ranks test
-Dum test,Dum's test
+Dum test,Dum's test,Dum’s test
 MANOVA,multivariate analysis of variance
 Mantel Haenszel

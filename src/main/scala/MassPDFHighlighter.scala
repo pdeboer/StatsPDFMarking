@@ -15,10 +15,10 @@ import scala.sys.process._
  */
 object MassPDFHighlighter extends App with LazyLogging {
 
-  val pdfsDir = "../bmj/"
-  val snippetsDir = "../bmj_snippets/"
+  val pdfsDir = "../pdfs2/"
+  val snippetsDir = "../pdfs2_snippets/"
 
-  val pathConvert = "/usr/bin/convert"
+  val pathConvert = "/opt/local/bin/convert"
 
   val PERMUTATIONS_CSV_FILENAME = "permutations_bmj.csv"
 
