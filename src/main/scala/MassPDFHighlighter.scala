@@ -238,8 +238,9 @@ object MassPDFHighlighter extends App with LazyLogging {
               val height = MainSnippet.getHeight(new File(snippetPath))
               val methodOnTop = MainSnippet.isMethodOnTop(snippetPath)
               Some(Permutation(f.getName+"/"+i.highlightString+"/"+assumptionPosition, methodName+"_"+methodPositions,
-                snippetPath, highlightedFile.getPath, methodOnTop, (Math.min(matches._1.minBy(_.getY).getY,
-                  matches._2.minBy(_.getY).getY)/height) * 100, (Math.max(matches._1.maxBy(_.getY).getY, matches._2.maxBy(_.getY).getY)/height * 100)))
+                snippetPath, highlightedFile.getPath, methodOnTop,
+                Math.max(0.0, Math.min(matches._1.minBy(_.getY).getY, matches._2.minBy(_.getY).getY)/height * 100),
+                Math.min(100.0, Math.max(matches._1.maxBy(_.getY).getY, matches._2.maxBy(_.getY).getY)/height * 100)))
             }else {
               val methodOnTop = MainSnippet.isMethodOnTop(snippetPath)
               Some(Permutation(f.getName+"/"+i.highlightString+"/"+assumptionPosition, methodName+"_"+methodPositions,
