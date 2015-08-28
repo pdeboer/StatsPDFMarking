@@ -12,7 +12,7 @@ import org.codehaus.plexus.util.FileUtils
 /**
  * Created by mattia on 13.07.15.
  */
-object MainSnippet extends LazyLogging{
+object Snippet extends LazyLogging{
 
   val YELLOW_RANGES= List[(Int, Int)]((190, 255), (190, 255), (100, 160))
   val GREEN_RANGES= List[(Int, Int)]((100, 160), (190, 255), (100, 160))
@@ -57,9 +57,7 @@ object MainSnippet extends LazyLogging{
 
   def getHeight(png: File) : Int = {
     try {
-
       val inputImage = ImageIO.read(png)
-
       inputImage.getHeight
     }catch{
       case e: Exception => {
@@ -81,25 +79,15 @@ object MainSnippet extends LazyLogging{
   def extractAndGenerateImage(pngImage: File, yellowCoords: List[Point2D], greenCoords: List[Point2D]): String = {
 
     if (greenCoords.nonEmpty && yellowCoords.nonEmpty) {
-
-      //multiple yellow, single green
       val inputImage = ImageIO.read(pngImage)
       val (startY: Int, endY: Int) = extractImageBoundaries(yellowCoords, greenCoords, inputImage.getHeight)
-      val snippetHeight = endY - startY
-
-      val imageWidth = inputImage.getWidth()
-
-      val snippetImage = new BufferedImage(imageWidth, snippetHeight, BufferedImage.TYPE_INT_RGB)
-      for (w <- 0 until imageWidth) {
-        for (h <- 0 until snippetHeight) {
-          snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
-        }
-      }
 
       val storeSnippetPath = pngImage.getParentFile.getPath
       val snippetFile = new File(storeSnippetPath + "/" + pngImage.getName)
 
+      val snippetImage: BufferedImage = createImage(inputImage, startY, endY)
       ImageIO.write(snippetImage, "png", snippetFile)
+
       logger.debug(s"Snippet successfully written: $storeSnippetPath/${pngImage.getName}")
       snippetFile.getPath
     }else {
@@ -115,11 +103,23 @@ object MainSnippet extends LazyLogging{
     }
   }
 
-  def extractImageBoundaries(coordsYellow: List[Point2D], coordsGreen: List[Point2D], maxHeight: Int): (Int, Int) = {
+  def createImage(inputImage: BufferedImage, startY: Int, endY: Int): BufferedImage = {
+    val snippetHeight = endY - startY
 
+    val imageWidth = inputImage.getWidth()
+
+    val snippetImage = new BufferedImage(imageWidth, snippetHeight, BufferedImage.TYPE_INT_RGB)
+    for (w <- 0 until imageWidth) {
+      for (h <- 0 until snippetHeight) {
+        snippetImage.setRGB(w, h, new Color(inputImage.getRGB(w, startY + h)).getRGB)
+      }
+    }
+    snippetImage
+  }
+
+  def extractImageBoundaries(coordsYellow: List[Point2D], coordsGreen: List[Point2D], maxHeight: Int): (Int, Int) = {
     val minGreen = coordsGreen.minBy(_.getY)
     val minYellow = coordsYellow.map(y => (Math.abs(minGreen.getY - y.getY), y)).minBy(_._1)._2
-
     val startY = Math.max(0, Math.min(minYellow.getY,minGreen.getY) - PADDING_SNIPPET)
     val endY = Math.min(Math.max(minYellow.getY, minGreen.getY) + PADDING_SNIPPET, maxHeight)
 
@@ -131,15 +131,12 @@ object MainSnippet extends LazyLogging{
     var maxY = endY
     val originalHeight = maxY-minY
     if(originalHeight < MINIMAL_SNIPPET_HEIGHT) {
-
       val deltaHeight = (MINIMAL_SNIPPET_HEIGHT-originalHeight)/2
-
       if(minY-deltaHeight >0){
         minY = minY - deltaHeight
       } else {
         minY = 0
       }
-
       if(maxY+deltaHeight < maxImageHeight){
         maxY = maxY + deltaHeight
       } else {
