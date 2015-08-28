@@ -14,8 +14,8 @@ import org.codehaus.plexus.util.FileUtils
  */
 object MainSnippet extends LazyLogging{
 
-  val YELLOW_RANGES= List[(Int, Int)]((200, 255), (200, 255), (100, 150))
-  val GREEN_RANGES= List[(Int, Int)]((100, 150), (200, 255), (100, 150))
+  val YELLOW_RANGES= List[(Int, Int)]((190, 255), (190, 255), (100, 160))
+  val GREEN_RANGES= List[(Int, Int)]((100, 160), (190, 255), (100, 160))
 
   val PADDING_SNIPPET = 200
   val MINIMAL_SNIPPET_HEIGHT = 300
