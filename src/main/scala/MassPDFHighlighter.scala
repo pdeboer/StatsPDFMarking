@@ -105,7 +105,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
     val permutations: List[Option[List[Permutation]]] = terms.termNames.par.map(method => {
 
-      val delta = (terms.getDeltaForMethod(method)/2)
+      val delta = terms.getDeltaForMethod(method)
 
       val methodAndSynonyms = terms.getMethodAndSynonymsFromMethodName(method).get
 
