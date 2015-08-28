@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 /**
  * Created by mattia on 28.08.15.
  */
-object Alg250 extends LazyLogging{
+object MergeMethods extends LazyLogging{
 
   case class StatMethod(minIndex:Int, maxIndex:Int, children:List[StatMethod], instructions: List[PDFHighlightInstruction])
 
@@ -51,7 +51,7 @@ object Alg250 extends LazyLogging{
     if(stop){
       mergedMethods
     }else {
-      val tmpList = Alg250.combine(mergedMethods)
+      val tmpList = MergeMethods.combine(mergedMethods)
       iterateAlgorithm(tmpList equals mergedMethods, tmpList)
     }
   }

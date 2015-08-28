@@ -3,7 +3,7 @@ import java.io._
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
-import highlighting.Alg250.StatMethod
+import highlighting.MergeMethods.StatMethod
 import highlighting._
 import input.folder.FolderPDFSource
 import org.codehaus.plexus.util.FileUtils
@@ -115,7 +115,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   def mergeMethodsAndHighlightPDF(pdfFilename: String, method: String, methodAndSynonyms: StatisticalMethod, permuter: PDFPermuter, methodsToMerge: List[StatMethod]): Option[List[Permutation]] = {
     if (methodsToMerge.nonEmpty) {
       val (mergedMethods: List[StatMethod], assumptionsList: List[PDFHighlightInstruction]) =
-        Alg250.mergeMethods(methodsToMerge, method, permuter, methodAndSynonyms, pdfFilename)
+        MergeMethods.mergeMethods(methodsToMerge, method, permuter, methodAndSynonyms, pdfFilename)
 
       Some(mergedMethods.par.zipWithIndex.flatMap(groupedMethods => {
         createHighlightedPDF(groupedMethods._2, groupedMethods._1.instructions, assumptionsList, method, pdfFilename, permuter)
