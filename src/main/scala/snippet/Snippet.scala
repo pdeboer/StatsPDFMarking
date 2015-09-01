@@ -70,9 +70,21 @@ object Snippet extends LazyLogging{
   def isMethodOnTop(path: String) : Boolean = {
     val (yellowCoords: List[Point2D], greenCoords: List[Point2D]) = extractColorCoords(new File(path))
     try{
-      yellowCoords.map(y => (Math.abs(greenCoords.minBy(_.getY).getY - y.getY), y)).minBy(_._1)._2.getY < greenCoords.minBy(_.getY).getY
+      val greenMin = greenCoords match {
+        case Nil => 0.0
+        case greenList => greenList.map(_.getY).min
+      }
+      val closestYellow : Double = yellowCoords match {
+        case Nil => 0.0
+        case yellowList => yellowList.minBy(v => math.abs((v.getY) - greenMin)).getY
+      }
+      closestYellow < greenMin
+
     } catch {
-      case e: Exception => true
+      case e: Exception => {
+        logger.debug("Cannot find highlight to establish if method or prerequisite is on top.")
+        true
+      }
     }
   }
 

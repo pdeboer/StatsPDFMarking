@@ -191,6 +191,7 @@ object MassPDFHighlighter extends App with LazyLogging {
     if (args.isDefinedAt(0) && args(0).equalsIgnoreCase("2")) {
       val matches = Snippet.extractColorCoords(new File(snippetPath))
       val height = Snippet.getHeight(new File(snippetPath))
+
       val methodOnTop = Snippet.isMethodOnTop(snippetPath)
 
       val coordinatesGreen : Double = if(matches._2.nonEmpty) {
