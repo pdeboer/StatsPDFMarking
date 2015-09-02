@@ -188,6 +188,8 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   def createPermutationForPrerequisite(methodName: String, highlightedFilename: File, snippetPath: String, methodPositions: String, instruction: PDFHighlightInstruction): Permutation = {
     val assumptionPosition = instruction.pageNr + ":" + (instruction.startSearchStringIndex + instruction.startHighlightStringIndex)
+    val pdfDirName = highlightedFilename.getParentFile.getName
+
     if (args.isDefinedAt(0) && args(0).equalsIgnoreCase("2")) {
       val matches = Snippet.extractColorCoords(new File(snippetPath))
       val height = Snippet.getHeight(new File(snippetPath))
@@ -209,11 +211,11 @@ object MassPDFHighlighter extends App with LazyLogging {
       val boundaryMin = Math.min(coordinatesGreen, closestYellow) * 100
       val boundaryMax = Math.max(coordinatesGreen, closestYellow) * 100
 
-      Permutation(snippetPath + "/" + instruction.highlightString + "/" + assumptionPosition, methodName + "_" + methodPositions,
+      Permutation(pdfDirName + "/" + instruction.highlightString + "/" + assumptionPosition, methodName + "_" + methodPositions,
         snippetPath, highlightedFilename.getPath, methodOnTop, boundaryMin, boundaryMax)
     } else {
       val methodOnTop = Snippet.isMethodOnTop(snippetPath)
-      Permutation(snippetPath + "/" + instruction.highlightString + "/" + assumptionPosition, methodName + "_" + methodPositions,
+      Permutation(pdfDirName + "/" + instruction.highlightString + "/" + assumptionPosition, methodName + "_" + methodPositions,
         snippetPath, highlightedFilename.getPath, methodOnTop)
     }
   }
