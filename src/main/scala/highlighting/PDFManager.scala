@@ -4,11 +4,10 @@ import java.awt.Color
 import java.io._
 
 import com.typesafe.scalalogging.LazyLogging
-import highlighting.MergeMethods.StatMethod
 import input.folder.FolderPDFSource
 import org.joda.time.DateTime
-import pdf.{PDFHighlightInstruction, PDFPermuter, Permutation}
-import png.PNGGenerator
+import pdf.{PDFHighlightInstruction, PDFPermuter, PDFTextExtractor, Permutation}
+import png.PNGManager
 import utils.Utils
 
 
@@ -33,12 +32,9 @@ case class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsD
 
       try {
         val permuter = new PDFPermuter(pdfFile.getAbsolutePath)
-        val maxLengthPDF = permuter.txt.map(_.length).sum
+        val maxLengthPDF = PDFTextExtractor.extract(pdfFile.getAbsolutePath).map(_.length).sum
 
-        val methodList = permuter.findAllMethodsInPaper(availableMethods).sortBy(m => {
-          permuter.txt.zipWithIndex.filter(_._2<m.pageNr).map(_._1.length).sum +
-            m.startSearchStringIndex + m.startHighlightStringIndex
-        })
+        val methodList = permuter.findAllMethodsInPaper(availableMethods).sortBy(m => calculateIndexPositionOfMethod(permuter, m))
 
         val methodsToMerge = methodList.map(m => {
           val methodIndex = calculateIndexPositionOfMethod(permuter, m)
@@ -86,7 +82,7 @@ case class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsD
       val pdfDirName = Utils.removePDFExtension(pdfFilename)
       val pathToSaveHighlightedPDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
       new File(pathToSaveHighlightedPDFs).mkdirs()
-      val highlightedFilename = new File(pathToSaveHighlightedPDFs + "/" + pdfDirName + "_" + highlighter._2 + "_" + groupId + ".pdf")
+      val highlightedFilename = new File(createHighlightedPDFFilename(groupId, highlighter._2, pdfDirName, pathToSaveHighlightedPDFs))
 
       val highlightedPDF = highlighter._1.highlight()
       Some(new BufferedOutputStream(new FileOutputStream(highlightedFilename))).foreach(s => {
@@ -95,8 +91,12 @@ case class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsD
       })
 
       logger.debug(s"Converting $pdfFilename to PNG (pages: [${highlightedPDF._1.start},${highlightedPDF._1.end}])...")
-      PNGGenerator(isMultipleColumnPaper, pathConvert).createPNGAndBuildPermutations(highlighter._1, methodName, highlightedFilename, highlightedPDF._1)
+      PNGManager(isMultipleColumnPaper, pathConvert).convertPDFAndCreatePermutations(highlighter._1, methodName, highlightedFilename, highlightedPDF._1)
     }).toList
+  }
+
+  def createHighlightedPDFFilename(groupId: Int, permutation: Int, pdfDirName: String, pathToSaveHighlightedPDFs: String): String = {
+    pathToSaveHighlightedPDFs + "/" + pdfDirName + "_" + permutation + "_" + groupId + ".pdf"
   }
 
   def extractPublicationYear(pdfFilename: String): Int = {

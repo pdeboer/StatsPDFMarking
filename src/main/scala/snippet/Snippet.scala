@@ -121,7 +121,6 @@ object Snippet extends LazyLogging{
 
   def createImage(inputImage: BufferedImage, startY: Int, endY: Int): BufferedImage = {
     val snippetHeight = endY - startY
-
     val imageWidth = inputImage.getWidth()
 
     val snippetImage = new BufferedImage(imageWidth, snippetHeight, BufferedImage.TYPE_INT_RGB)

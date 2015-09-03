@@ -63,10 +63,6 @@ class HighlightTermloader {
     }
   }
 
-  def getMethodFromSynonymOrMethod(synonymOrMethod: String) : Option[StatisticalMethod] = {
-    terms.find(t => t.methodName.equalsIgnoreCase(synonymOrMethod) || t.synonyms.contains(synonymOrMethod))
-  }
-
   def getMethodAndSynonymsFromMethodName(method: String): Option[StatisticalMethod] = {
     terms.find(m => m.methodName.equalsIgnoreCase(method))
   }

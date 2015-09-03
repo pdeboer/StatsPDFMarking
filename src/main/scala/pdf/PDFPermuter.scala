@@ -3,6 +3,7 @@ package pdf
 import java.awt.Color
 import java.io.FileInputStream
 
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import highlighting.{HighlightTermloader, PDFHighlighter, TextHighlight}
 import org.apache.pdfbox.pdfparser.PDFParser
@@ -31,7 +32,6 @@ object PDFTextExtractor extends LazyLogging{
 
       val txt: List[String] = (0 to pdDoc.getNumberOfPages).map(pdfHighlight.textCache.getText(_)).toList
       pdDoc.close()
-
       txt
     } catch {
       case e: Exception => {
@@ -48,8 +48,9 @@ object PDFTextExtractor extends LazyLogging{
 
 class PDFPermuter(pdfPath: String) extends LazyLogging {
 
-  val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = 7
-  val MULTIVARIATE_MAX_DISTANCE = 20
+  val config = ConfigFactory.load()
+  val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = config.getInt("highlighter.allowedMaxLengthInWordMatch")
+  val MULTIVARIATE_MAX_DISTANCE = config.getInt("highlighter.multivariateMaxDistance")
 
   lazy val txt = PDFTextExtractor.extract(pdfPath)
 
@@ -120,7 +121,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
           val allIndicesOfThesePatterns : Iterator[Int] = Utils.escapeSearchString(ALLOWED_MAX_LENGTH_IN_WORD_MATCH, pattern).r.findAllMatchIn(pageTxt._1).map(_.start)
 
           // Special case: check if there is no MULTIVARIATE before ANOVA or ANALYSIS OF VARIANCE
-          val indexesToDiscard: List[Int] = checkSpecialCases(pattern, pageTxt, allIndicesOfThesePatterns)
+          val indexesToDiscard: List[Int] = identifyIndexSpecialCases(pattern, pageTxt, allIndicesOfThesePatterns)
 
           val substringIndices: Iterator[(Int, Int)] =
             allIndicesOfThesePatterns.filterNot(indexesToDiscard.contains(_)).map(index => {
@@ -152,7 +153,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
     }.flatten
   }
 
-  def checkSpecialCases(pattern: String, pageTxt: (String, Int), allIndicesOfThesePatterns : Iterator[Int]): List[Int] = {
+  def identifyIndexSpecialCases(pattern: String, pageTxt: (String, Int), allIndicesOfThesePatterns : Iterator[Int]): List[Int] = {
     if (pattern.equalsIgnoreCase("ANOVA") || pattern.equalsIgnoreCase("analysis of variance")) {
       val indexes = Utils.escapeSearchString(ALLOWED_MAX_LENGTH_IN_WORD_MATCH, "multivariate").r.findAllMatchIn(pageTxt._1).map(_.start)
       if (indexes.nonEmpty) {
@@ -176,14 +177,14 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 
   def extractSmallestBoundaryForSingleMatch(inputString: String, indexPosition: Int, pageTxt: String): (Int, Int) = {
     try{
-      val it = isSmallestMatch(0, indexPosition, inputString.length, pageTxt)
+      val numberOfCharsToIdentifyString = isSmallestMatch(0, indexPosition, inputString.length, pageTxt)
 
-      val selectedTxt = pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length + it))
+      val selectedTxt = pageTxt.substring(Math.max(0, indexPosition - numberOfCharsToIdentifyString), Math.min(pageTxt.length, indexPosition + inputString.length + numberOfCharsToIdentifyString))
 
       val spaces = selectedTxt.count( _ == ' ')
       val dashes = selectedTxt.count(_ == '-') + selectedTxt.count(_ == '–') + selectedTxt.count(_ == '—') + selectedTxt.count(_ == '―')
 
-      (Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputString.length  + spaces + dashes + it + 1))
+      (Math.max(0, indexPosition - numberOfCharsToIdentifyString), Math.min(pageTxt.length, indexPosition + inputString.length  + spaces + dashes + numberOfCharsToIdentifyString + 1))
 
     }catch{
       case e: Exception => {

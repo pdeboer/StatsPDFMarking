@@ -14,13 +14,12 @@ import scala.sys.process._
 /**
  * Created by mattia on 02.09.15.
  */
-case class PNGGenerator(isMultipleColumnPaper: Boolean, pathConvert: String) extends LazyLogging{
+case class PNGManager(isMultipleColumnPaper: Boolean, pathConvert: String) extends LazyLogging{
 
-  def createPNGAndBuildPermutations(highlighter: PDFHighlighter, methodName: String, highlightedFilename: File,
+  def convertPDFAndCreatePermutations(highlighter: PDFHighlighter, methodName: String, highlightedFilename: File,
                                highlightedPDFPaper: HighlightPage): List[Permutation] = {
-
-
-    val pdfToPngPath = convertPDFtoPNG(highlightedFilename, highlightedPDFPaper)
+    
+    val pdfToPngPath = convertToPNG(highlightedFilename, highlightedPDFPaper)
     val snippetPath = cutPNG(pdfToPngPath)
     val methodInstructions = highlighter.instructions.filter(f => f.color == Color.yellow)
 
@@ -38,9 +37,9 @@ case class PNGGenerator(isMultipleColumnPaper: Boolean, pathConvert: String) ext
     permutations.filter(p => p.isDefined).map(_.get)
   }
 
-  private def convertPDFtoPNG(pdfFile: File, pages: HighlightPage) : File = {
+  private def convertToPNG(pdfFile: File, pages: HighlightPage) : File = {
     val pathPDFFile = pdfFile.getPath
-    val pathConvertedPNGFile: String = pdfFile.getParentFile.getPath+"/" + createPNGFileName(pdfFile.getName)
+    val pathConvertedPNGFile: String = pdfFile.getParentFile.getPath+"/" + addPNGExtension(pdfFile.getName)
 
     val range = extractPageRange(pages)
 
@@ -65,6 +64,7 @@ case class PNGGenerator(isMultipleColumnPaper: Boolean, pathConvert: String) ext
         Snippet.createSnippet(pdfToPngPath)
       }
     } else {
+      logger.error("Cannot cut PNG file. The PDF was not correctly converted.")
       ""
     }
   }
@@ -113,7 +113,7 @@ case class PNGGenerator(isMultipleColumnPaper: Boolean, pathConvert: String) ext
     }
   }
 
-  def createPNGFileName(filename: String) : String = {
+  def addPNGExtension(filename: String) : String = {
     filename+".png"
   }
 }
