@@ -2,7 +2,8 @@ package queries
 
 import java.io.{File, FileFilter}
 
-import highlighting.{HighlightTermloader, PDFTextExtractor}
+import highlighting.HighlightTermloader
+import pdf.PDFTextExtractor
 
 /**
  * Created by mattia on 03.08.15.

@@ -471,7 +471,7 @@ public class TextHighlight extends PDFTextStripper {
 	 * Internal utility class that keeps a mapping from the text contents to their TextPositions. This is needed to
 	 * compute bounding boxes. The data is stored on a per-page basis (keyed on the 1-based pageNo)
 	 */
-	private class TextCache {
+	public class TextCache {
 		private final Map<Integer, StringBuilder> texts = new HashMap<Integer, StringBuilder>();
 		private final Map<Integer, ArrayList<TextPosition>> positions = new HashMap<Integer, ArrayList<TextPosition>>();
 

@@ -70,15 +70,19 @@ object Snippet extends LazyLogging{
   def isMethodOnTop(path: String) : Boolean = {
     val (yellowCoords: List[Point2D], greenCoords: List[Point2D]) = extractColorCoords(new File(path))
     try{
-      val greenMin = greenCoords match {
-        case Nil => 0.0
-        case greenList => greenList.map(_.getY).min
+      val greenMin : Point2D = greenCoords match {
+        case Nil => new Point2D.Double(0.0, 0.0)
+        case greenList => greenList.minBy(_.getY)
       }
-      val closestYellow : Double = yellowCoords match {
-        case Nil => 0.0
-        case yellowList => yellowList.minBy(v => math.abs((v.getY) - greenMin)).getY
+      val closestYellow : Point2D= yellowCoords match {
+        case Nil => new Point2D.Double(0.0, 0.0)
+        case yellowList => yellowList.minBy(v => math.abs((v.getY) - greenMin.getY))
       }
-      closestYellow < greenMin
+      if(Math.abs(closestYellow.getY - greenMin.getY) < 5){
+        closestYellow.getX < greenMin.getX
+      }else {
+        closestYellow.getY < greenMin.getY
+      }
 
     } catch {
       case e: Exception => {

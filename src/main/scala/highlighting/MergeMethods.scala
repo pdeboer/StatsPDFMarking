@@ -3,6 +3,7 @@ package highlighting
 import java.awt.Color
 
 import com.typesafe.scalalogging.LazyLogging
+import pdf.{PDFHighlightInstruction, PDFPermuter}
 
 /**
  * Created by mattia on 28.08.15.
@@ -64,14 +65,14 @@ object MergeMethods extends LazyLogging{
 
     if(mergedMethods.nonEmpty) {
       val assumptionsForMethod : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
-        List[String](assumption.name) ::: assumption.synonym
+        List[String](assumption.assumptionName) ::: assumption.synonym
       })
       val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
 
       if(assumptionsList.nonEmpty) {
         logger.debug(s"There are: ${assumptionsList.length} different matches for the assumptions of method $method.")
         (mergedMethods, assumptionsList)
-      }else {
+      } else {
         (List.empty[StatMethod], List.empty[PDFHighlightInstruction])
       }
     }else{

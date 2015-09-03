@@ -1,16 +1,22 @@
-package highlighting
+package pdf
 
 import java.awt.Color
-import java.io.{ByteArrayOutputStream, FileInputStream}
-import java.util.regex.Pattern
+import java.io.FileInputStream
 
 import com.typesafe.scalalogging.LazyLogging
+import highlighting.{HighlightTermloader, PDFHighlighter, TextHighlight}
 import org.apache.pdfbox.pdfparser.PDFParser
 import org.apache.pdfbox.pdmodel.PDDocument
+import utils.Utils
 
 import scala.collection.immutable.Iterable
 
+/**
+ * Created by mattia on 02.09.15.
+ */
 case class PDFHighlightInstruction(color: Color, searchString: String, highlightString: String, startSearchStringIndex: Int, startHighlightStringIndex: Int, pageNr: Int)
+
+case class Permutation(groupName: String, methodIndex: String, snippetPath: String, pdfPath: String, methodOnTop: Boolean, relativeTop: Double = 0, relativeBottom: Double = 0)
 
 object PDFTextExtractor extends LazyLogging{
   def extract(pdfPath: String): List[String] = {
@@ -37,7 +43,7 @@ object PDFTextExtractor extends LazyLogging{
         throw e1
       }
     }
-	}
+  }
 }
 
 class PDFPermuter(pdfPath: String) extends LazyLogging {
@@ -45,19 +51,19 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = 7
   val MULTIVARIATE_MAX_DISTANCE = 20
 
-	lazy val txt = PDFTextExtractor.extract(pdfPath)
+  lazy val txt = PDFTextExtractor.extract(pdfPath)
 
-	def findAllMethodsInPaper(permutationDefinition: Map[Color, List[String]]): List[PDFHighlightInstruction] = {
-		val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
+  def findAllMethodsInPaper(permutationDefinition: Map[Color, List[String]]): List[PDFHighlightInstruction] = {
+    val uniqueStrings = getUniqueStringsForSearchTerms(permutationDefinition)
     uniqueStrings.toList
-	}
+  }
 
-  def getUniquePairsForSearchTerms(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction]): List[PDFHighlight] = {
-    assumptionsList.map(p => new PDFHighlight(pdfPath, methodsList.toList ::: List(p)))
+  def getUniquePairsForSearchTerms(methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction]): List[PDFHighlighter] = {
+    assumptionsList.map(p => new PDFHighlighter(pdfPath, methodsList.toList ::: List(p)))
   }
 
   def cleanUniquePairsCandidate(seqUniqueStrings: Seq[PDFHighlightInstruction], methodIndex: Int, assumptionIndex: Int): Option[(PDFHighlightInstruction, PDFHighlightInstruction)] = {
-    
+
     if (isHighlightAssumptionOutsideMethod(seqUniqueStrings, methodIndex, assumptionIndex)) {
       Some(seqUniqueStrings(methodIndex), seqUniqueStrings(assumptionIndex))
     }else {
@@ -98,37 +104,28 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
     val terms = new HighlightTermloader
 
     method != assumption &&
-    !method.highlightString.equals(assumption.highlightString) &&
+      !method.highlightString.equals(assumption.highlightString) &&
       !method.searchString.equals(assumption.searchString) &&
       terms.methodsAndSynonyms.exists(m => method.highlightString.contains(m)) &&
       terms.assumptionsAndSynonyms.exists(a => assumption.highlightString.contains(a) &&
         method.color != assumption.color)
   }
 
-  def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q"+m+"\\E"+"[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString("")
-    if(searchString.length <= ALLOWED_MAX_LENGTH_IN_WORD_MATCH || searchString.contains(" ")){
-      "(?i)(\\b"+search+"\\b)"
-    } else {
-      "(?i)("+search+")"
-    }
-  }
-
   def getUniqueStringsForSearchTerms(highlightTerms: Map[Color, List[String]]): Iterable[PDFHighlightInstruction] = {
-		highlightTerms.flatMap {
-			case (color, patterns) => patterns.map(pattern => {
+    highlightTerms.flatMap {
+      case (color, patterns) => patterns.map(pattern => {
 
         txt.zipWithIndex.flatMap(pageTxt => {
 
-          val allIndicesOfThesePatterns : Iterator[Int] = escapeSearchString(pattern).r.findAllMatchIn(pageTxt._1).map(_.start)
+          val allIndicesOfThesePatterns : Iterator[Int] = Utils.escapeSearchString(ALLOWED_MAX_LENGTH_IN_WORD_MATCH, pattern).r.findAllMatchIn(pageTxt._1).map(_.start)
 
           // Special case: check if there is no MULTIVARIATE before ANOVA or ANALYSIS OF VARIANCE
           val indexesToDiscard: List[Int] = checkSpecialCases(pattern, pageTxt, allIndicesOfThesePatterns)
 
           val substringIndices: Iterator[(Int, Int)] =
             allIndicesOfThesePatterns.filterNot(indexesToDiscard.contains(_)).map(index => {
-            extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt._1)
-          })
+              extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt._1)
+            })
 
           val substrings = substringIndices.map(i => pageTxt._1.substring(i._1, i._2))
           substrings.map(substring => {
@@ -136,8 +133,8 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
             //TODO: What if the searchStringMatch contains two times the word to highlight? which one is to highlight?
             try {
               val searchStringMatch = ("\\Q"+substring+"\\E").r.findFirstMatchIn(pageTxt._1).get
-              val start = if (escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
-                escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
+              val start = if (Utils.escapeSearchString(ALLOWED_MAX_LENGTH_IN_WORD_MATCH, pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
+                Utils.escapeSearchString(ALLOWED_MAX_LENGTH_IN_WORD_MATCH, pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
               } else {
                 0
               }
@@ -152,12 +149,12 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
         })
 
       })
-		}.flatten
-	}
+    }.flatten
+  }
 
   def checkSpecialCases(pattern: String, pageTxt: (String, Int), allIndicesOfThesePatterns : Iterator[Int]): List[Int] = {
     if (pattern.equalsIgnoreCase("ANOVA") || pattern.equalsIgnoreCase("analysis of variance")) {
-      val indexes = escapeSearchString("multivariate").r.findAllMatchIn(pageTxt._1).map(_.start)
+      val indexes = Utils.escapeSearchString(ALLOWED_MAX_LENGTH_IN_WORD_MATCH, "multivariate").r.findAllMatchIn(pageTxt._1).map(_.start)
       if (indexes.nonEmpty) {
         indexes.flatMap(i => allIndicesOfThesePatterns.map(j => (i, j))).filter(m => Math.abs(m._1 - m._2) <= MULTIVARIATE_MAX_DISTANCE).map(_._2).toList
       } else {
@@ -171,7 +168,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
   def isSmallestMatch(it: Int, indexPosition: Int, inputStringLength: Int, pageTxt: String): Int = {
     val subTxt = pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputStringLength + it))
     if(("(?i)(\\Q"+subTxt+"\\E)").r.findAllMatchIn(txt.mkString("")).length == 1){
-        it
+      it
     }else {
       isSmallestMatch(it+1, indexPosition, inputStringLength, pageTxt)
     }
@@ -199,62 +196,5 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
       }
     }
 
-  }
-}
-
-
-/**
- * Created by pdeboer on 16/06/15.
- */
-class PDFHighlight(val pdfPath: String, val instructions: List[PDFHighlightInstruction]) extends LazyLogging {
-
-
-  /**
-   * taken from Mattia's code and adapted
-   */
-  def highlight(): (HighlightPage, Array[Byte]) = {
-    try {
-      val file = pdfPath
-      val parser: PDFParser = new PDFParser(new FileInputStream(file))
-      parser.parse()
-      val pdDoc: PDDocument = new PDDocument(parser.getDocument)
-
-      val pdfHighlight: TextHighlight = new TextHighlight("UTF-8")
-      pdfHighlight.setLineSeparator(" ")
-      pdfHighlight.initialize(pdDoc)
-
-      val pages : List[Int] = instructions.map(i => {
-
-        val patterns = List(i.searchString, i.highlightString).zipWithIndex.map(s => if(s._2%2==0){Pattern.compile("\\Q"+s._1+"\\E")}else {Pattern.compile(escapeSearchString(s._1))})
-        pdfHighlight.highlight(patterns.head, patterns(1), i.color, i.pageNr)
-        i.pageNr-1
-      })
-
-      val byteArrayOutputStream = new ByteArrayOutputStream()
-
-			if (pdDoc != null) {
-				pdDoc.save(byteArrayOutputStream)
-				pdDoc.close()
-			}
-			if (parser.getDocument != null) {
-				parser.getDocument.close()
-			}
-
-      (HighlightPage(pages.min, pages.max), byteArrayOutputStream.toByteArray())
-    } catch {
-      case e: Exception => {
-        logger.error(s"Cannot store highlighted version of pdf: $pdfPath.", e)
-        (HighlightPage(-1, -1), Array.empty[Byte])
-      }
-    }
-  }
-
-  def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString("")
-    if(searchString.length <= 7 || searchString.contains(" ")){
-      "(?i)(\\b"+search+"\\b)"
-    } else {
-      "(?i)("+search+")"
-    }
   }
 }

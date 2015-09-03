@@ -34,7 +34,7 @@ class HighlightTermloader {
 		Source.fromFile("met2ass.csv").getLines().foreach(l => {
 			val cols = l.split(",")
 
-			val assumption = assumptionsInCSV.find(_.name == cols(1)).getOrElse( throw new Exception(cols(1)) )
+			val assumption = assumptionsInCSV.find(_.assumptionName == cols(1)).getOrElse( throw new Exception(cols(1)) )
 			methodMap += cols(0) -> (assumption :: methodMap.getOrElse(cols(0), Nil))
 		})
 
@@ -46,13 +46,13 @@ class HighlightTermloader {
 		methods
 	}
 
-	def termNames = terms.map(_.name).toList
+	def methods = terms.map(_.methodName).toList
 	def termSynonyms = terms.flatMap(t => t.synonyms).toList
-	def termAssumptions = terms.flatMap(t => t.assumptions.map(a => a.name)).toList
+	def termAssumptions = terms.flatMap(t => t.assumptions.map(a => a.assumptionName)).toList
 	def termAssumptionSynonyms = terms.flatMap(t => t.assumptions.flatMap(a => a.synonym)).toList
-	def methodsAndSynonyms = termNames ::: termSynonyms
+	def methodsAndSynonyms = methods ::: termSynonyms
 	def assumptionsAndSynonyms = termAssumptions ::: termAssumptionSynonyms
-	def allTerms = termNames ::: termSynonyms ::: termAssumptions ::: termAssumptionSynonyms
+	def allTerms = methods ::: termSynonyms ::: termAssumptions ::: termAssumptionSynonyms
 
   def getDeltaForMethod(method: String) : Int = {
     try {
@@ -64,15 +64,15 @@ class HighlightTermloader {
   }
 
   def getMethodFromSynonymOrMethod(synonymOrMethod: String) : Option[StatisticalMethod] = {
-    terms.find(t => t.name.equalsIgnoreCase(synonymOrMethod) || t.synonyms.contains(synonymOrMethod))
+    terms.find(t => t.methodName.equalsIgnoreCase(synonymOrMethod) || t.synonyms.contains(synonymOrMethod))
   }
 
   def getMethodAndSynonymsFromMethodName(method: String): Option[StatisticalMethod] = {
-    terms.find(m => m.name.equalsIgnoreCase(method))
+    terms.find(m => m.methodName.equalsIgnoreCase(method))
   }
 
 }
 
-case class StatisticalMethod(name: String, synonyms: List[String], var assumptions: List[StatisticalAssumption])
+case class StatisticalMethod(methodName: String, synonyms: List[String], var assumptions: List[StatisticalAssumption])
 
-case class StatisticalAssumption(name: String, synonym: List[String])
+case class StatisticalAssumption(assumptionName: String, synonym: List[String])
