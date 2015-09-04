@@ -1,12 +1,12 @@
-package highlighting
+package pdf
 
 import java.awt.Color
 import java.io._
 
 import com.typesafe.scalalogging.LazyLogging
+import highlighting.{HighlightTermloader, MergeMethods, StatMethod, StatisticalMethod}
 import input.folder.FolderPDFSource
 import org.joda.time.DateTime
-import pdf.{PDFHighlightInstruction, PDFPermuter, PDFTextExtractor, Permutation}
 import png.PNGManager
 import utils.Utils
 
@@ -79,7 +79,7 @@ case class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsD
       val methodName = method.replaceAll(" ", "_")
       val year = extractPublicationYear(pdfFilename)
 
-      val pdfDirName = Utils.removePDFExtension(pdfFilename)
+      val pdfDirName = removeExtension(pdfFilename)
       val pathToSaveHighlightedPDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
       new File(pathToSaveHighlightedPDFs).mkdirs()
       val highlightedFilename = new File(createHighlightedPDFFilename(groupId, highlighter._2, pdfDirName, pathToSaveHighlightedPDFs))
@@ -93,6 +93,10 @@ case class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsD
       logger.debug(s"Converting $pdfFilename to PNG (pages: [${highlightedPDF._1.start},${highlightedPDF._1.end}])...")
       PNGManager(isMultipleColumnPaper, pathConvert).convertPDFAndCreatePermutations(highlighter._1, methodName, highlightedFilename, highlightedPDF._1)
     }).toList
+  }
+
+  def removeExtension(fileName: String): String = {
+    fileName.substring(0, fileName.length - 4)
   }
 
   def createHighlightedPDFFilename(groupId: Int, permutation: Int, pdfDirName: String, pathToSaveHighlightedPDFs: String): String = {

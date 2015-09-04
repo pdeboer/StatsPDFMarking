@@ -1,7 +1,8 @@
 package utils
 
-import java.io.{File, PrintWriter}
+import java.io.File
 
+import com.github.tototoshi.csv.CSVWriter
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import org.codehaus.plexus.util.FileUtils
@@ -14,32 +15,29 @@ object Utils extends LazyLogging{
 
   val conf = ConfigFactory.load()
   val PERMUTATIONS_CSV_FILENAME = conf.getString("highlighter.permutationFilename")
+  val ALLOWED_SINGLE_WORD_CHARS = conf.getInt("highlighter.allowedMaxLengthInWordMatch")
 
   def createCSV(permutations: List[Option[List[Permutation]]]) = {
-    val writer = new PrintWriter(new File(PERMUTATIONS_CSV_FILENAME))
-    writer.write("group_name, method_index, snippet_filename, pdf_path, method_on_top, relative_height_top, relative_height_bottom\n")
+    val writer = CSVWriter.open(new File(PERMUTATIONS_CSV_FILENAME))
+    writer.writeRow(Seq("group_name", "method_index", "snippet_filename", "pdf_path", "method_on_top", "relative_height_top", "relative_height_bottom"))
     permutations.foreach(p => {
       if(p.isDefined) {
         p.get.foreach(pe => {
           val methodOnTop = if(pe.methodOnTop) 1 else 0
-          writer.append(pe.groupName + "," + pe.methodIndex+ "," + pe.snippetPath + "," + pe.pdfPath + "," + methodOnTop + "," +  pe.relativeTop +","+ pe.relativeBottom+"\n")
+          writer.writeRow(Seq(pe.groupName,pe.methodIndex,pe.snippetPath,pe.pdfPath,methodOnTop,pe.relativeTop,pe.relativeBottom))
         })
       }
     })
     writer.close()
   }
 
-  def escapeSearchString(allowedSingleWordCharacters: Int, searchString: String): String = {
+  def escapeSearchString(searchString: String): String = {
     val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString("")
-    if(searchString.length <= allowedSingleWordCharacters || searchString.contains(" ")){
+    if(searchString.length <= ALLOWED_SINGLE_WORD_CHARS || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
       "(?i)("+search+")"
     }
-  }
-
-  def removePDFExtension(fileName: String): String = {
-    fileName.substring(0, fileName.length - 4)
   }
 
   def copyAndMoveFile(dest: String, f: File, e: Exception): Any = {

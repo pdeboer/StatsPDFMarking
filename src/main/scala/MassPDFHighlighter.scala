@@ -2,8 +2,8 @@ import java.io._
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
-import highlighting._
 import org.joda.time.DateTime
+import pdf.PDFManager
 import utils.Utils
 
 

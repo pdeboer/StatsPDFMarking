@@ -49,7 +49,6 @@ object PDFTextExtractor extends LazyLogging{
 class PDFPermuter(pdfPath: String) extends LazyLogging {
 
   val config = ConfigFactory.load()
-  val ALLOWED_MAX_LENGTH_IN_WORD_MATCH = config.getInt("highlighter.allowedMaxLengthInWordMatch")
   val MULTIVARIATE_MAX_DISTANCE = config.getInt("highlighter.multivariateMaxDistance")
 
   lazy val txt = PDFTextExtractor.extract(pdfPath)
@@ -118,7 +117,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 
         txt.zipWithIndex.flatMap(pageTxt => {
 
-          val allIndicesOfThesePatterns : Iterator[Int] = Utils.escapeSearchString(ALLOWED_MAX_LENGTH_IN_WORD_MATCH, pattern).r.findAllMatchIn(pageTxt._1).map(_.start)
+          val allIndicesOfThesePatterns : Iterator[Int] = Utils.escapeSearchString(pattern).r.findAllMatchIn(pageTxt._1).map(_.start)
 
           // Special case: check if there is no MULTIVARIATE before ANOVA or ANALYSIS OF VARIANCE
           val indexesToDiscard: List[Int] = identifyIndexSpecialCases(pattern, pageTxt, allIndicesOfThesePatterns)
@@ -134,8 +133,8 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
             //TODO: What if the searchStringMatch contains two times the word to highlight? which one is to highlight?
             try {
               val searchStringMatch = ("\\Q"+substring+"\\E").r.findFirstMatchIn(pageTxt._1).get
-              val start = if (Utils.escapeSearchString(ALLOWED_MAX_LENGTH_IN_WORD_MATCH, pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
-                Utils.escapeSearchString(ALLOWED_MAX_LENGTH_IN_WORD_MATCH, pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
+              val start = if (Utils.escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
+                Utils.escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
               } else {
                 0
               }
@@ -155,7 +154,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 
   def identifyIndexSpecialCases(pattern: String, pageTxt: (String, Int), allIndicesOfThesePatterns : Iterator[Int]): List[Int] = {
     if (pattern.equalsIgnoreCase("ANOVA") || pattern.equalsIgnoreCase("analysis of variance")) {
-      val indexes = Utils.escapeSearchString(ALLOWED_MAX_LENGTH_IN_WORD_MATCH, "multivariate").r.findAllMatchIn(pageTxt._1).map(_.start)
+      val indexes = Utils.escapeSearchString("multivariate").r.findAllMatchIn(pageTxt._1).map(_.start)
       if (indexes.nonEmpty) {
         indexes.flatMap(i => allIndicesOfThesePatterns.map(j => (i, j))).filter(m => Math.abs(m._1 - m._2) <= MULTIVARIATE_MAX_DISTANCE).map(_._2).toList
       } else {

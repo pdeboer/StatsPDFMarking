@@ -34,7 +34,7 @@ class PDFHighlighter(val pdfPath: String, val instructions: List[PDFHighlightIns
           if(pattern._2 % 2 == 0){
             Pattern.compile("\\Q"+pattern._1+"\\E")
           } else {
-            Pattern.compile(Utils.escapeSearchString(7, pattern._1))
+            Pattern.compile(Utils.escapeSearchString(pattern._1))
           }
         })
         pdfHighlight.highlight(patterns.head, patterns(1), i.color, i.pageNr)
