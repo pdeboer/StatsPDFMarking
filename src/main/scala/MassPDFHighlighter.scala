@@ -27,7 +27,7 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   val isTwoColumn = args.isDefinedAt(0) && args(0).equalsIgnoreCase("2")
 
-  PDFManager(isTwoColumn, pdfsDir, snippetsDir, pathConvert).highlightFiles()
+  new PDFManager(isTwoColumn, pdfsDir, snippetsDir, pathConvert).highlightFiles()
 
   logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 

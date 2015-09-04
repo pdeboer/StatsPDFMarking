@@ -10,8 +10,10 @@ import org.joda.time.DateTime
 import png.PNGManager
 import utils.Utils
 
+case class GeneralInformation(pdfFilename: String, method: String, methodAndSynonyms: StatisticalMethod,
+                permuter: PDFPermuter, methodsToMerge: List[StatMethod])
 
-case class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsDir: String, pathConvert: String) extends LazyLogging {
+class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsDir: String, pathConvert: String) extends LazyLogging {
 
   def highlightFiles() = {
     val permutations : List[Option[List[Permutation]]] = new FolderPDFSource(pdfsDir).get().par.flatMap(f => {
@@ -35,13 +37,9 @@ case class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsD
         val maxLengthPDF = PDFTextExtractor.extract(pdfFile.getAbsolutePath).map(_.length).sum
 
         val methodList = permuter.findAllMethodsInPaper(availableMethods).sortBy(m => calculateIndexPositionOfMethod(permuter, m))
+        val methodsToMerge = createStatMethodList(delta, permuter, maxLengthPDF, methodList)
 
-        val methodsToMerge = methodList.map(m => {
-          val methodIndex = calculateIndexPositionOfMethod(permuter, m)
-          StatMethod(Math.max(0, methodIndex - delta), Math.min(maxLengthPDF, methodIndex + delta), List.empty[StatMethod], List[PDFHighlightInstruction](m))
-        })
-
-        mergeMethodsAndHighlightPDF(pdfFile.getName, method, methodAndSynonyms, permuter, methodsToMerge)
+        mergeMethodsAndHighlightPDF(GeneralInformation(pdfFile.getName, method, methodAndSynonyms, permuter, methodsToMerge))
 
       } catch {
         case e: Exception => {
@@ -52,37 +50,44 @@ case class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsD
     }).toList
   }
 
+  def createStatMethodList(delta: Int, permuter: PDFPermuter, maxLengthPDF: Int, methodList: List[PDFHighlightInstruction]) = {
+    methodList.map(m => {
+      val methodIndex = calculateIndexPositionOfMethod(permuter, m)
+      StatMethod(Math.max(0, methodIndex - delta), Math.min(maxLengthPDF, methodIndex + delta), List.empty[StatMethod], List[PDFHighlightInstruction](m))
+    })
+  }
+
   def calculateIndexPositionOfMethod(permuter: PDFPermuter, m: PDFHighlightInstruction): Int = {
     permuter.txt.zipWithIndex.filter(_._2 < m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex
   }
 
-  def mergeMethodsAndHighlightPDF(pdfFilename: String, method: String, methodAndSynonyms: StatisticalMethod,
-                                  permuter: PDFPermuter, methodsToMerge: List[StatMethod]): Option[List[Permutation]] = {
-    if (methodsToMerge.nonEmpty) {
+  case class HighlightInformation(groupId: Int, methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction])
+
+  def mergeMethodsAndHighlightPDF(data: GeneralInformation): Option[List[Permutation]] = {
+    if (data.methodsToMerge.nonEmpty) {
       val (mergedMethods: List[StatMethod], assumptionsList: List[PDFHighlightInstruction]) =
-        MergeMethods.mergeMethods(methodsToMerge, method, permuter, methodAndSynonyms, pdfFilename)
+        MergeMethods.mergeMethods(data)
 
       Some(mergedMethods.par.zipWithIndex.flatMap(groupedMethods => {
-        highlightPDFAndCreatePNG(groupedMethods._2, groupedMethods._1.instructions, assumptionsList, method, pdfFilename, permuter)
+        highlightPDFAndCreatePNG(HighlightInformation(groupedMethods._2, groupedMethods._1.instructions, assumptionsList), data)
       }).toList)
     } else {
       None
     }
   }
+  
+  def highlightPDFAndCreatePNG(toHighlight: HighlightInformation, general: GeneralInformation): List[Permutation] = {
 
-  def highlightPDFAndCreatePNG(groupId: Int, methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction], method: String,
-                           pdfFilename: String, permuter: PDFPermuter): List[Permutation] = {
+    general.permuter.getUniquePairsForSearchTerms(toHighlight.methodsList, toHighlight.assumptionsList).zipWithIndex.par.flatMap( highlighter => {
 
-    permuter.getUniquePairsForSearchTerms(methodsList, assumptionsList).zipWithIndex.par.flatMap( highlighter => {
+      logger.debug(s"${highlighter._2}_${general.pdfFilename}: highlighting combination of ${highlighter._1.instructions}")
+      val methodName = general.method.replaceAll(" ", "_")
+      val year = extractPublicationYear(general.pdfFilename)
 
-      logger.debug(s"${highlighter._2}_$pdfFilename: highlighting combination of ${highlighter._1.instructions}")
-      val methodName = method.replaceAll(" ", "_")
-      val year = extractPublicationYear(pdfFilename)
-
-      val pdfDirName = removeExtension(pdfFilename)
+      val pdfDirName = removeExtension(general.pdfFilename)
       val pathToSaveHighlightedPDFs = snippetsDir + "/" + year + "/" + methodName + "/" + pdfDirName
       new File(pathToSaveHighlightedPDFs).mkdirs()
-      val highlightedFilename = new File(createHighlightedPDFFilename(groupId, highlighter._2, pdfDirName, pathToSaveHighlightedPDFs))
+      val highlightedFilename = new File(createHighlightedPDFFilename(toHighlight.groupId, highlighter._2, pdfDirName, pathToSaveHighlightedPDFs))
 
       val highlightedPDF = highlighter._1.highlight()
       Some(new BufferedOutputStream(new FileOutputStream(highlightedFilename))).foreach(s => {
@@ -90,7 +95,7 @@ case class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsD
         s.close()
       })
 
-      logger.debug(s"Converting $pdfFilename to PNG (pages: [${highlightedPDF._1.start},${highlightedPDF._1.end}])...")
+      logger.debug(s"Converting ${general.pdfFilename} to PNG (pages: [${highlightedPDF._1.start},${highlightedPDF._1.end}])...")
       PNGManager(isMultipleColumnPaper, pathConvert).convertPDFAndCreatePermutations(highlighter._1, methodName, highlightedFilename, highlightedPDF._1)
     }).toList
   }

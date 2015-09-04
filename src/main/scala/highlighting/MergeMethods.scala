@@ -3,7 +3,7 @@ package highlighting
 import java.awt.Color
 
 import com.typesafe.scalalogging.LazyLogging
-import pdf.{PDFHighlightInstruction, PDFPermuter}
+import pdf.{GeneralInformation, PDFHighlightInstruction}
 
 /**
  * Created by mattia on 28.08.15.
@@ -58,19 +58,19 @@ object MergeMethods extends LazyLogging{
     }
   }
 
-  def mergeMethods(methodsToMerge: List[StatMethod], method: String, permuter: PDFPermuter, methodAndSynonyms: StatisticalMethod, pdfName: String) : (List[StatMethod], List[PDFHighlightInstruction]) = {
+  def mergeMethods(data: GeneralInformation): (List[StatMethod], List[PDFHighlightInstruction]) = {
 
-    val mergedMethods = mergeMethods(stop = false, methodsToMerge)
-    logger.debug(s"Result after merging method: $method => ${mergedMethods.length} different groups for paper $pdfName.")
+    val mergedMethods = mergeMethods(stop = false, data.methodsToMerge)
+    logger.debug(s"Result after merging method: ${data.method} => ${mergedMethods.length} different groups for paper ${data.pdfFilename}.")
 
     if(mergedMethods.nonEmpty) {
-      val assumptionsForMethod : List[String] = methodAndSynonyms.assumptions.flatMap(assumption => {
+      val assumptionsForMethod : List[String] = data.methodAndSynonyms.assumptions.flatMap(assumption => {
         List[String](assumption.assumptionName) ::: assumption.synonym
       })
-      val assumptionsList = permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
+      val assumptionsList = data.permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
 
       if(assumptionsList.nonEmpty) {
-        logger.debug(s"There are: ${assumptionsList.length} different matches for the assumptions of method $method.")
+        logger.debug(s"There are: ${assumptionsList.length} different matches for the assumptions of method ${data.method}.")
         (mergedMethods, assumptionsList)
       } else {
         (List.empty[StatMethod], List.empty[PDFHighlightInstruction])

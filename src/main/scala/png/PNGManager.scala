@@ -29,7 +29,7 @@ case class PNGManager(isMultipleColumnPaper: Boolean, pathConvert: String) exten
 
     val permutations: List[Option[Permutation]] = highlighter.instructions.map(i => {
       if (i.color == Color.green) {
-        Some(createPermutationForPrerequisite(methodName, highlightedFilename, snippetPath, methodPositions, i))
+        Some(createPermutationForPrerequisite(PNGInformation(methodName, highlightedFilename, snippetPath, methodPositions), i))
       } else {
         None
       }
@@ -67,19 +67,20 @@ case class PNGManager(isMultipleColumnPaper: Boolean, pathConvert: String) exten
       logger.error("Cannot cut PNG file. The PDF was not correctly converted.")
       ""
     }
-  }
-
-  def createPermutationForPrerequisite(methodName: String, highlightedFilename: File, snippetPath: String,
-                                       methodPositions: String, instruction: PDFHighlightInstruction): Permutation = {
+  }  
+  
+  case class PNGInformation(methodName: String, highlightedFilename: File, snippetPath: String, methodPositions: String)
+  
+  def createPermutationForPrerequisite(pngInformation: PNGInformation, instruction: PDFHighlightInstruction): Permutation = {
 
     val assumptionPosition = instruction.pageNr + ":" + (instruction.startSearchStringIndex + instruction.startHighlightStringIndex)
-    val pdfDirName = highlightedFilename.getParentFile.getName
+    val pdfDirName = pngInformation.highlightedFilename.getParentFile.getName
 
     if (isMultipleColumnPaper) {
-      val matches = Snippet.extractColorCoords(new File(snippetPath))
-      val height = Snippet.getHeight(new File(snippetPath))
+      val matches = Snippet.extractColorCoords(new File(pngInformation.snippetPath))
+      val height = Snippet.getHeight(new File(pngInformation.snippetPath))
 
-      val methodOnTop = Snippet.isMethodOnTop(snippetPath)
+      val methodOnTop = Snippet.isMethodOnTop(pngInformation.snippetPath)
 
       val coordinatesGreen : Double = if(matches._2.nonEmpty) {
         matches._2.map(_.getY).min/height
@@ -96,12 +97,12 @@ case class PNGManager(isMultipleColumnPaper: Boolean, pathConvert: String) exten
       val boundaryMin = Math.min(coordinatesGreen, closestYellow) * 100
       val boundaryMax = Math.max(coordinatesGreen, closestYellow) * 100
 
-      Permutation(pdfDirName + "/" + instruction.highlightString + "/" + assumptionPosition, methodName + "_" + methodPositions,
-        snippetPath, highlightedFilename.getPath, methodOnTop, boundaryMin, boundaryMax)
+      Permutation(pdfDirName + "/" + instruction.highlightString + "/" + assumptionPosition, pngInformation.methodName + "_" + pngInformation.methodPositions,
+        pngInformation.snippetPath, pngInformation.highlightedFilename.getPath, methodOnTop, boundaryMin, boundaryMax)
     } else {
-      val methodOnTop = Snippet.isMethodOnTop(snippetPath)
-      Permutation(pdfDirName + "/" + instruction.highlightString + "/" + assumptionPosition, methodName + "_" + methodPositions,
-        snippetPath, highlightedFilename.getPath, methodOnTop)
+      val methodOnTop = Snippet.isMethodOnTop(pngInformation.snippetPath)
+      Permutation(pdfDirName + "/" + instruction.highlightString + "/" + assumptionPosition, pngInformation.methodName + "_" + pngInformation.methodPositions,
+        pngInformation.snippetPath, pngInformation.highlightedFilename.getPath, methodOnTop)
     }
   }
 
