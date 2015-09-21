@@ -44,6 +44,13 @@ object PDFTextExtractor extends LazyLogging{
       }
     }
   }
+
+  def countAllOccurrences(method: String, txt: List[String]) : Int = {
+    txt.map(page => {
+      Utils.escapeSearchString(method).r.findAllMatchIn(page).size
+    }).sum
+  }
+
 }
 
 class PDFPermuter(pdfPath: String) extends LazyLogging {
