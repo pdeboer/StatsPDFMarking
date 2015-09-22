@@ -13,9 +13,9 @@ import pdf.PDFTextExtractor
  */
 object PaperSampler extends App with LazyLogging {
 
-  val pdfsDir = if(args.nonEmpty && args.isDefinedAt(0)){args(0)}else{"../bmj/"}
+  val pdfsDir = args(0)
   logger.info("PDFs DIR: " + pdfsDir)
-  val PERCENT = 10.0
+  val PERCENT = args(1).toDouble
 
   val pdfs = new FolderPDFSource(pdfsDir).get().toList
 
