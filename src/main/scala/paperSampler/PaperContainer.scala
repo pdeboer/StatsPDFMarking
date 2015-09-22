@@ -18,7 +18,7 @@ class PaperContainer {
   private var methodPapers : Map[String, List[Paper]] = Map.empty[String, List[Paper]]
 
   def diff(distribution: Map[String, Int]) : Boolean = {
-    distribution.forall(d => methodPapers.getOrElse(d._1, List.empty[Paper]).map(_.methods.getOrElse(d._1, 0)).sum == d._2)
+    distribution.forall(d => getOccurrenceOfMethodOverAllPapers(d._1) == d._2)
   }
 
   override def toString() : String = {
@@ -36,7 +36,12 @@ class PaperContainer {
   def get: Map[String, List[Paper]] = methodPapers
 
   def getOccurrenceOfMethodForPaper(paperFile: File, method: String) : Int = {
-    methodPapers.getOrElse(method, List.empty[Paper]).find(paper => paper.path.equalsIgnoreCase(paperFile.getPath)).get.methods.getOrElse(method, 0)
+    val possiblePaper = methodPapers.getOrElse(method, List.empty[Paper]).find(paper => paper.path.equalsIgnoreCase(paperFile.getPath))
+    if(possiblePaper.isDefined){
+      possiblePaper.get.methods.getOrElse(method, 0)
+    } else {
+      0
+    }
   }
 
   def getOccurrenceOfMethodOverAllPapers(method: String) : Int = {
