@@ -15,7 +15,7 @@ object PaperSampler extends App with LazyLogging {
 
   val pdfsDir = if(args.isDefinedAt(0)){args(0)}else{"../pdfs/"}
   logger.info("PDFs DIR: " + pdfsDir)
-  val PERCENT = 20.0
+  val PERCENT = 90.0
 
   val pdfs = new FolderPDFSource(pdfsDir).get().toList
 
