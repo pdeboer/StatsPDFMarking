@@ -14,7 +14,7 @@ import pdf.PDFTextExtractor
 object PaperSampler extends App with LazyLogging {
 
   val pdfsDir = if(args.isDefinedAt(0)){args(0)}else{"../pdfs/"}
-  val PERCENT = 50
+  val PERCENT = 50.0
 
   val pdfs = new FolderPDFSource(pdfsDir).get().toList
 
@@ -37,7 +37,7 @@ object PaperSampler extends App with LazyLogging {
   })
 
   val distribution : Map[String, Int] = methods.map(method => {
-    method -> Math.floorDiv(corpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT, 100)
+    method -> Math.floor(corpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT / 100.0).toInt
   }).toMap
 
   distribution.foreach(d => logger.debug(d._1 + " ->: " + corpus.getOccurrenceOfMethodOverAllPapers(d._1) + " * "+ PERCENT+"%  => " + d._2))
