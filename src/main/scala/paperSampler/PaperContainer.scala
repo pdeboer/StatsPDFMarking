@@ -1,7 +1,5 @@
 package paperSampler
 
-import java.io.File
-
 import scala.util.Random
 
 /**
@@ -35,12 +33,16 @@ class PaperContainer {
 
   def get: Map[String, List[Paper]] = methodPapers
 
-  def getOccurrenceOfMethodForPaper(paperFile: File, method: String) : Int = {
-    val possiblePapers = methodPapers.get(method).get
-    val found = possiblePapers.find(_.path.equalsIgnoreCase(paperFile.getPath))
-    if(found.isDefined){
-      found.get.methods.get(method).get
-    } else {
+  def getOccurrenceOfMethodForPaper(paperPath: String, method: String) : Int = {
+    val possiblePapers = methodPapers.get(method)
+    if(possiblePapers.isDefined){
+      val found = possiblePapers.get.find(_.path.equalsIgnoreCase(paperPath))
+      if(found.isDefined){
+        found.get.methods.get(method).get
+      } else {
+        0
+      }
+    }else {
       0
     }
   }

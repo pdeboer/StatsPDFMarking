@@ -15,7 +15,7 @@ object PaperSampler extends App with LazyLogging {
 
   val pdfsDir = if(args.isDefinedAt(0)){args(0)}else{"../pdfs/"}
   logger.info("PDFs DIR: " + pdfsDir)
-  val PERCENT = 20.0
+  val PERCENT = 80.0
 
   val pdfs = new FolderPDFSource(pdfsDir).get().toList
 
@@ -26,14 +26,16 @@ object PaperSampler extends App with LazyLogging {
 
   val availableMethods : List[String] = termLoader.methods
 
-  pdfs.par.foreach(pdf => {
+  pdfs.foreach(pdf => {
     val txt = PDFTextExtractor.extract(pdf.getAbsolutePath)
     val methods : Map[String, Int] = availableMethods.map(method => {
       val synonyms : List[String] = termLoader.getMethodAndSynonymsFromMethodName(method).get.synonyms
       val occurrencesAllSynonyms = synonyms.map(s => PDFTextExtractor.countAllOccurrences(s, txt)).sum
       val occurrencesMethod = PDFTextExtractor.countAllOccurrences(method, txt)
-      method -> (occurrencesAllSynonyms+occurrencesMethod)
-    }).toMap
+      if(occurrencesAllSynonyms+occurrencesMethod > 0){
+        method -> (occurrencesAllSynonyms+occurrencesMethod)
+      }
+    }).collect({case pair: (String, Int) => pair}).toMap
     corpus.add(Some(Paper(pdf.getPath, methods)))
   })
 
@@ -47,7 +49,7 @@ object PaperSampler extends App with LazyLogging {
   val sequMeth = availableMethods.toSeq
   writer.writeRow("Paper" +: sequMeth)
   pdfs.foreach(pdf => {
-    writer.writeRow(pdf.getPath +: sequMeth.map(method => corpus.getOccurrenceOfMethodForPaper(pdf, method)))
+    writer.writeRow(pdf.getPath +: sequMeth.map(method => corpus.getOccurrenceOfMethodForPaper(pdf.getPath, method)))
   })
   writer.close()
 
@@ -68,7 +70,7 @@ object PaperSampler extends App with LazyLogging {
   writer1.writeRow("Paper" +: sequMeth1)
   val allPdfs : List[String] = usedPapers.get.flatMap(_._2.map(_.path)).toList.distinct
   allPdfs.foreach(paper => {
-    writer1.writeRow(paper +: sequMeth1.map(method => usedPapers.getOccurrenceOfMethodForPaper(new File(paper), method)))
+    writer1.writeRow(paper +: sequMeth1.map(method => usedPapers.getOccurrenceOfMethodForPaper(paper, method)))
   })
 
   writer1.close()
