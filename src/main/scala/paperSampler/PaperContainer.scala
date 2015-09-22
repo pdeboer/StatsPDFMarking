@@ -26,7 +26,7 @@ class PaperContainer {
   }
 
   def removeRandomPaper(method: String) : Option[Paper] = {
-    val shuffled = Random.shuffle(methodPapers.getOrElse(method, List.empty[Paper]))
+    val shuffled = Random.shuffle(methodPapers.getOrElse(method, List.empty[Paper]).filter(_.methods.get(method).get > 0))
     val toRemove = shuffled.headOption
     val rest = shuffled.drop(1)
     methodPapers += method -> rest
