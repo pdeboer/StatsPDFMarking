@@ -15,7 +15,7 @@ object PaperSampler extends App with LazyLogging {
 
   val pdfsDir = if(args.isDefinedAt(0)){args(0)}else{"../pdfs/"}
   logger.info("PDFs DIR: " + pdfsDir)
-  val PERCENT = 90.0
+  val PERCENT = 20.0
 
   val pdfs = new FolderPDFSource(pdfsDir).get().toList
 
@@ -66,8 +66,8 @@ object PaperSampler extends App with LazyLogging {
   val writer1 = CSVWriter.open(new File("./usedPapers.csv"))
   val sequMeth1 = availableMethods.toSeq
   writer1.writeRow("Paper" +: sequMeth1)
-  val allPdfs : List[String] = usedPapers.get.flatMap(_._2.map(_.path)).toList
-  allPdfs.distinct.foreach(paper => {
+  val allPdfs : List[String] = usedPapers.get.flatMap(_._2.map(_.path)).toList.distinct
+  allPdfs.foreach(paper => {
     writer1.writeRow(paper +: sequMeth1.map(method => usedPapers.getOccurrenceOfMethodForPaper(new File(paper), method)))
   })
 

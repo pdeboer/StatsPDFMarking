@@ -26,9 +26,9 @@ class PaperContainer {
   }
 
   def removeRandomPaper(method: String) : Option[Paper] = {
-    val shuffled = Random.shuffle(methodPapers.getOrElse(method, List.empty[Paper]).filter(paper => getOccurrenceOfMethodForPaper(new File(paper.path), method) > 0))
-    val toRemove = shuffled.headOption
-    val rest = shuffled.drop(1)
+    val shuffled : List[Paper] = Random.shuffle(methodPapers.getOrElse(method, List.empty[Paper]).filter(paper => paper.methods.get(method).get > 0))
+    val toRemove : Option[Paper] = shuffled.headOption
+    val rest : List[Paper] = shuffled.drop(1)
     methodPapers += method -> rest
     toRemove
   }
@@ -36,9 +36,10 @@ class PaperContainer {
   def get: Map[String, List[Paper]] = methodPapers
 
   def getOccurrenceOfMethodForPaper(paperFile: File, method: String) : Int = {
-    val possiblePaper = methodPapers.getOrElse(method, List.empty[Paper]).find(paper => paper.path.equalsIgnoreCase(paperFile.getPath))
-    if(possiblePaper.isDefined){
-      possiblePaper.get.methods.getOrElse(method, 0)
+    val possiblePapers = methodPapers.get(method).get
+    val found = possiblePapers.find(_.path.equalsIgnoreCase(paperFile.getPath))
+    if(found.isDefined){
+      found.get.methods.get(method).get
     } else {
       0
     }
