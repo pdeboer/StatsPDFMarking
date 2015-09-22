@@ -14,7 +14,8 @@ import pdf.PDFTextExtractor
 object PaperSampler extends App with LazyLogging {
 
   val pdfsDir = if(args.isDefinedAt(0)){args(0)}else{"../pdfs/"}
-  val PERCENT = 50.0
+  logger.info("PDFs DIR: " + pdfsDir)
+  val PERCENT = 20.0
 
   val pdfs = new FolderPDFSource(pdfsDir).get().toList
 
@@ -23,27 +24,27 @@ object PaperSampler extends App with LazyLogging {
 
   val termLoader = new HighlightTermloader()
 
-  val methods : List[String] = termLoader.methods
+  val availableMethods : List[String] = termLoader.methods
 
   pdfs.par.foreach(pdf => {
     val txt = PDFTextExtractor.extract(pdf.getAbsolutePath)
-    val paper : Map[String, Int] = methods.map(method => {
+    val methods : Map[String, Int] = availableMethods.map(method => {
       val synonyms : List[String] = termLoader.getMethodAndSynonymsFromMethodName(method).get.synonyms
       val occurrencesAllSynonyms = synonyms.map(s => PDFTextExtractor.countAllOccurrences(s, txt)).sum
       val occurrencesMethod = PDFTextExtractor.countAllOccurrences(method, txt)
       method -> (occurrencesAllSynonyms+occurrencesMethod)
     }).toMap
-    corpus.add(Some(Paper(pdf.getPath, paper)))
+    corpus.add(Some(Paper(pdf.getPath, methods)))
   })
 
-  val distribution : Map[String, Int] = methods.map(method => {
+  val distribution : Map[String, Int] = availableMethods.map(method => {
     method -> Math.floor(corpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT / 100.0).toInt
   }).toMap
 
   distribution.foreach(d => logger.debug(d._1 + " ->: " + corpus.getOccurrenceOfMethodOverAllPapers(d._1) + " * "+ PERCENT+"%  => " + d._2))
 
   val writer = CSVWriter.open(new File("./corpus.csv"))
-  val sequMeth = methods.toSeq
+  val sequMeth = availableMethods.toSeq
   writer.writeRow("Paper" +: sequMeth)
   pdfs.foreach(pdf => {
     writer.writeRow(pdf.getPath +: sequMeth.map(method => corpus.getOccurrenceOfMethodForPaper(pdf, method)))
@@ -53,7 +54,7 @@ object PaperSampler extends App with LazyLogging {
   val usedPapers = new PaperContainer
 
   while(!usedPapers.diff(distribution)){
-    methods.foreach(method => {
+    availableMethods.foreach(method => {
       if(usedPapers.getOccurrenceOfMethodOverAllPapers(method) < distribution.get(method).get){
         usedPapers.add(corpus.removeRandomPaper(method))
       }else if(usedPapers.getOccurrenceOfMethodOverAllPapers(method) > distribution.get(method).get){
@@ -63,10 +64,10 @@ object PaperSampler extends App with LazyLogging {
   }
 
   val writer1 = CSVWriter.open(new File("./usedPapers.csv"))
-  val sequMeth1 = methods.toSeq
+  val sequMeth1 = availableMethods.toSeq
   writer1.writeRow("Paper" +: sequMeth1)
   val allPdfs : List[String] = usedPapers.get.flatMap(_._2.map(_.path)).toList
-  allPdfs.foreach(paper => {
+  allPdfs.distinct.foreach(paper => {
     writer1.writeRow(paper +: sequMeth1.map(method => usedPapers.getOccurrenceOfMethodForPaper(new File(paper), method)))
   })
 
