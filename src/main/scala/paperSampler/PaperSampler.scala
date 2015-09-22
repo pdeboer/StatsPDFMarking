@@ -43,7 +43,7 @@ object PaperSampler extends App with LazyLogging {
     method -> Math.floor(corpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT / 100.0).toInt
   }).toMap
 
-  val writer = CSVWriter.open(new File("./corpus.csv"))
+  val writer = CSVWriter.open(new File("./corpus"+pdfsDir.replaceAll("..","").replaceAll("/","_")+".csv"))
   val sequMeth = availableMethods.toSeq
   writer.writeRow("Paper" +: sequMeth)
   pdfs.foreach(pdf => {
@@ -63,7 +63,7 @@ object PaperSampler extends App with LazyLogging {
     })
   }
 
-  val writer1 = CSVWriter.open(new File("./usedPapers.csv"))
+  val writer1 = CSVWriter.open(new File("./usedPapers"+pdfsDir.replaceAll("..","").replaceAll("/","_")+".csv"))
   val sequMeth1 = availableMethods.toSeq
   writer1.writeRow("Paper" +: sequMeth1)
   val allPdfs : List[String] = usedPapers.get.flatMap(_._2.map(_.path)).toList.distinct
