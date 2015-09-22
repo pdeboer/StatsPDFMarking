@@ -13,9 +13,9 @@ import pdf.PDFTextExtractor
  */
 object PaperSampler extends App with LazyLogging {
 
-  val pdfsDir = if(args.isDefinedAt(0)){args(0)}else{"../pdfs/"}
+  val pdfsDir = if(args.nonEmpty && args.isDefinedAt(0)){args(0)}else{"../bmj/"}
   logger.info("PDFs DIR: " + pdfsDir)
-  val PERCENT = 80.0
+  val PERCENT = 10.0
 
   val pdfs = new FolderPDFSource(pdfsDir).get().toList
 
@@ -26,7 +26,7 @@ object PaperSampler extends App with LazyLogging {
 
   val availableMethods : List[String] = termLoader.methods
 
-  pdfs.foreach(pdf => {
+  pdfs.par.foreach(pdf => {
     val txt = PDFTextExtractor.extract(pdf.getAbsolutePath)
     val methods : Map[String, Int] = availableMethods.map(method => {
       val synonyms : List[String] = termLoader.getMethodAndSynonymsFromMethodName(method).get.synonyms
@@ -42,8 +42,6 @@ object PaperSampler extends App with LazyLogging {
   val distribution : Map[String, Int] = availableMethods.map(method => {
     method -> Math.floor(corpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT / 100.0).toInt
   }).toMap
-
-  distribution.foreach(d => logger.debug(d._1 + " ->: " + corpus.getOccurrenceOfMethodOverAllPapers(d._1) + " * "+ PERCENT+"%  => " + d._2))
 
   val writer = CSVWriter.open(new File("./corpus.csv"))
   val sequMeth = availableMethods.toSeq
@@ -74,5 +72,8 @@ object PaperSampler extends App with LazyLogging {
   })
 
   writer1.close()
+
+  distribution.foreach(d => logger.debug(d._1 + " ->: " + corpus.getOccurrenceOfMethodOverAllPapers(d._1) + " * "+ PERCENT+"%  => " + d._2 + " == " + usedPapers.getOccurrenceOfMethodOverAllPapers(d._1)))
+
 
 }
