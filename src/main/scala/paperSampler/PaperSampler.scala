@@ -43,13 +43,7 @@ object PaperSampler extends App with LazyLogging {
     method -> Math.floor(corpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT / 100.0).toInt
   }).toMap
 
-  val writer = CSVWriter.open(new File("./corpus"+pdfsDir.replaceAll("\\Q..\\E","").replaceAll("/","_")+".csv"))
-  val sequMeth = availableMethods.toSeq
-  writer.writeRow("Paper" +: sequMeth)
-  pdfs.foreach(pdf => {
-    writer.writeRow(pdf.getPath +: sequMeth.map(method => corpus.getOccurrenceOfMethodForPaper(pdf.getPath, method)))
-  })
-  writer.close()
+  createCSVFile("corpus")
 
   var usedPapers = new PaperContainer
 
@@ -66,9 +60,8 @@ object PaperSampler extends App with LazyLogging {
       tmpDistance = distance
       tmpUsedPapers = usedPapers.copy
       tmpCorpus = corpus.copy
-      val wr = CSVWriter.open(new File("./tmpPapers"+pdfsDir.replaceAll("\\Q..\\E","").replaceAll("/","_")+".csv"))
-      wr.writeRow(usedPapers.get.flatMap(_._2.map(_.path).toSeq).toSeq)
-      wr.close()
+
+      createCSVFile("tmpUsedPapers")
       logger.info(s"Distance: $tmpDistance")
     }else {
       usedPapers = tmpUsedPapers
@@ -84,15 +77,7 @@ object PaperSampler extends App with LazyLogging {
     })
   }
 
-  val writer1 = CSVWriter.open(new File("./usedPapers"+pdfsDir.replaceAll("\\Q..\\E","").replaceAll("/","_")+".csv"))
-  val sequMeth1 = availableMethods.toSeq
-  writer1.writeRow("Paper" +: sequMeth1)
-  val allPdfs : List[String] = usedPapers.get.flatMap(_._2.map(_.path)).toList.distinct
-  allPdfs.foreach(paper => {
-    writer1.writeRow(paper +: sequMeth1.map(method => usedPapers.getOccurrenceOfMethodForPaper(paper, method)))
-  })
-
-  writer1.close()
+  createCSVFile("usedPapers")
 
   distribution.foreach(d => logger.debug(d._1 + " ->: " + corpus.getOccurrenceOfMethodOverAllPapers(d._1) + " * "+ PERCENT+"%  => " + d._2 + " == " + usedPapers.getOccurrenceOfMethodOverAllPapers(d._1)))
 
@@ -100,6 +85,17 @@ object PaperSampler extends App with LazyLogging {
     distribution.map(d => {
       Math.abs(usedPapers.getOccurrenceOfMethodOverAllPapers(d._1) - d._2)
     }).sum
+  }
+
+  def createCSVFile(filename: String): Unit = {
+    val wr = CSVWriter.open(new File("./"+filename + pdfsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_") + ".csv"))
+    val sequMeth1 = availableMethods.toSeq
+    wr.writeRow("Paper" +: sequMeth1)
+    val allPdfs: List[String] = usedPapers.get.flatMap(_._2.map(_.path)).toList.distinct
+    allPdfs.foreach(paper => {
+      wr.writeRow(paper +: sequMeth1.map(method => usedPapers.getOccurrenceOfMethodForPaper(paper, method)))
+    })
+    wr.close()
   }
 
 }
