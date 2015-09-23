@@ -14,20 +14,20 @@ object MassPDFHighlighter extends App with LazyLogging {
 
   val conf = ConfigFactory.load()
 
-  val pdfsDir = conf.getString("highlighter.pdfSourceDir")
-  val snippetsDir = conf.getString("highlighter.snippetDir")
-  val pathConvert = conf.getString("highlighter.convertCmd")
+  val INPUT_DIR = conf.getString("highlighter.pdfSourceDir")
+  val OUTPUT_DIR = conf.getString("highlighter.snippetDir")
+  val CONVERT_CMD = conf.getString("highlighter.convertCmd")
   val PERMUTATIONS_CSV_FILENAME = conf.getString("highlighter.permutationFilename")
 
   val startTime = new DateTime().getMillis
 
-  new File(snippetsDir).mkdir()
+  new File(OUTPUT_DIR).mkdir()
 
-  Utils.emptyDirRecursively(new File(snippetsDir))
+  Utils.emptyDirRecursively(new File(OUTPUT_DIR))
 
   val isTwoColumn = args.isDefinedAt(0) && args(0).equalsIgnoreCase("2")
 
-  new PDFManager(isTwoColumn, pdfsDir, snippetsDir, pathConvert).highlightFiles()
+  new PDFManager(isTwoColumn, INPUT_DIR, OUTPUT_DIR, CONVERT_CMD).highlightFiles()
 
   logger.debug(s"Process finished in ${(new DateTime().getMillis - startTime) / 1000} seconds")
 

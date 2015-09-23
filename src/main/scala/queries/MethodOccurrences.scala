@@ -3,7 +3,7 @@ package queries
 import java.io.{File, FileInputStream, FileOutputStream}
 import java.util.regex.Pattern
 
-import input.bmc.{DBPaperBody, MJADAL}
+import input.bmc.{BMJDAL, DBPaperBody}
 
 import scala.io.Source
 
@@ -15,7 +15,7 @@ object MethodOccurrences extends App {
 		val terms = l.split(",").map(_.trim())
 		val papersWithTermVariations = terms.flatMap(t => {
 			val targetTerms = if (t.length < 7) addWordBoundaries(t) else List(t)
-			targetTerms.flatMap(tt => MJADAL.getPapersContainingTerm(tt).map(o => PaperOccurrence(o)(List(tt))))
+			targetTerms.flatMap(tt => BMJDAL.getPapersContainingTerm(tt).map(o => PaperOccurrence(o)(List(tt))))
 		})
 		val termOccurrences = papersWithTermVariations.groupBy(_.dbp).map {
 			case (body, occurenceList) => PaperOccurrence(body)(occurenceList.map(po => po.terms).toList.flatten)
@@ -74,15 +74,14 @@ object MethodOccurrences extends App {
 		override def toString = numPapers + "," + numStringMatches
 	}
 
-	/*
 	println(s"Method,${methodNumbers.head.overall.csvHeader},${methodNumbers.head.years.map(_.csvHeader).mkString(",")} ")
 	methodNumbers.foreach(mc => println(s"${mc.methodOccurrence},${mc.overall},${mc.years.mkString(",")} "))
-	*/
 
 	case class MethodOccurrence(method: String, po: List[PaperOccurrence]) extends Serializable {
 		override def toString = method.replaceAll(",", "/")
 	}
 
+	/*
 	paperIDs.par.foreach(p => {
 		val (url, parentURL) = MJADAL.getPaperURL(p)
 		val rightFileName = url.split("/").reverse.headOption.getOrElse("")
@@ -92,6 +91,6 @@ object MethodOccurrences extends App {
 
 		copy(sourceFile, targetFile)
 	})
-
+*/
 	case class PaperOccurrence(dbp: DBPaperBody)(val terms: List[String]) extends Serializable
 }
