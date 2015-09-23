@@ -66,18 +66,13 @@ object PaperSampler extends App with LazyLogging {
       tmpDistance = distance
       tmpUsedPapers = usedPapers.copy
       tmpCorpus = corpus.copy
-    }else {
-      usedPapers = tmpUsedPapers
-      corpus = tmpCorpus
-    }
-
-    if(it%1000 == 0 ) {
       val wr = CSVWriter.open(new File("./tmpPapers"+pdfsDir.replaceAll("..","").replaceAll("/","_")+".csv"))
       wr.writeRow(usedPapers.get.flatMap(_._2.map(_.path).toSeq).toSeq)
       wr.close()
-    }
-    if(it%100 == 0) {
       logger.info(s"Distance: $tmpDistance")
+    }else {
+      usedPapers = tmpUsedPapers
+      corpus = tmpCorpus
     }
 
     availableMethods.foreach(method => {
