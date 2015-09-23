@@ -72,7 +72,7 @@ object PaperSampler extends App with LazyLogging {
     }
 
     if(it%1000 == 0 ) {
-      val wr = CSVWriter.open(new File("./tmpPapers.csv"))
+      val wr = CSVWriter.open(new File("./tmpPapers"+pdfsDir.replaceAll("..","").replaceAll("/","_")+".csv"))
       wr.writeAll(usedPapers.get.map(_._2.toSeq).toSeq)
     }
     if(it%100 == 0) {
