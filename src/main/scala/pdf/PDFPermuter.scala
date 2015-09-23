@@ -55,7 +55,7 @@ object PDFTextExtractor extends LazyLogging {
 
 class PDFPermuter(pdfPath: String) extends LazyLogging {
 
-	lazy val txt = PDFTextExtractor.extract(pdfPath)
+	lazy val txt : List[String] = PDFTextExtractor.extract(pdfPath)
 	val config = ConfigFactory.load()
 	val MULTIVARIATE_MAX_DISTANCE = config.getInt("highlighter.multivariateMaxDistance")
 
@@ -90,23 +90,13 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 		val startHighlightIndexAssumption = startSearchIndexAssumption + seqUniqueStrings(assumptionIndex).startHighlightStringIndex
 		val endHighlightIndexAssumption = startHighlightIndexAssumption + seqUniqueStrings(assumptionIndex).highlightString.length
 
-		//TODO refactor. You can express this a lot easier. For example, one doesn't return "true" or "false" within an IF statement. Instead, one can directly return the condition.
-		//example: val a = if(b>3) true else false
-		//is the same as: val a = b > 3
-		if (startSearchIndexMethod <= startSearchIndexAssumption && endSearchIndexMethod <= startSearchIndexAssumption && endSearchIndexAssumption >= endSearchIndexMethod) {
-			true
-		}
-		else if (startHighlightIndexMethod <= startHighlightIndexAssumption && endHighlightIndexMethod <= startHighlightIndexAssumption && endHighlightIndexAssumption >= endHighlightIndexMethod) {
-			true
-		}
-		else if (startSearchIndexAssumption <= startSearchIndexMethod && endSearchIndexAssumption <= startSearchIndexMethod && endSearchIndexAssumption <= endSearchIndexMethod) {
-			true
-		} else if (startHighlightIndexAssumption <= startHighlightIndexMethod && endHighlightIndexAssumption <= startHighlightIndexMethod && endHighlightIndexAssumption <= endHighlightIndexMethod) {
-			true
-		}
-		else {
-			false
-		}
+    val valid =
+      (startSearchIndexMethod <= startSearchIndexAssumption && endSearchIndexMethod <= startSearchIndexAssumption && endSearchIndexAssumption >= endSearchIndexMethod) ||
+      (startHighlightIndexMethod <= startHighlightIndexAssumption && endHighlightIndexMethod <= startHighlightIndexAssumption && endHighlightIndexAssumption >= endHighlightIndexMethod) ||
+      (startSearchIndexAssumption <= startSearchIndexMethod && endSearchIndexAssumption <= startSearchIndexMethod && endSearchIndexAssumption <= endSearchIndexMethod) ||
+			(startHighlightIndexAssumption <= startHighlightIndexMethod && endHighlightIndexAssumption <= startHighlightIndexMethod && endHighlightIndexAssumption <= endHighlightIndexMethod)
+
+    valid
 	}
 
 	def isUniquePairValidCandidate(method: PDFHighlightInstruction, assumption: PDFHighlightInstruction): Boolean = {
@@ -121,48 +111,48 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 	}
 
 	def getUniqueStringsForSearchTerms(highlightTerms: Map[Color, List[String]]): Iterable[PDFHighlightInstruction] = {
-		//TODO very long method. can you shorten it to make it more understandable?
+
 		highlightTerms.flatMap {
-			case (color, patterns) => patterns.map(pattern => {
-
+			case (color, patterns) => patterns.flatMap(pattern => {
 				txt.zipWithIndex.flatMap(pageTxt => {
-
 					val allIndicesOfThesePatterns: Iterator[Int] = Utils.escapeSearchString(pattern).r.findAllMatchIn(pageTxt._1).map(_.start)
 
-					// Special case: check if there is no MULTIVARIATE before ANOVA or ANALYSIS OF VARIANCE
 					val indexesToDiscard: List[Int] = identifyIndexSpecialCases(pattern, pageTxt, allIndicesOfThesePatterns)
 
-					val substringIndices: Iterator[(Int, Int)] =
-						allIndicesOfThesePatterns.filterNot(indexesToDiscard.contains(_)).map(index => {
-							extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt._1)
-						})
-
+					val substringIndices: Iterator[(Int, Int)] = extractSubstringIndicesWithoutInvalidCases(pattern, allIndicesOfThesePatterns, indexesToDiscard, pageTxt._1)
 					val substrings = substringIndices.map(i => pageTxt._1.substring(i._1, i._2))
-					substrings.map(substring => {
 
-						//TODO: What if the searchStringMatch contains two times the word to highlight? which one is to highlight?
-						try {
-							val searchStringMatch = ("\\Q" + substring + "\\E").r.findFirstMatchIn(pageTxt._1).get
-							val start = if (Utils.escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
-								Utils.escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
-							} else {
-								0
-							}
-							PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start, pageTxt._2)
-						} catch {
-							case e: Exception => {
-								logger.error("Cannot find term " + pattern + " in pdf " + pdfPath, e)
-								null
-							}
-						}
-					})
+					val pdfHighlightInstructions = substrings.map(createPDFHighlightInstructionForSubstring(color, pattern, pageTxt, _))
+          pdfHighlightInstructions.filter(_.isDefined).map(_.get)
 				})
-
 			})
-		}.flatten
+		}
 	}
 
-	def identifyIndexSpecialCases(pattern: String, pageTxt: (String, Int), allIndicesOfThesePatterns: Iterator[Int]): List[Int] = {
+  def createPDFHighlightInstructionForSubstring(color: Color, pattern: String, pageTxt: (String, Int), substring: String): Option[PDFHighlightInstruction] = {
+    try {
+      val searchStringMatch = ("\\Q" + substring + "\\E").r.findFirstMatchIn(pageTxt._1).get
+      val start = if (Utils.escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
+        Utils.escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
+      } else {
+        0
+      }
+      Some(PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start, pageTxt._2))
+    } catch {
+      case e: Exception => {
+        logger.error("Cannot find term " + pattern + " in pdf " + pdfPath, e)
+        None
+      }
+    }
+  }
+
+  def extractSubstringIndicesWithoutInvalidCases(pattern: String, allIndicesOfThesePatterns: Iterator[Int], indexesToDiscard: List[Int], pageTxt: String): Iterator[(Int, Int)] = {
+    allIndicesOfThesePatterns.filterNot(indexesToDiscard.contains(_)).map(index => {
+      extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt)
+    })
+  }
+
+  def identifyIndexSpecialCases(pattern: String, pageTxt: (String, Int), allIndicesOfThesePatterns: Iterator[Int]): List[Int] = {
 		if (pattern.equalsIgnoreCase("ANOVA") || pattern.equalsIgnoreCase("analysis of variance")) {
 			val indexes = Utils.escapeSearchString("multivariate").r.findAllMatchIn(pageTxt._1).map(_.start)
 			if (indexes.nonEmpty) {

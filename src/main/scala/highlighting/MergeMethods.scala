@@ -3,7 +3,7 @@ package highlighting
 import java.awt.Color
 
 import com.typesafe.scalalogging.LazyLogging
-import pdf.{GeneralInformation, PDFHighlightInstruction}
+import pdf.{MethodInPaper, PDFHighlightInstruction}
 
 /**
  * Created by mattia on 28.08.15.
@@ -58,7 +58,7 @@ object MergeMethods extends LazyLogging{
     }
   }
 
-  def mergeMethods(data: GeneralInformation): (List[StatMethod], List[PDFHighlightInstruction]) = {
+  def mergeMethods(data: MethodInPaper): (List[StatMethod], List[PDFHighlightInstruction]) = {
 
     val mergedMethods = mergeMethods(stop = false, data.methodsToMerge)
     logger.debug(s"Result after merging method: ${data.method} => ${mergedMethods.length} different groups for paper ${data.pdfFilename}.")

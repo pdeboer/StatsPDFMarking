@@ -14,37 +14,33 @@ import scala.sys.process._
 /**
  * Created by mattia on 02.09.15.
  */
-case class PNGManager(isMultipleColumnPaper: Boolean, pathConvert: String) extends LazyLogging{
+class PNGManager(isMultipleColumnPaper: Boolean, pathConvert: String) extends LazyLogging{
 
   def convertPDFAndCreatePermutations(highlighter: PDFHighlighter, methodName: String, highlightedFilename: File,
                                highlightedPDFPaper: HighlightPage): List[Permutation] = {
     
-    val pdfToPngPath = convertToPNG(highlightedFilename, highlightedPDFPaper)
-    val snippetPath = cutPNG(pdfToPngPath)
-    val methodInstructions = highlighter.instructions.filter(f => f.color == Color.yellow)
+    val pdfToPngFile = convertToPNG(highlightedFilename, highlightedPDFPaper)
+    val snippetPath = cutPNG(pdfToPngFile)
+    val methodInstructions = highlighter.instructions.filter(_.color == Color.yellow)
 
     val methodPositions = methodInstructions.map(methodInstruction => {
       methodInstruction.pageNr + ":" + (methodInstruction.startSearchStringIndex + methodInstruction.startHighlightStringIndex)
     }).mkString("_")
 
-    val permutations: List[Option[Permutation]] = highlighter.instructions.map(i => {
-      if (i.color == Color.green) {
-        Some(createPermutationForPrerequisite(PNGInformation(methodName, highlightedFilename, snippetPath, methodPositions), i))
-      } else {
-        None
-      }
+    val permutations: List[Permutation] = highlighter.instructions.filter(_.color == Color.green).map(i => {
+      createPermutationForSinglePrerequisite(PNGInstruction(methodName, highlightedFilename, snippetPath, methodPositions), i)
     })
-    permutations.filter(p => p.isDefined).map(_.get)
+    permutations
   }
 
   private def convertToPNG(pdfFile: File, pages: HighlightPage) : File = {
-    val pathPDFFile = pdfFile.getPath
+
     val pathConvertedPNGFile: String = pdfFile.getParentFile.getPath+"/" + addPNGExtension(pdfFile.getName)
 
     val range = extractPageRange(pages)
 
     val convertCommandWithParams =
-      Seq("bash", "-c", s"nice -n 5 $pathConvert -density 200 -append ${pathPDFFile + range} ${pathConvertedPNGFile}")
+      Seq("bash", "-c", s"nice -n 5 $pathConvert -density 200 -append ${pdfFile.getPath + range} ${pathConvertedPNGFile}")
 
     if(convertCommandWithParams.! != 0){
       Utils.copyAndMoveFile("../errors_convertPDFtoPNG/", pdfFile, new Exception(s"Cannot convert PDF pages $range to PNG"))
@@ -69,18 +65,18 @@ case class PNGManager(isMultipleColumnPaper: Boolean, pathConvert: String) exten
     }
   }  
   
-  case class PNGInformation(methodName: String, highlightedFilename: File, snippetPath: String, methodPositions: String)
+  case class PNGInstruction(methodName: String, highlightedFilename: File, snippetPath: String, methodPositions: String)
   
-  def createPermutationForPrerequisite(pngInformation: PNGInformation, instruction: PDFHighlightInstruction): Permutation = {
+  def createPermutationForSinglePrerequisite(pngInstruction: PNGInstruction, instruction: PDFHighlightInstruction): Permutation = {
 
-    val assumptionPosition = instruction.pageNr + ":" + (instruction.startSearchStringIndex + instruction.startHighlightStringIndex)
-    val pdfDirName = pngInformation.highlightedFilename.getParentFile.getName
+    val prerequisitePosition = instruction.pageNr + ":" + (instruction.startSearchStringIndex + instruction.startHighlightStringIndex)
+    val pdfDirName = pngInstruction.highlightedFilename.getParentFile.getName
 
     if (isMultipleColumnPaper) {
-      val matches = Snippet.extractColorCoords(new File(pngInformation.snippetPath))
-      val height = Snippet.getHeight(new File(pngInformation.snippetPath))
+      val matches = Snippet.extractColorCoords(new File(pngInstruction.snippetPath))
+      val height = Snippet.getHeight(new File(pngInstruction.snippetPath))
 
-      val methodOnTop = Snippet.isMethodOnTop(pngInformation.snippetPath)
+      val methodOnTop = Snippet.isMethodOnTop(pngInstruction.snippetPath)
 
       val coordinatesGreen : Double = if(matches._2.nonEmpty) {
         matches._2.map(_.getY).min/height
@@ -97,12 +93,12 @@ case class PNGManager(isMultipleColumnPaper: Boolean, pathConvert: String) exten
       val boundaryMin = Math.min(coordinatesGreen, closestYellow) * 100
       val boundaryMax = Math.max(coordinatesGreen, closestYellow) * 100
 
-      Permutation(pdfDirName + "/" + instruction.highlightString + "/" + assumptionPosition, pngInformation.methodName + "_" + pngInformation.methodPositions,
-        pngInformation.snippetPath, pngInformation.highlightedFilename.getPath, methodOnTop, boundaryMin, boundaryMax)
+      Permutation(pdfDirName + "/" + instruction.highlightString + "/" + prerequisitePosition, pngInstruction.methodName + "_" + pngInstruction.methodPositions,
+        pngInstruction.snippetPath, pngInstruction.highlightedFilename.getPath, methodOnTop, boundaryMin, boundaryMax)
     } else {
-      val methodOnTop = Snippet.isMethodOnTop(pngInformation.snippetPath)
-      Permutation(pdfDirName + "/" + instruction.highlightString + "/" + assumptionPosition, pngInformation.methodName + "_" + pngInformation.methodPositions,
-        pngInformation.snippetPath, pngInformation.highlightedFilename.getPath, methodOnTop)
+      val methodOnTop = Snippet.isMethodOnTop(pngInstruction.snippetPath)
+      Permutation(pdfDirName + "/" + instruction.highlightString + "/" + prerequisitePosition, pngInstruction.methodName + "_" + pngInstruction.methodPositions,
+        pngInstruction.snippetPath, pngInstruction.highlightedFilename.getPath, methodOnTop)
     }
   }
 
