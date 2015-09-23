@@ -33,6 +33,14 @@ class PaperContainer {
 
   def get: Map[String, List[Paper]] = methodPapers
 
+  def copy : PaperContainer = {
+    val ret = new PaperContainer
+    methodPapers.foreach(m => {
+      m._2.foreach(paper => ret.add(Some(paper)))
+    })
+    ret
+  }
+
   def getOccurrenceOfMethodForPaper(paperPath: String, method: String) : Int = {
     val possiblePapers = methodPapers.get(method)
     if(possiblePapers.isDefined){

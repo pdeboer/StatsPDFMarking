@@ -20,7 +20,7 @@ object PaperSampler extends App with LazyLogging {
   val pdfs = new FolderPDFSource(pdfsDir).get().toList
 
   // corpus contains the occurrences of every methods for each paper
-  val corpus = new PaperContainer()
+  var corpus = new PaperContainer()
 
   val termLoader = new HighlightTermloader()
 
@@ -51,9 +51,34 @@ object PaperSampler extends App with LazyLogging {
   })
   writer.close()
 
-  val usedPapers = new PaperContainer
+  var usedPapers = new PaperContainer
+
+  var it : Int = 0
+  var tmpDistance = calcDistance
+
+  var tmpUsedPapers: PaperContainer = usedPapers
+  var tmpCorpus: PaperContainer = corpus
 
   while(!usedPapers.diff(distribution)){
+    it += 1
+    val distance = calcDistance
+    if(tmpDistance > distance){
+      tmpDistance = distance
+      tmpUsedPapers = usedPapers.copy
+      tmpCorpus = corpus.copy
+    }else {
+      usedPapers = tmpUsedPapers
+      corpus = tmpCorpus
+    }
+
+    if(it%1000 == 0 ) {
+      val wr = CSVWriter.open(new File("./tmpPapers.csv"))
+      wr.writeAll(usedPapers.get.map(_._2.toSeq).toSeq)
+    }
+    if(it%100 == 0) {
+      logger.info(s"Distance: $tmpDistance")
+    }
+
     availableMethods.foreach(method => {
       if(usedPapers.getOccurrenceOfMethodOverAllPapers(method) < distribution.get(method).get){
         usedPapers.add(corpus.removeRandomPaper(method))
@@ -75,5 +100,10 @@ object PaperSampler extends App with LazyLogging {
 
   distribution.foreach(d => logger.debug(d._1 + " ->: " + corpus.getOccurrenceOfMethodOverAllPapers(d._1) + " * "+ PERCENT+"%  => " + d._2 + " == " + usedPapers.getOccurrenceOfMethodOverAllPapers(d._1)))
 
+  def calcDistance : Int = {
+    distribution.map(d => {
+      Math.abs(usedPapers.getOccurrenceOfMethodOverAllPapers(d._1) - d._2)
+    }).sum
+  }
 
 }
