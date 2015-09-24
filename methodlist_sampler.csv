@@ -8,10 +8,10 @@ U test, Mann Whitney
 Wilcoxon Signed-Ranks test, Wilcoxon test, Wilcoxon Signed Rank
 Kruskal Wallis
 McNemar
-Friedman's test, Friedman test
-chi square, Fisher's Exact, Χ square, Χ2
+Friedmans test, Friedman test
+chi square, Fishers Exact, Χ square, Χ2
 t test
-Dum's test, Dum test
+Dums test, Dum test
 Receiver Operating Characteristic Curve, ROC, C statistic, Hosmer Lemeshow
 Odds ratio, Relative risk, Likelihood ratio
 Kappa,  Kendall Tau, Youden J, Bland Altman
@@ -28,7 +28,7 @@ Meta analysis
 Content analysis
 Confidence interval, CI
 Random effect
-Cronbach's alpha, Cronbachs alpha, Cronbach alpha
+Cronbachs alpha, Cronbach alpha
 Kaplan Meier analysis
 Principal component analysis, PCA
 Support vector machines, SVM
