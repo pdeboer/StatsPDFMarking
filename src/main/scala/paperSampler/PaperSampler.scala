@@ -43,7 +43,7 @@ object PaperSampler extends App with LazyLogging {
     method -> Math.floor(corpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT / 100.0).toInt
   }).toMap
 
-  createCSVFile("corpus")
+  createCSVFile("corpus", corpus)
 
   var usedPapers = new PaperContainer
 
@@ -61,7 +61,7 @@ object PaperSampler extends App with LazyLogging {
       tmpUsedPapers = usedPapers.copy
       tmpCorpus = corpus.copy
 
-      createCSVFile("tmpUsedPapers")
+      createCSVFile("tmpUsedPapers", tmpUsedPapers)
       logger.info(s"Distance: $tmpDistance")
     }else {
       usedPapers = tmpUsedPapers
@@ -77,7 +77,7 @@ object PaperSampler extends App with LazyLogging {
     })
   }
 
-  createCSVFile("usedPapers")
+  createCSVFile("usedPapers", usedPapers)
 
   distribution.foreach(d => logger.debug(d._1 + " ->: " + corpus.getOccurrenceOfMethodOverAllPapers(d._1) + " * "+ PERCENT+"%  => " + d._2 + " == " + usedPapers.getOccurrenceOfMethodOverAllPapers(d._1)))
 
@@ -87,13 +87,13 @@ object PaperSampler extends App with LazyLogging {
     }).sum
   }
 
-  def createCSVFile(filename: String): Unit = {
+  def createCSVFile(filename: String, papers: PaperContainer): Unit = {
     val wr = CSVWriter.open(new File("./"+filename + pdfsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_") + ".csv"))
     val sequMeth1 = availableMethods.toSeq
     wr.writeRow("Paper" +: sequMeth1)
-    val allPdfs: List[String] = usedPapers.get.flatMap(_._2.map(_.path)).toList.distinct
+    val allPdfs: List[String] = papers.get.flatMap(_._2.map(_.path)).toList.distinct
     allPdfs.foreach(paper => {
-      wr.writeRow(paper +: sequMeth1.map(method => usedPapers.getOccurrenceOfMethodForPaper(paper, method)))
+      wr.writeRow(paper +: sequMeth1.map(method => papers.getOccurrenceOfMethodForPaper(paper, method)))
     })
     wr.close()
   }
