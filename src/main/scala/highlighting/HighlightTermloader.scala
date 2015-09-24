@@ -10,7 +10,7 @@ class HighlightTermloader {
 
   val deltas = {
 
-    val methodToDelta = Source.fromFile("deltas.csv").getLines().map(l => {
+    val methodToDelta = Source.fromFile("deltas.csv", "UTF-8").getLines().map(l => {
       val cols = l.split(",")
       (cols(0), cols(1).toInt)
     }).toList
@@ -20,18 +20,18 @@ class HighlightTermloader {
 
   lazy val terms = {
 
-    val assumptionsInCSV = Source.fromFile("assumptions.csv").getLines().map(l => {
+    val assumptionsInCSV = Source.fromFile("assumptions.csv", "UTF-8").getLines().map(l => {
 			val cols = l.split(",")
 			StatisticalAssumption(cols(0), cols.drop(1).toList)
 		}).toList
 
-		val methodNamesAndSynonyms = Source.fromFile("methods.csv").getLines().map(l => {
+		val methodNamesAndSynonyms = Source.fromFile("methods.csv", "UTF-8").getLines().map(l => {
 			val cols = l.split(",")
 			(cols(0), cols.drop(1).toList)
 		}).toList
 
     var methodMap = new mutable.HashMap[String, List[StatisticalAssumption]]()
-		Source.fromFile("met2ass.csv").getLines().foreach(l => {
+		Source.fromFile("met2ass.csv", "UTF-8").getLines().foreach(l => {
 			val cols = l.split(",")
 
 			val assumption = assumptionsInCSV.find(_.assumptionName == cols(1)).getOrElse( throw new Exception(cols(1)) )

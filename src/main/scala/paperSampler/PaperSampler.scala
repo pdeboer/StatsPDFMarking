@@ -23,7 +23,7 @@ object PaperSampler extends App with LazyLogging {
   // corpus contains the occurrences of every methods for each paper
   var corpus = new PaperContainer()
 
-  val termLoader : Map[String, List[String]] = Source.fromFile("methodlist_sampler.csv").getLines().map(l => {
+  val termLoader : Map[String, List[String]] = Source.fromFile("methodlist.csv", "UTF-8").getLines().map(l => {
     val cols = l.split(",")
     (cols(0), cols.drop(1).toList)
   }).toMap

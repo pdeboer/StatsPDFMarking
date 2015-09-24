@@ -11,7 +11,7 @@ import scala.io.Source
  * Created by pdeboer on 30/07/15.
  */
 object MethodOccurrences extends App {
-	val occurrences: List[MethodOccurrence] = Source.fromFile("methodlist.csv").getLines().toList.par.map(l => {
+	val occurrences: List[MethodOccurrence] = Source.fromFile("methodlist.csv", "UTF-8").getLines().toList.par.map(l => {
 		val terms = l.split(",").map(_.trim())
 		val papersWithTermVariations = terms.flatMap(t => {
 			val targetTerms = if (t.length < 7) addWordBoundaries(t) else List(t)
