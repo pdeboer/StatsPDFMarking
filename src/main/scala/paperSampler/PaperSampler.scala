@@ -4,9 +4,10 @@ import java.io.File
 
 import com.github.tototoshi.csv.CSVWriter
 import com.typesafe.scalalogging.LazyLogging
-import highlighting.HighlightTermloader
 import input.folder.FolderPDFSource
 import pdf.PDFTextExtractor
+
+import scala.io.Source
 
 /**
  * Created by mattia on 21.09.15.
@@ -22,14 +23,17 @@ object PaperSampler extends App with LazyLogging {
   // corpus contains the occurrences of every methods for each paper
   var corpus = new PaperContainer()
 
-  val termLoader = new HighlightTermloader()
+  val termLoader : Map[String, List[String]] = Source.fromFile("methodlist.csv").getLines().map(l => {
+    val cols = l.split(",")
+    (cols(0), cols.drop(1).toList)
+  }).toMap
 
-  val availableMethods : List[String] = termLoader.methods
+  val availableMethods : List[String] = termLoader.keys.toList
 
   pdfs.par.foreach(pdf => {
     val txt = PDFTextExtractor.extract(pdf.getAbsolutePath)
     val methods : Map[String, Int] = availableMethods.map(method => {
-      val synonyms : List[String] = termLoader.getMethodAndSynonymsFromMethodName(method).get.synonyms
+      val synonyms : List[String] = termLoader.getOrElse(method, List.empty)
       val occurrencesAllSynonyms = synonyms.map(s => PDFTextExtractor.countAllOccurrences(s, txt)).sum
       val occurrencesMethod = PDFTextExtractor.countAllOccurrences(method, txt)
       if(occurrencesAllSynonyms+occurrencesMethod > 0){
