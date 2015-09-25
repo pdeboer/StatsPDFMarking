@@ -18,12 +18,12 @@ Kappa,  Kendall Tau, Bland–Altman, Youden J, Bland Altman, Youden-J, Kendall-T
 Survival analysis, Life tables, Log rank test
 Sensitivity, Specificity, Positive predictive value, Negative predictive value
 Post hoc analysis, Tukey, Newman–Kuels, Duncan
-Cluster analysis
+Cluster analysis,Clustering
 Factor analysis
 Classification and regression tree analysis, tree analysis
 Mantel–Haenszel, Mantel – Haenszel, Mantel Haenszel
 Miettine
-Decision tree analysis
+Decision tree analysis,Decision trees
 Meta-analysis, Meta analysis
 Content analysis, Content-analysis
 Confidence interval, CI, Confidence-interval
@@ -34,8 +34,6 @@ Principal component analysis, PCA
 Support vector machines, SVM
 Bayesian network, Bayes network, belief network, probabilistic directed acyclic graphical model
 Neural networks, ANN
-Decision trees
-Clustering, Cluster analysis
 Hidden Markov Monte Carlo, MCMC
 Fuzzy logic
 Latent semantic analysis, LSA

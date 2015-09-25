@@ -55,6 +55,10 @@ class PaperContainer {
     }
   }
 
+  def countPapersContainingMethod(method: String) : Int = {
+    methodPapers.getOrElse(method, List.empty[Paper]).count(_.methods.getOrElse(method, 0) > 0)
+  }
+
   def getOccurrenceOfMethodOverAllPapers(method: String) : Int = {
     methodPapers.getOrElse(method, List.empty[Paper]).map(_.methods.getOrElse(method, 0)).sum
   }

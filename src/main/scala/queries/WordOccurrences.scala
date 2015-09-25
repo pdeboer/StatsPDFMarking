@@ -10,7 +10,7 @@ import pdf.PDFTextExtractor
  */
 object WordOccurrences extends App {
 
-  val pdfSourceFolder = "../pdfs2/"
+  val pdfSourceFolder = "../mja/"
   val methodsAndSynonyms = new HighlightTermloader().methodsAndSynonyms
 
   var skipped = 0

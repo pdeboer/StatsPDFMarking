@@ -2,6 +2,7 @@ package pdf
 
 import java.awt.Color
 import java.io.FileInputStream
+import java.util.regex.Pattern
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
@@ -20,37 +21,34 @@ case class PDFHighlightInstruction(color: Color, searchString: String, highlight
 case class Permutation(groupName: String, methodIndex: String, snippetPath: String, pdfPath: String, methodOnTop: Boolean, relativeTop: Double = 0, relativeBottom: Double = 0)
 
 object PDFTextExtractor extends LazyLogging {
-	def extract(pdfPath: String): List[String] = {
-		try {
-			val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
-			parser.parse()
-			val pdDoc: PDDocument = new PDDocument(parser.getDocument)
+  def extract(pdfPath: String): List[String] = {
+    try {
+      val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
+      parser.parse()
+      val pdDoc: PDDocument = new PDDocument(parser.getDocument)
 
-			val pdfHighlight: TextHighlight = new TextHighlight("UTF-8")
-			pdfHighlight.setLineSeparator(" ")
-			pdfHighlight.initialize(pdDoc)
+      val pdfHighlight: TextHighlight = new TextHighlight("UTF-8")
+      pdfHighlight.setLineSeparator(" ")
+      pdfHighlight.initialize(pdDoc)
 
-			val txt: List[String] = (0 to pdDoc.getNumberOfPages).map(pdfHighlight.textCache.getText(_)).toList
-			pdDoc.close()
-			txt
-		} catch {
-			case e: Exception => {
-				logger.error(s"Cannot decode text for pdf $pdfPath", e)
-				throw e
-			}
-			case e1: Error => {
-				logger.error("An error occurred while extracting text from pdf ", e1)
-				throw e1
-			}
-		}
-	}
+      val txt: List[String] = (0 to pdDoc.getNumberOfPages).map(pdfHighlight.textCache.getText(_)).toList
+      pdDoc.close()
+      txt
+    } catch {
+      case e: Exception => {
+        logger.error(s"Cannot decode text for pdf $pdfPath", e)
+        throw e
+      }
+      case e1: Error => {
+        logger.error("An error occurred while extracting text from pdf ", e1)
+        throw e1
+      }
+    }
+  }
 
-	def countAllOccurrences(method: String, txt: List[String]): Int = {
-		txt.map(page => {
-			Utils.escapeSearchString(method).r.findAllMatchIn(page).size
-		}).sum
-	}
-
+  def countAllOccurrences(method: String, txt: List[String]): Int = {
+    Utils.escapeSearchString(method).map(_.r.findAllMatchIn(txt.mkString("").toLowerCase).length).sum
+  }
 }
 
 class PDFPermuter(pdfPath: String) extends LazyLogging {
@@ -115,11 +113,11 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 		highlightTerms.flatMap {
 			case (color, patterns) => patterns.flatMap(pattern => {
 				txt.zipWithIndex.flatMap(pageTxt => {
-					val allIndicesOfThesePatterns: Iterator[Int] = Utils.escapeSearchString(pattern).r.findAllMatchIn(pageTxt._1).map(_.start)
+					val allIndicesOfThesePatterns: List[Int] = Utils.escapeSearchString(pattern).flatMap(_.r.findAllMatchIn(pageTxt._1).map(_.start))
 
 					val indexesToDiscard: List[Int] = identifyIndexSpecialCases(pattern, pageTxt, allIndicesOfThesePatterns)
 
-					val substringIndices: Iterator[(Int, Int)] = extractSubstringIndicesWithoutInvalidCases(pattern, allIndicesOfThesePatterns, indexesToDiscard, pageTxt._1)
+					val substringIndices: List[(Int, Int)] = extractSubstringIndicesWithoutInvalidCases(pattern, allIndicesOfThesePatterns, indexesToDiscard, pageTxt._1)
 					val substrings = substringIndices.map(i => pageTxt._1.substring(i._1, i._2))
 
 					val pdfHighlightInstructions = substrings.map(createPDFHighlightInstructionForSubstring(color, pattern, pageTxt, _))
@@ -131,12 +129,9 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 
   def createPDFHighlightInstructionForSubstring(color: Color, pattern: String, pageTxt: (String, Int), substring: String): Option[PDFHighlightInstruction] = {
     try {
-      val searchStringMatch = ("\\Q" + substring + "\\E").r.findFirstMatchIn(pageTxt._1).get
-      val start = if (Utils.escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).isDefined) {
-        Utils.escapeSearchString(pattern).r.findFirstMatchIn(searchStringMatch.matched).get.start
-      } else {
-        0
-      }
+      val searchStringMatch = Pattern.quote(substring.toLowerCase).r.findFirstMatchIn(pageTxt._1.toLowerCase).get
+      val start = Pattern.quote(pattern.toLowerCase).r.findFirstMatchIn(searchStringMatch.matched.toLowerCase).map(_.start).get
+
       Some(PDFHighlightInstruction(color, substring, pattern, searchStringMatch.start, start, pageTxt._2))
     } catch {
       case e: Exception => {
@@ -146,15 +141,15 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
     }
   }
 
-  def extractSubstringIndicesWithoutInvalidCases(pattern: String, allIndicesOfThesePatterns: Iterator[Int], indexesToDiscard: List[Int], pageTxt: String): Iterator[(Int, Int)] = {
+  def extractSubstringIndicesWithoutInvalidCases(pattern: String, allIndicesOfThesePatterns: List[Int], indexesToDiscard: List[Int], pageTxt: String): List[(Int, Int)] = {
     allIndicesOfThesePatterns.filterNot(indexesToDiscard.contains(_)).map(index => {
       extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt)
     })
   }
 
-  def identifyIndexSpecialCases(pattern: String, pageTxt: (String, Int), allIndicesOfThesePatterns: Iterator[Int]): List[Int] = {
+  def identifyIndexSpecialCases(pattern: String, pageTxt: (String, Int), allIndicesOfThesePatterns: List[Int]): List[Int] = {
 		if (pattern.equalsIgnoreCase("ANOVA") || pattern.equalsIgnoreCase("analysis of variance")) {
-			val indexes = Utils.escapeSearchString("multivariate").r.findAllMatchIn(pageTxt._1).map(_.start)
+			val indexes = Utils.escapeSearchString("multivariate").flatMap(_.r.findAllMatchIn(pageTxt._1).map(_.start))
 			if (indexes.nonEmpty) {
 				indexes.flatMap(i => allIndicesOfThesePatterns.map(j => (i, j))).filter(m => Math.abs(m._1 - m._2) <= MULTIVARIATE_MAX_DISTANCE).map(_._2).toList
 			} else {
@@ -167,7 +162,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 
 	def isSmallestMatch(it: Int, indexPosition: Int, inputStringLength: Int, pageTxt: String): Int = {
 		val subTxt = pageTxt.substring(Math.max(0, indexPosition - it), Math.min(pageTxt.length, indexPosition + inputStringLength + it))
-		if (("(?i)(\\Q" + subTxt + "\\E)").r.findAllMatchIn(txt.mkString("")).length == 1) {
+		if (Pattern.quote(subTxt.toLowerCase).r.findAllMatchIn(txt.mkString("").toLowerCase).length == 1) {
 			it
 		} else {
 			isSmallestMatch(it + 1, indexPosition, inputStringLength, pageTxt)

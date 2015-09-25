@@ -7,7 +7,6 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.pdfbox.pdfparser.PDFParser
 import org.apache.pdfbox.pdmodel.PDDocument
 import pdf.PDFHighlightInstruction
-import utils.Utils
 
 /**
  * Created by pdeboer on 16/06/15.
@@ -31,11 +30,7 @@ class PDFHighlighter(val pdfPath: String, val instructions: List[PDFHighlightIns
 
       val pages : List[Int] = instructions.map(i => {
         val patterns = List(i.searchString, i.highlightString).zipWithIndex.map(pattern => {
-          if(pattern._2 % 2 == 0){
-            Pattern.compile("\\Q"+pattern._1+"\\E")
-          } else {
-            Pattern.compile(Utils.escapeSearchString(pattern._1))
-          }
+            Pattern.compile(Pattern.quote(pattern._1))
         })
         pdfHighlight.highlight(patterns.head, patterns(1), i.color, i.pageNr)
         i.pageNr-1

@@ -1,6 +1,7 @@
 package utils
 
 import java.io.File
+import java.util.regex.Pattern
 
 import com.github.tototoshi.csv.CSVWriter
 import com.typesafe.config.ConfigFactory
@@ -31,13 +32,30 @@ object Utils extends LazyLogging{
     writer.close()
   }
 
-  def escapeSearchString(searchString: String): String = {
-    val search = searchString.replaceAll(" ", "").map(m => "\\Q" + m + "\\E" + "[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString("")
+  def escapeSearchString(searchString: String): List[String] = {
+    /*val search = searchString.map(m => "\\Q" + m + "\\E" + "[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString("")
     if(searchString.length <= ALLOWED_SINGLE_WORD_CHARS || searchString.contains(" ")){
       "(?i)(\\b"+search+"\\b)"
     } else {
       "(?i)("+search+")"
+    }*/
+    if(searchString.length < 7) {
+      permuteMethod(searchString.toLowerCase).map(meth => {
+        Pattern.quote(meth)
+      })
     }
+    else {
+      List(Pattern.quote(searchString.toLowerCase))
+    }
+  }
+
+  private def permuteMethod(t: String): List[String] = {
+    val thingsToAddForSmallWords = " -.;,!(){}[]:".map(_.toString).toList
+    thingsToAddForSmallWords.flatMap(before => {
+      thingsToAddForSmallWords.map(after => {
+        before + t + after
+      })
+    })
   }
 
   def copyAndMoveFile(dest: String, f: File, e: Exception): Any = {
