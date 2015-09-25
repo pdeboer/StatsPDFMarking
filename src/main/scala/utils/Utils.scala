@@ -45,7 +45,7 @@ object Utils extends LazyLogging{
       })
     }
     else {
-      List(Pattern.quote(searchString.toLowerCase))
+      List("\\b"+Pattern.quote(searchString.toLowerCase)+"\\b")
     }
   }
 
