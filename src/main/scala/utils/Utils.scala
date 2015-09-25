@@ -1,7 +1,6 @@
 package utils
 
 import java.io.File
-import java.util.regex.Pattern
 
 import com.github.tototoshi.csv.CSVWriter
 import com.typesafe.config.ConfigFactory
@@ -41,11 +40,11 @@ object Utils extends LazyLogging{
     }*/
     if(searchString.length < 7) {
       permuteMethod(searchString.toLowerCase).map(meth => {
-        Pattern.quote(meth)
+        meth.map(m => "\\Q" + m + "\\E" + "[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString("")
       })
     }
     else {
-      List("\\b"+Pattern.quote(searchString.toLowerCase)+"\\b")
+      List("\\b"+searchString.toLowerCase.map(m => "\\Q" + m + "\\E" + "[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString("")+"\\b")
     }
   }
 
