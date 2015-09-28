@@ -38,14 +38,14 @@ object BMCDAL {
 		inner join topPrepub target on b.id1 = target.id1 and b.id2 = target.id2 and b.id3 = target.id3 and b.description = target.d
 		INNER JOIN pdftext t ON b.imediaURL = t.url
 		WHERE LOWER(t.body) LIKE $likeTerm"""
-			.map(r => new DBPaperBody(r.long(1), r.string(2), r.string(3), r.int(4))).list().apply()
+			.map(r => new DBPaperBody(r.int(1), r.string(2), r.string(3), r.int(4))).list().apply()
 	}
 
 }
 
 case class DBPaper(id: Long, filename: String, year: Int)
 
-class DBPaperBody(val id: Long, _body: String, val url: String, val year: Int) extends Serializable {
+class DBPaperBody(val id: Int, _body: String, val url: String, val year: Int) extends Serializable {
 	def body: String = _body
 
 	override def equals(other: Any): Boolean = other match {

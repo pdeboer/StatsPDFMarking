@@ -27,11 +27,11 @@ object PaperSampler extends App with LazyLogging {
     l.split(",").map(_.trim()).toList
   }).toList
 
-  pdfs.par.foreach(pdf => {
+  pdfs.foreach(pdf => {
     val txt = PDFTextExtractor.extractTextAsString(pdf.getAbsolutePath)
     val methods : Map[String, Int] = termLoader.map(terms => {
       val method = terms.head
-      val occurrences : Int = terms.foldLeft(0)((s, c) => s + PDFTextExtractor.countAllOccurrences(c, txt))
+      val occurrences : Int = terms.map(c => PDFTextExtractor.countAllOccurrences(c, txt)).sum
       method -> occurrences
     }).toMap
 

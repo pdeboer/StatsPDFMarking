@@ -24,7 +24,7 @@ object BMJDAL {
 		sql"""SELECT DISTINCT p.id,  t.body, p.url, left(issue,4) AS y
 		FROM bmjpdftext t INNER JOIN bmjpaper p ON t.paperId = p.id
 		WHERE LOWER(t.body) LIKE $likeTerm"""
-			.map(r => new BMJPaperBody(r.long(1), WeakReference(r.string(2)), r.string(3), r.int(4))).list().apply()
+			.map(r => new BMJPaperBody(r.int(1), WeakReference(r.string(2)), r.string(3), r.int(4))).list().apply()
 	}
 
 	def getPaperBody(id: Long) = DB readOnly { implicit session => sql"SELECT body FROM bmjpdftext WHERE paperId = $id"
@@ -36,7 +36,7 @@ object BMJDAL {
 	}
 }
 
-class BMJPaperBody(id: Long, var _body: WeakReference[String], url: String, year: Int) extends DBPaperBody(id, "", url, year) {
+class BMJPaperBody(id: Int, var _body: WeakReference[String], url: String, year: Int) extends DBPaperBody(id, "", url, year) {
 	override def body: String = _body.get.getOrElse({
 		println("refetching " + id)
 		val b: String = BMJDAL.getPaperBody(id)

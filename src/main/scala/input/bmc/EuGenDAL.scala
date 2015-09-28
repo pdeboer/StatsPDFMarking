@@ -24,7 +24,7 @@ object EuGenDAL {
 		sql"""SELECT DISTINCT id,  body
 		FROM eugenpracttext
 		WHERE LOWER(body) LIKE $likeTerm"""
-			.map(r => new EuGenPaperBody(r.long(1), WeakReference(r.string(2)))).list().apply()
+			.map(r => new EuGenPaperBody(r.int(1), WeakReference(r.string(2)))).list().apply()
 	}
 
 	def getPaperBody(id: Long) = DB readOnly { implicit session => sql"SELECT body FROM eugenpracttext WHERE id = $id"
@@ -36,7 +36,7 @@ object EuGenDAL {
 	}
 }
 
-class EuGenPaperBody(id: Long, var _body: WeakReference[String]) extends DBPaperBody(id, "", "", 2014) {
+class EuGenPaperBody(id: Int, var _body: WeakReference[String]) extends DBPaperBody(id, "", "", 2014) {
 	override def body: String = _body.get.getOrElse({
 		println("refetching " + id)
 		val b: String = EuGenDAL.getPaperBody(id)

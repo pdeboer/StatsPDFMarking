@@ -3,19 +3,19 @@ package queries
 import java.io.{File, FileInputStream, FileOutputStream}
 import java.util.regex.Pattern
 
-import input.bmc.{BMJDAL, DBPaperBody}
+import input.bmc.{BMJLOCAL, DBPaperBody}
 
 import scala.io.Source
 
 /**
  * Created by pdeboer on 30/07/15.
  */
-object MethodOccurrences extends App {
-	val occurrences: List[MethodOccurrence] = Source.fromFile("methodlist.csv", "UTF-8").getLines().toList.par.map(l => {
+object LocalMethodOccurrences extends App {
+	val occurrences: List[MethodOccurrence] = Source.fromFile("methodlist_full.csv", "UTF-8").getLines().toList.par.map(l => {
 		val terms = l.split(",").map(_.trim())
 		val papersWithTermVariations = terms.flatMap(t => {
 			val targetTerms = if (t.length < 7) addWordBoundaries(t) else List(t)
-			targetTerms.flatMap(tt => BMJDAL.getPapersContainingTerm(tt).map(o => PaperOccurrence(o)(List(tt))))
+			targetTerms.flatMap(tt => BMJLOCAL.getPapersContainingTerm(tt).map(o => PaperOccurrence(o)(List(tt))))
 		})
 		val termOccurrences = papersWithTermVariations.groupBy(_.dbp).map {
 			case (body, occurenceList) => PaperOccurrence(body)(occurenceList.map(po => po.terms).toList.flatten)
@@ -33,12 +33,22 @@ object MethodOccurrences extends App {
 
 	def countOccurrencePerYear(mo: MethodOccurrence, year: Int = -1): MethodCountPerYear = {
 		val occurrenceList = if (year == -1) mo else MethodOccurrence(mo.method, mo.po.filter(_.dbp.year == year))
-		val stringMatches = occurrenceList.po.foldLeft(0)((s, po) => s + countOccurrences(po.terms, po.dbp.body))
+
+    val stringMatches = occurrenceList.po.map(po => {
+      if(po != null && po.terms.nonEmpty && po.dbp.body.nonEmpty){
+        countOccurrences(po.terms, po.dbp.body)
+      }else{
+        0
+      }
+    }).sum
+
 		val numPapers = occurrenceList.po.map(_.dbp).toSet.size
 		MethodCountPerYear(year, numPapers, stringMatches)
 	}
 
-	def countOccurrences(needles: List[String], haystack: String, ignoreCases: Boolean = true): Int = needles.map(n => countOccurrence(n, haystack, ignoreCases)).sum
+	def countOccurrences(needles: List[String], haystack: String, ignoreCases: Boolean = true): Int = needles.map(n => {
+    countOccurrence(n, haystack, ignoreCases)
+  }).sum
 
 	def countOccurrence(needle: String, haystack: String, ignoreCases: Boolean = true): Int = {
 		val needleIgnoreCase = if (ignoreCases) needle.toLowerCase else needle
