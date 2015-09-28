@@ -31,8 +31,8 @@ object PaperSampler extends App with LazyLogging {
     val txt = PDFTextExtractor.extractTextAsString(pdf.getAbsolutePath)
     val methods : Map[String, Int] = termLoader.map(terms => {
       val method = terms.head
-      val occurrences = terms.map(s => PDFTextExtractor.countAllOccurrences(s, txt))
-      method -> occurrences.sum
+      val occurrences : Int = terms.foldLeft(0)((s, c) => s + PDFTextExtractor.countAllOccurrences(c, txt))
+      method -> occurrences
     }).toMap
 
     corpus.add(Some(Paper(pdf.getPath, methods)))
