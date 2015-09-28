@@ -36,7 +36,7 @@ class PaperContainer {
   def copy : PaperContainer = {
     val ret = new PaperContainer
     methodPapers.par.foreach(m => {
-      m._2.foreach(paper => ret.add(Some(paper)))
+      m._2.par.foreach(paper => ret.add(Some(paper)))
     })
     ret
   }
