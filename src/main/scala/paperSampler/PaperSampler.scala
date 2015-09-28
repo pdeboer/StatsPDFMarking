@@ -15,7 +15,7 @@ import scala.io.Source
 object PaperSampler extends App with LazyLogging {
 
   val pdfsDir = args(0)
-  logger.info("PDFs DIR: " + pdfsDir)
+  logger.debug("PDFs DIR: " + pdfsDir)
   val PERCENT = args(1).toDouble
 
   val pdfs = new FolderPDFSource(pdfsDir).get().toList
@@ -31,7 +31,7 @@ object PaperSampler extends App with LazyLogging {
   val availableMethods : List[String] = termLoader.keys.toList
 
   pdfs.par.foreach(pdf => {
-    val txt = PDFTextExtractor.extract(pdf.getAbsolutePath)
+    val txt = PDFTextExtractor.extractTextAsString(pdf.getAbsolutePath)
     val methods : Map[String, Int] = availableMethods.map(method => {
       val synonyms : List[String] = termLoader.getOrElse(method, List.empty)
       val occurrencesSynonyms = synonyms.map(s => PDFTextExtractor.countAllOccurrences(s, txt)).sum
@@ -67,7 +67,7 @@ object PaperSampler extends App with LazyLogging {
       tmpCorpus = corpus.copy
 
       createCSVFile("tmpUsedPapers", tmpUsedPapers)
-      logger.info(s"Distance: $tmpDistance")
+      logger.debug(s"Distance: $tmpDistance")
     }else {
       usedPapers = tmpUsedPapers.copy
       corpus = tmpCorpus.copy

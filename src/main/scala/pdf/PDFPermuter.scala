@@ -9,6 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 import highlighting.{HighlightTermloader, PDFHighlighter, TextHighlight}
 import org.apache.pdfbox.pdfparser.PDFParser
 import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.util.PDFTextStripper
 import utils.Utils
 
 import scala.collection.immutable.Iterable
@@ -46,8 +47,30 @@ object PDFTextExtractor extends LazyLogging {
     }
   }
 
-  def countAllOccurrences(method: String, txt: List[String]): Int = {
-    Utils.escapeSearchString(method).map(_.r.findAllMatchIn(txt.mkString("").toLowerCase).length).sum
+  def extractTextAsString(pdfPath: String) : String = {
+    try {
+      val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
+      parser.parse()
+      val pdDoc: PDDocument = new PDDocument(parser.getDocument)
+
+      val stripper = new PDFTextStripper()
+      val txt = stripper.getText(pdDoc)
+      pdDoc.close()
+      txt
+    } catch {
+      case e: Exception => {
+        logger.error(s"Cannot decode text for pdf $pdfPath", e)
+        throw e
+      }
+      case e1: Error => {
+        logger.error("An error occurred while extracting text from pdf ", e1)
+        throw e1
+      }
+    }
+  }
+
+  def countAllOccurrences(method: String, txt: String): Int = {
+    Utils.escapeSearchString(method).map(_.r.findAllMatchIn(txt.toLowerCase).length).sum
   }
 }
 
