@@ -76,9 +76,19 @@ object PaperSampler extends App with LazyLogging {
     termLoader.foreach(terms => {
       val method = terms.head
       if(usedPapers.getOccurrenceOfMethodOverAllPapers(method) < distribution.get(method).get){
-        usedPapers.add(corpus.removeRandomPaper(method))
+        val paper = corpus.removeRandomPaper(method)
+        if(paper.isDefined){
+          usedPapers.add(paper)
+        }else {
+          logger.debug(s"ADD to used: Cannot find any free paper containing $method : found=${corpus.getOccurrenceOfMethodOverAllPapers(method)}")
+        }
       }else if(usedPapers.getOccurrenceOfMethodOverAllPapers(method) > distribution.get(method).get){
-        corpus.add(usedPapers.removeRandomPaper(method))
+        val paper = usedPapers.removeRandomPaper(method)
+        if(paper.isDefined){
+          corpus.add(paper)
+        } else {
+          logger.debug(s"REMOVE from used: Cannot find any free paper containing $method : found = ${usedPapers.getOccurrenceOfMethodOverAllPapers(method)}")
+        }
       }
     })
   }
