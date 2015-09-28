@@ -58,6 +58,7 @@ object PaperSampler extends App with LazyLogging {
   var tmpCorpus: PaperContainer = corpus.copy
 
   logger.debug("Start algorithm...")
+  logger.debug(s"Distance: $tmpDistance")
 
   while(!usedPapers.diff(distribution)){
     val distance = calcDistance
