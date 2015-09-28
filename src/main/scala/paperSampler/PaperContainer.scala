@@ -9,7 +9,12 @@ class PaperContainer {
 
   def add(p: Option[Paper]) = {
     if(p.isDefined){
-      p.get.methods.foreach(m => methodPapers += m._1 -> (methodPapers.getOrElse(m._1, List.empty[Paper]) ::: List[Paper](p.get)))
+      p.get.methods.foreach(m => methodPapers += m._1 -> (
+        if(methodPapers.getOrElse(m._1, List.empty[Paper]).contains(p)){
+          methodPapers.getOrElse(m._1, List.empty[Paper])
+        }else{
+          methodPapers.getOrElse(m._1, List.empty[Paper]) ::: List[Paper](p.get)
+        }))
     }
   }
 
