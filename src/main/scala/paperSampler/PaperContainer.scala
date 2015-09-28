@@ -10,15 +10,15 @@ class PaperContainer {
   def add(p: Option[Paper]) = {
     if(p.isDefined){
       p.get.methods.foreach(m => methodPapers += m._1 -> (
-        if(methodPapers.getOrElse(m._1, List.empty[Paper]).contains(p)){
-          methodPapers.getOrElse(m._1, List.empty[Paper])
+        if(methodPapers.getOrElse(m._1, Seq.empty[Paper]).contains(p)){
+          methodPapers.getOrElse(m._1, Seq.empty[Paper])
         }else{
-          methodPapers.getOrElse(m._1, List.empty[Paper]) ::: List[Paper](p.get)
+          methodPapers.getOrElse(m._1, Seq.empty[Paper]) ++ Seq[Paper](p.get)
         }))
     }
   }
 
-  private var methodPapers : Map[String, List[Paper]] = Map.empty[String, List[Paper]]
+  private var methodPapers : Map[String, Seq[Paper]] = Map.empty[String, Seq[Paper]]
 
   def diff(distribution: Map[String, Int]) : Boolean = {
     distribution.forall(d => getOccurrenceOfMethodOverAllPapers(d._1) == d._2)
@@ -29,14 +29,14 @@ class PaperContainer {
   }
 
   def removeRandomPaper(method: String) : Option[Paper] = {
-    val shuffled : List[Paper] = Random.shuffle(methodPapers.getOrElse(method, List.empty[Paper]).filter(paper => paper.methods.get(method).get > 0))
+    val shuffled : List[Paper] = Random.shuffle(methodPapers.getOrElse(method, Seq.empty[Paper]).filter(paper => paper.methods.get(method).get > 0).toList)
     val toRemove : Option[Paper] = shuffled.headOption
-    val rest : List[Paper] = shuffled.drop(1)
+    val rest : Seq[Paper] = shuffled.drop(1)
     methodPapers += method -> rest
     toRemove
   }
 
-  def get: Map[String, List[Paper]] = methodPapers
+  def get: Map[String, Seq[Paper]] = methodPapers
 
   def copy : PaperContainer = {
     val ret = new PaperContainer
