@@ -27,7 +27,7 @@ object PaperSampler extends App with LazyLogging {
     l.split(",").map(_.trim()).toList
   }).toList
 
-  pdfs.foreach(pdf => {
+  pdfs.par.foreach(pdf => {
     val txt = PDFTextExtractor.extractTextAsString(pdf.getAbsolutePath)
     val methods : Map[String, Int] = termLoader.map(terms => {
       val method = terms.head
@@ -38,25 +38,28 @@ object PaperSampler extends App with LazyLogging {
     corpus.add(Some(Paper(pdf.getPath, methods)))
   })
 
+  createCSVFile("corpus", corpus)
+  logger.debug("Corpus csv created")
+
   val distribution : Map[String, Int] = termLoader.map(terms => {
     val method = terms.head
     method -> Math.floor(corpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT / 100.0).toInt
   }).toMap
 
-  createCSVFile("corpus", corpus)
+  logger.debug("Distribution defined")
 
   //corpus.get.foreach(d => logger.debug(d._1 + " ->: papers: " +corpus.countPapersContainingMethod(d._1) + ", total occurrences: " + corpus.getOccurrenceOfMethodOverAllPapers(d._1) ))
 
   var usedPapers = new PaperContainer()
 
-  var it : Int = 0
   var tmpDistance = calcDistance
 
   var tmpUsedPapers: PaperContainer = usedPapers.copy
   var tmpCorpus: PaperContainer = corpus.copy
 
+  logger.debug("Start algorithm...")
+
   while(!usedPapers.diff(distribution)){
-    it += 1
     val distance = calcDistance
     if(tmpDistance > distance){
       tmpDistance = distance
@@ -66,8 +69,8 @@ object PaperSampler extends App with LazyLogging {
       createCSVFile("tmpUsedPapers", tmpUsedPapers)
       logger.debug(s"Distance: $tmpDistance")
     }else {
-      usedPapers = tmpUsedPapers.copy
-      corpus = tmpCorpus.copy
+      usedPapers = tmpUsedPapers
+      corpus = tmpCorpus
     }
 
     termLoader.foreach(terms => {
@@ -81,7 +84,7 @@ object PaperSampler extends App with LazyLogging {
   }
 
   createCSVFile("usedPapers", usedPapers)
-
+  logger.debug("Used Paper csv created")
 
   def calcDistance : Int = {
     distribution.map(d => {
