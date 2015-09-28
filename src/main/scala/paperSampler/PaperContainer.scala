@@ -30,10 +30,11 @@ class PaperContainer {
   def removeRandomPaper(method: String) : Option[Paper] = {
     val shuffled : List[Paper] = Random.shuffle(methodPapers.getOrElse(method, Set.empty[Paper]).filter(paper => paper.methods.get(method).get > 0).toList)
     val toRemove : Option[Paper] = shuffled.headOption
-
-    methodPapers.par.map(m => {
-      m._1 -> m._2.filterNot(_.path.equalsIgnoreCase(toRemove.get.path))
-    })
+    if(toRemove.isDefined){
+      methodPapers = methodPapers.map(m => {
+        m._1 -> m._2.filterNot(_.path.equalsIgnoreCase(toRemove.get.path))
+      })
+    }
 
     toRemove
   }
