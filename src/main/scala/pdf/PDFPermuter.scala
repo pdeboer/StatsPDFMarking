@@ -1,7 +1,7 @@
 package pdf
 
 import java.awt.Color
-import java.io.FileInputStream
+import java.io.{File, FileInputStream}
 import java.util.regex.Pattern
 
 import com.typesafe.config.ConfigFactory
@@ -49,9 +49,7 @@ object PDFTextExtractor extends LazyLogging {
 
   def extractTextAsString(pdfPath: String) : String = {
     try {
-      val parser: PDFParser = new PDFParser(new FileInputStream(pdfPath))
-      parser.parse()
-      val pdDoc: PDDocument = new PDDocument(parser.getDocument)
+      val pdDoc: PDDocument = PDDocument.load(new File(pdfPath))
 
       val stripper = new PDFTextStripper()
       val txt = stripper.getText(pdDoc)
