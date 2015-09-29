@@ -112,7 +112,7 @@ object PaperSampler extends App with LazyLogging {
       })
     }*/
 
-    createCSVFile("usedPapers", usedPapers)
+    createCSVFile(s"usedPapers_$journal", usedPapers)
     logger.debug("Used Paper csv created")
 
   })
@@ -139,7 +139,7 @@ object PaperSampler extends App with LazyLogging {
   }
 
   def createCSVFile(filename: String, papers: PaperContainer): Unit = {
-    val wr = CSVWriter.open(new File("./"+filename + allJournalsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_") + ".csv"))
+    val wr = CSVWriter.open(new File("./"+filename + ".csv"))
     val sequMeth1 = termLoader.toSeq.map(_.head)
     wr.writeRow("Paper" +: sequMeth1)
     val allPdfs: List[String] = papers.get.flatMap(_._2.map(_.path)).toList.distinct
