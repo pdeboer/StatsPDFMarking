@@ -7,22 +7,19 @@ import scala.util.Random
 /**
  * Created by mattia on 21.09.15.
  */
-class PaperContainer(papers: Set[Paper] = Set.empty[Paper]) extends LazyLogging{
+class PaperContainer extends LazyLogging{
 
-  def add(p: Option[Paper]) : Map[String, Set[Paper]]= {
-    if(p.isDefined){
+  def add(p: Option[Paper]) = {
+    if(p.isDefined) {
       p.get.methods.foreach(m => {
-        if(p.get.methods.getOrElse(m._1, 0) > 0){
+        if (p.get.methods.getOrElse(m._1, 0) > 0) {
           methodPapers += m._1 -> (methodPapers.getOrElse(m._1, Set.empty[Paper]) ++ Set[Paper](p.get))
         }
       })
-      methodPapers
-    }else {
-      methodPapers
     }
   }
 
-  private var methodPapers : Map[String, Set[Paper]] = papers.par.flatMap(p => add(Some(p))).seq.toMap
+  private var methodPapers : Map[String, Set[Paper]] = Map.empty[String, Set[Paper]]
 
   def sameAs(distribution: Map[String, Int], journal: String) : Boolean = {
     distribution.forall(d => getOccurrenceOfMethodOverAllPapersInJournal(d._1, journal) == d._2)

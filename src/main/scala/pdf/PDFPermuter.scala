@@ -68,7 +68,7 @@ object PDFTextExtractor extends LazyLogging {
   }
 
   def countAllOccurrences(method: String, txt: String): Int = {
-    Utils.escapeSearchString(method).map(_.r.findAllMatchIn(txt.toLowerCase).length).sum
+    Utils.escapeSearchString(method).map(_.r.findAllMatchIn(txt).length).sum
   }
 }
 

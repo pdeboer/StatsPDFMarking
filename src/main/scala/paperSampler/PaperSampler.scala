@@ -2,7 +2,6 @@ package paperSampler
 
 import java.io.{File, FilenameFilter}
 
-import com.github.tototoshi.csv.CSVWriter
 import com.typesafe.scalalogging.LazyLogging
 import pdf.PDFTextExtractor
 
@@ -20,6 +19,65 @@ object PaperSampler extends App with LazyLogging {
   logger.debug(s"Journals DIR: $allJournalsDir")
   val journalsToPdfs = getJournalToPdfsMap
 
+  val journals = journalsToPdfs.keys.toList
+
+  val termLoader : List[List[String]] = Source.fromFile("methodlist_full.csv", "UTF-8").getLines().map(l => {
+    l.split(",").map(_.trim()).toList
+  }).toList
+
+  val (corpus, plainCorpus) = createCorpus()
+
+  SamplerWriter.createCSVFile("corpus"+ allJournalsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_"), corpus, false, termLoader, journals)
+  //SamplerWriter.createCSVFile("plainCorpus"+ allJournalsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_"), plainCorpus, false, termLoader, journals)
+  logger.debug("Corpus csv created")
+
+  var distribution : Map[String, Int] = calculateDistribution(corpus)
+
+  journals.foreach(journal => {
+
+    val journalCorpus = createJournalCorpus(corpus, journal)
+    SamplerWriter.createCSVFile(s"corpus_$journal", journalCorpus, true, termLoader, journals)
+
+    if(!distributionOverAllJournals){
+      distribution = calculateDistribution(journalCorpus)
+    }
+
+    logger.debug(s"Start algorithm for journal $journal...")
+    val usedPapers = SamplerAlgorithm.findBestPath(journalCorpus)
+
+    SamplerWriter.createCSVFile(s"usedPapers_$journal", usedPapers, true, termLoader, journals)
+    logger.debug("Used Paper csv created")
+  })
+
+  def createCorpus(): (PaperContainer, PaperContainer) = {
+    val container = new PaperContainer
+    val plainContainer = new PaperContainer
+
+    journalsToPdfs.par.foreach(journal => {
+      journal._2.par.foreach(pdf => {
+
+        val pdfTxt = PDFTextExtractor.extract(pdf.getAbsolutePath)
+        val pdfPlainTxt = PDFTextExtractor.extractTextAsString(pdf.getAbsolutePath)
+
+        val methods: Map[String, Int] = termLoader.map(terms => {
+          val method = terms.head
+          val occurrences: Int = terms.map(term => PDFTextExtractor.countAllOccurrences(term, pdfTxt.mkString(""))).sum
+          method -> occurrences
+        }).toMap
+
+        val plainMethods: Map[String, Int] = termLoader.map(terms => {
+          val method = terms.head
+          val occurrences: Int = terms.map(term => PDFTextExtractor.countAllOccurrences(term, pdfPlainTxt)).sum
+          method -> occurrences
+        }).toMap
+
+        container.add(Some(Paper(pdf.getPath, journal._1, methods)))
+        plainContainer.add(Some(Paper(pdf.getPath, journal._1, plainMethods)))
+      })
+    })
+    (container, plainContainer)
+  }
+
   def getJournalToPdfsMap: Map[String, List[File]] = {
     new File(allJournalsDir).listFiles(new FilenameFilter {
       override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
@@ -28,106 +86,24 @@ object PaperSampler extends App with LazyLogging {
     }).toList).toMap
   }
 
-  val journals = journalsToPdfs.keys.toList
-
-  // corpus contains the occurrences of every methods for each paper
-  var corpus = new PaperContainer()
-
-  val termLoader : List[List[String]] = Source.fromFile("methodlist_full.csv", "UTF-8").getLines().map(l => {
-    l.split(",").map(_.trim()).toList
-  }).toList
-
-  journalsToPdfs.par.foreach(journal => {
-    journal._2.par.foreach(pdf => {
-      val pdfTxt = PDFTextExtractor.extract(pdf.getAbsolutePath)
-      val methods : Map[String, Int] = termLoader.map(terms => {
+  def calculateDistribution(corp : PaperContainer): Map[String, Int] = {
+    if (distributionOverAllJournals) {
+      val dist = termLoader.map(terms => {
         val method = terms.head
-        val occurrences : Int = terms.flatMap(term => pdfTxt.map(pageTxt => PDFTextExtractor.countAllOccurrences(term, pageTxt))).sum
-        method -> occurrences
-      }).toMap
-
-      corpus.add(Some(Paper(pdf.getPath, journal._1, methods)))
-    })
-  })
-
-  createCorpusCSVFile("corpus", corpus)
-  logger.debug("Corpus csv created")
-
-  var distribution : Map[String, Int] = if(distributionOverAllJournals){
-    val dist = termLoader.map(terms => {
-      val method = terms.head
-      method -> Math.floor(corpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT / 100.0).toInt
-    }).toMap
-    logger.debug("Distribution defined")
-    dist
-  }else{
-    Map.empty[String, Int]
-  }
-
-  journals.foreach(journal => {
-
-    val journalCorpus = createJournalCorpus(corpus, journal)
-    createCSVFile(s"corpus_$journal", journalCorpus)
-
-    if(!distributionOverAllJournals){
-      distribution = termLoader.map(terms => {
-        val method = terms.head
-        method -> Math.floor(journalCorpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT / 100.0).toInt
+        method -> Math.floor(corp.getOccurrenceOfMethodOverAllPapers(method) * PERCENT / 100.0).toInt
       }).toMap
       logger.debug("Distribution defined")
+      dist
+    } else {
+      Map.empty[String, Int]
     }
-
-    //corpus.get.foreach(d => logger.debug(d._1 + " ->: container: " +corpus.countPapersContainingMethod(d._1) + ", total occurrences: " + corpus.getOccurrenceOfMethodOverAllPapers(d._1) ))
-
-    var usedPapers = new PaperContainer()
-
-    logger.debug(s"Start algorithm for journal $journal...")
-
-    usedPapers = findBestPath(journalCorpus)
-
-    /*var tmpDistance: Double = 10000.0
-
-    var tmpUsedPapers: PaperContainer = usedPapers.copy
-    var tmpCorpus: PaperContainer = corpus.copy
-
-    while(!usedPapers.sameAs(distribution, journal)){
-      val distance = calcDistance(usedPapers, journal)
-
-      if(tmpDistance > distance){
-        tmpDistance = distance
-        tmpUsedPapers = usedPapers.copy
-        tmpCorpus = corpus.copy
-
-        createCSVFile("tmpUsedPapers", tmpUsedPapers)
-        logger.debug(s"Distance: $tmpDistance")
-      }else {
-        usedPapers = tmpUsedPapers
-        corpus = tmpCorpus
-      }
-
-      termLoader.foreach(terms => {
-        val method = terms.head
-
-        if(usedPapers.getOccurrenceOfMethodOverAllPapersInJournal(method, journal) < distribution.get(method).get){
-          val occurrencesLeft = distribution.get(method).get - usedPapers.getOccurrenceOfMethodOverAllPapersInJournal(method, journal)
-          usedPapers.add(corpus.removeRandomPaper(method, occurrencesLeft))
-        }
-        else if(usedPapers.getOccurrenceOfMethodOverAllPapersInJournal(method, journal) > distribution.get(method).get){
-          val surplusOccurrences = usedPapers.getOccurrenceOfMethodOverAllPapersInJournal(method, journal) - distribution.get(method).get
-          corpus.add(usedPapers.removeRandomPaper(method, surplusOccurrences))
-        }
-
-      })
-    }*/
-
-    createCSVFile(s"usedPapers_$journal", usedPapers)
-    logger.debug("Used Paper csv created")
-
-  })
+  }
 
   def createJournalCorpus(corpus: PaperContainer, journal: String) : PaperContainer = {
     val filteredPapers = corpus.get.flatMap(_._2.filter(_.journal.equalsIgnoreCase(journal)))
-    new PaperContainer(filteredPapers.toSet)
+    val c = new PaperContainer()
+    filteredPapers.par.foreach(p => c.add(Some(p)))
+    c
   }
 
   def calcDistance(papers: PaperContainer) : Double = {
@@ -136,43 +112,4 @@ object PaperSampler extends App with LazyLogging {
     }).sum)
   }
 
-  def findBestPath(papers: PaperContainer) : PaperContainer = {
-    val allPdfs : List[Paper] = papers.get.flatMap(_._2).toList.distinct
-    val allPapersPermutations : List[List[Paper]] = allPdfs.toSet.subsets.map(_.toList).toList
-
-    val sol : Map[List[Paper], Double] = allPapersPermutations.par.map(perm => {
-      val container = new PaperContainer(perm.toSet)
-      val dist = calcDistance(container)
-      if(dist < 5){
-        logger.debug(s"Distance $dist with permutations $perm")
-      }
-      perm -> dist
-    }).seq.toMap
-
-    val min = sol.minBy(_._2)
-    val solution = new PaperContainer(min._1.toSet)
-    logger.debug(s"Found solution with distance ${min._2} and ${min._1.size} papers")
-    solution
-  }
-
-  def createCSVFile(filename: String, papers: PaperContainer): Unit = {
-    val wr = CSVWriter.open(new File("./"+filename + ".csv"))
-    val sequMeth1 = termLoader.toSeq.map(_.head)
-    wr.writeRow("Paper" +: sequMeth1)
-    val allPdfs: List[String] = papers.get.flatMap(_._2.map(_.path)).toList.distinct
-    allPdfs.foreach(paper => {
-      wr.writeRow(paper +: sequMeth1.map(method => papers.getOccurrenceOfMethodForPaper(paper, method)))
-    })
-    wr.close()
-  }
-
-  def createCorpusCSVFile(filename: String, container: PaperContainer): Unit = {
-    val wr = CSVWriter.open(new File("./"+filename + allJournalsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_") + ".csv"))
-    val sequMeth1 = termLoader.toSeq.map(_.head)
-    wr.writeRow("Method" +: journals)
-    sequMeth1.foreach(method => {
-      wr.writeRow(method +: journals.map(journal => container.getOccurrenceOfMethodOverAllPapersInJournal(method, journal)))
-    })
-    wr.close()
-  }
 }
