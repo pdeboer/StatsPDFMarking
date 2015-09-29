@@ -39,12 +39,12 @@ object Utils extends LazyLogging{
       "(?i)("+search+")"
     }*/
     if(searchString.length < 7) {
-      permuteMethod(searchString.toLowerCase).map(meth => {
-        meth.map(m => "\\Q" + m + "\\E[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString
+      permuteMethod(searchString).map(meth => {
+        "(?i)(\\b"+meth.map(m => "\\Q" + m + "\\E[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString+"\\b)"
       })
     }
     else {
-      List(searchString.toLowerCase.map(m => "\\Q" + m + "\\E[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString)
+      List("(?i)("+searchString.replace(" ", "").map(m => "\\Q" + m + "\\E[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString+")")
     }
   }
 

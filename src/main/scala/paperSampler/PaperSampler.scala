@@ -18,10 +18,15 @@ object PaperSampler extends App with LazyLogging {
   val distributionOverAllJournals = args(2).toBoolean
 
   logger.debug(s"Journals DIR: $allJournalsDir")
-  val journalsToPdfs = new File(allJournalsDir).listFiles(new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
-  }).map(journalDir => journalDir.getName -> journalDir.listFiles(new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")}).toList).toMap
+  val journalsToPdfs = getJournalToPdfsMap
+
+  def getJournalToPdfsMap: Map[String, List[File]] = {
+    new File(allJournalsDir).listFiles(new FilenameFilter {
+      override def accept(dir: File, name: String): Boolean = new File(dir, name).isDirectory
+    }).map(journalDir => journalDir.getName -> journalDir.listFiles(new FilenameFilter {
+      override def accept(dir: File, name: String): Boolean = name.endsWith(".pdf")
+    }).toList).toMap
+  }
 
   val journals = journalsToPdfs.keys.toList
 
@@ -61,10 +66,13 @@ object PaperSampler extends App with LazyLogging {
 
   journals.foreach(journal => {
 
+    val journalCorpus = createJournalCorpus(corpus, journal)
+    createCSVFile(s"corpus_$journal", journalCorpus)
+
     if(!distributionOverAllJournals){
       distribution = termLoader.map(terms => {
         val method = terms.head
-        method -> Math.floor(corpus.getOccurrenceOfMethodOverAllPapersInJournal(method, journal)*PERCENT / 100.0).toInt
+        method -> Math.floor(journalCorpus.getOccurrenceOfMethodOverAllPapers(method)*PERCENT / 100.0).toInt
       }).toMap
       logger.debug("Distribution defined")
     }
@@ -75,7 +83,7 @@ object PaperSampler extends App with LazyLogging {
 
     logger.debug(s"Start algorithm for journal $journal...")
 
-    usedPapers = findBestPath(corpus, journal)
+    usedPapers = findBestPath(journalCorpus)
 
     /*var tmpDistance: Double = 10000.0
 
@@ -117,19 +125,28 @@ object PaperSampler extends App with LazyLogging {
 
   })
 
-  def calcDistance(papers: PaperContainer, journal: String) : Double = {
+  def createJournalCorpus(corpus: PaperContainer, journal: String) : PaperContainer = {
+    val filteredPapers = corpus.get.flatMap(_._2.filter(_.journal.equalsIgnoreCase(journal)))
+    new PaperContainer(filteredPapers.toSet)
+  }
+
+  def calcDistance(papers: PaperContainer) : Double = {
     Math.sqrt(distribution.map(d => {
-      Math.pow(papers.getOccurrenceOfMethodOverAllPapersInJournal(d._1, journal) - d._2, 2.0)
+      Math.pow(papers.getOccurrenceOfMethodOverAllPapers(d._1) - d._2, 2.0)
     }).sum)
   }
 
-  def findBestPath(papers: PaperContainer, journal: String) : PaperContainer = {
+  def findBestPath(papers: PaperContainer) : PaperContainer = {
     val allPdfs : List[Paper] = papers.get.flatMap(_._2).toList.distinct
     val allPapersPermutations : List[List[Paper]] = allPdfs.toSet.subsets.map(_.toList).toList
 
     val sol : Map[List[Paper], Double] = allPapersPermutations.par.map(perm => {
       val container = new PaperContainer(perm.toSet)
-      perm -> calcDistance(container, journal)
+      val dist = calcDistance(container)
+      if(dist < 5){
+        logger.debug(s"Distance $dist with permutations $perm")
+      }
+      perm -> dist
     }).seq.toMap
 
     val min = sol.minBy(_._2)
