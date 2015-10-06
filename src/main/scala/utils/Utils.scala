@@ -45,7 +45,8 @@ object Utils extends LazyLogging {
 
 		if (searchString.length < 7)
 			searchStringInclSuffixes.map(search => {
-				"(?i)(\\b" + quoteAndAllowSpaces(search) + "\\b)"
+				//"(?i)(\\b" + quoteAndAllowSpaces(search) + "\\b)"
+				"(\\b" + quoteAndAllowSpaces(search) + "\\b)"
 			})
 		else
 			List("(?i)(" + quoteAndAllowSpaces(searchString) + ")")
