@@ -63,8 +63,8 @@ object PaperSampler extends App with LazyLogging {
 
         val methods: Map[String, Int] = termLoader.map(terms => {
           val method = terms.head
-          val occurrences: Int = terms.map(term => PDFTextExtractor.countAllOccurrences(term, pdfTxt.mkString(""))).sum
-          method -> occurrences
+          val occurrenceMap = terms.map(term => term -> PDFTextExtractor.countAllOccurrences(term, pdfTxt.mkString(""))).toMap
+          method.toLowerCase -> occurrenceMap.values.sum
         }).toMap
 
         val plainMethods: Map[String, Int] = termLoader.map(terms => {
