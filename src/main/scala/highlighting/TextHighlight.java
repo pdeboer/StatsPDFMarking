@@ -125,48 +125,11 @@ public class TextHighlight extends PDFTextStripper {
 		return boundingBox;
 	}
 
-    /**
-     * Highlights a pattern within the PDF with the default color.
-     * Returns the list of added annotations for further modification
-     * Note: it will process every page, but cannot process patterns that span multiple pages
-     * Note: it will not work for top-bottom text (such as Chinese)
-     *
-     * @param pattern String that will be converted to Regex pattern
-     * @throws IOException
-     */
-    public void highlightDefault(final String pattern, Color color, int pageNr) throws IOException {
-        Pattern compiledPattern = Pattern.compile("\\Q" + pattern + "\\E", Pattern.CASE_INSENSITIVE);
-        this.highlightDefault(compiledPattern, color, pageNr);
-    }
-
-    /**
-     * Highlights a pattern within the PDF with the default color.
-     * Returns the list of added annotations for further modification.
-     * Note: it will process every page, but cannot process patterns that span multiple pages.
-     * Note: it will not work for top-bottom text (such as Chinese)
-     *
-     * @param pattern Pattern (regex)
-     * @throws IOException
-     */
-    public void highlightDefault(final Pattern pattern, Color color, int pageNr) throws IOException {
-        this.highlight(pattern, pattern, color, pageNr);
-    }
-
-    public void highlight(final String pattern, int pageNr)
-            throws IOException {
-        Pattern p = Pattern.compile("\\b(" + pattern + ")\\b", Pattern.CASE_INSENSITIVE);
-        this.highlight(p, pageNr);
-    }
-
-
-    public void highlight(final Pattern pattern, int pageNr) throws IOException {
-        highlight(pattern, pattern, Color.yellow, pageNr);
-    }
 
     public void highlight(final Pattern searchText, final Pattern markingPattern, Color color, int pageNr) {
         if (textCache == null || document == null) {
-            throw new IllegalArgumentException("TextCache was not initilized");
-        }
+			throw new IllegalArgumentException("TextCache was not initialized");
+		}
 
         final List<PDPage> pages = document.getDocumentCatalog().getAllPages();
 
@@ -186,7 +149,6 @@ public class TextHighlight extends PDFTextStripper {
 			}
 			graphicsStateDictionary.put("highlights", graphicsState);
 			resources.setGraphicsStates(graphicsStateDictionary);
-            int spaceOccurrences = searchText.toString().split(" ").length > 0 ? searchText.toString().split(" ").length-1 : 0;
 
             for (Match searchMatch : textCache.match(pageNr, searchText)) {
                 if(textCache.match(searchMatch.positions, markingPattern).size()>0) {
@@ -196,8 +158,8 @@ public class TextHighlight extends PDFTextStripper {
                         }
                     }
                 }else if(markingPattern.toString().contains("\\b")){
-                    for (Match markingMatch : textCache.match(searchMatch.positions, Pattern.compile("(?i)("+markingPattern.toString().substring(7, markingPattern.toString().length()-3)+")"))) {
-                        if (markupMatch(color, contentStream, markingMatch)) {
+					for (Match markingMatch : textCache.match(searchMatch.positions, PatternHelper.formatPatternWithWordBoundary(markingPattern))) {
+						if (markupMatch(color, contentStream, markingMatch)) {
                             found = true;
                         }
                     }
@@ -217,8 +179,9 @@ public class TextHighlight extends PDFTextStripper {
         }
     }
 
-    private boolean markupMatch(Color color, PDPageContentStream contentStream, Match markingMatch) throws IOException {
-        final List<PDRectangle> textBoundingBoxes = getTextBoundingBoxes(markingMatch.positions);
+
+	private boolean markupMatch(Color color, PDPageContentStream contentStream, Match markingMatch) throws IOException {
+		final List<PDRectangle> textBoundingBoxes = getTextBoundingBoxes(markingMatch.positions);
 
         if (textBoundingBoxes.size() > 0) {
             contentStream.appendRawCommands("/highlights gs\n");
