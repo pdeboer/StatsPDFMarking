@@ -22,6 +22,7 @@ project/target
 
 ### SBT template
 # Simple Build Tool
+/testpdfs
 # http://www.scala-sbt.org/release/docs/Getting-Started/Directories.html#configuring-version-control
 
 
