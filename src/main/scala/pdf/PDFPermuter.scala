@@ -68,7 +68,8 @@ object PDFTextExtractor extends LazyLogging {
 	}
 
 	def countAllOccurrences(method: String, txt: String): Int = {
-		Utils.escapeSearchString(method).map(_.r.findAllMatchIn(txt).length).sum
+		val txtLower = txt.toLowerCase
+		Utils.escapeSearchString(method.toLowerCase).map(_.r.findAllMatchIn(txt).length).sum
 	}
 }
 
@@ -140,14 +141,14 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 					val substringIndices: List[(Int, Int)] = extractSubstringIndicesWithoutInvalidCases(highlightPattern, allIndicesOfThesePatterns, indexesToDiscard, pageTxt._1)
 					val substrings = substringIndices.map(i => pageTxt._1.substring(i._1, i._2))
 
-					val pdfHighlightInstructions = substrings.map(createPDFHighlightInstructionForSubstring(color, highlightPattern, pageTxt, _))
+					val pdfHighlightInstructions = substrings.map((searchString: String) => createPDFHighlightInstructionForSubstring(color, highlightPattern, searchString, pageTxt))
 					pdfHighlightInstructions.filter(_.isDefined).map(_.get)
 				})
 			})
 		}
 	}
 
-	def createPDFHighlightInstructionForSubstring(color: Color, highlightPattern: String, pageTxt: (String, Int), searchString: String): Option[PDFHighlightInstruction] = {
+	def createPDFHighlightInstructionForSubstring(color: Color, highlightPattern: String, searchString: String, pageTxt: (String, Int)): Option[PDFHighlightInstruction] = {
 		try {
 			val searchStringMatch = Pattern.quote(searchString.toLowerCase).r.findFirstMatchIn(pageTxt._1.toLowerCase).get
 			val startHighlightStringIndex = Pattern.quote(highlightPattern.toLowerCase).r.findFirstMatchIn(searchStringMatch.matched.toLowerCase).map(_.start).get
