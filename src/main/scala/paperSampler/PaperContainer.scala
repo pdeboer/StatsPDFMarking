@@ -62,9 +62,9 @@ class PaperContainer extends LazyLogging {
 	}
 
 	def countMethodOccurrencesInPaper(targetPaperPath: String, method: String): Int = {
-		val possiblePapers = methodPapers.get(method)
-		if (possiblePapers.isDefined) {
-			val found = possiblePapers.get.find(_.path.equalsIgnoreCase(targetPaperPath))
+		val papersWithMethod = methodPapers.get(method)
+		if (papersWithMethod.isDefined) {
+			val found = papersWithMethod.get.find(_.path.equalsIgnoreCase(targetPaperPath))
 			if (found.isDefined) {
 				found.get.methods.get(method).get
 			} else {
@@ -82,7 +82,7 @@ class PaperContainer extends LazyLogging {
 	def countMethodOccurrences(method: String, journal: String = null): Int = {
 		val papers = methodPapers.getOrElse(method, List.empty[Paper])
 		val papersFromTargetJournal = if (journal == null) papers else papers.filter(_.journal.equalsIgnoreCase(journal))
-		papersFromTargetJournal.map(_.methods.getOrElse(method, 0)).sum
+		papersFromTargetJournal.toList.map(_.methods.getOrElse(method, 0)).sum
 	}
 
 }
