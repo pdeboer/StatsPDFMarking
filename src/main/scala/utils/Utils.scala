@@ -41,7 +41,7 @@ object Utils extends LazyLogging {
 		val searchStringInclSuffixes = if (searchString.length < 7) addLikelySuffixesAndPostfixesToMethods(searchString) else List(searchString)
 
 		val charsToEscape = "-()[].!{}:*"
-		def quoteAndAllowSpaces(str: String) = str.map(c => (if (charsToEscape.contains(c)) s"\\$c" else c) + "(\\s)*").mkString("")
+		def quoteAndAllowSpaces(str: String) = str.map(c => (if (charsToEscape.contains(c)) s"\\$c" else c) + "[\\s\\-]*").mkString("")
 
 		if (searchString.length < 7)
 			searchStringInclSuffixes.map(search => {
