@@ -37,12 +37,12 @@ object SamplerAlgorithm extends LazyLogging{
       termLoader.foreach(terms => {
         val method = terms.head
 
-        if(usedPapers.getOccurrenceOfMethodOverAllPapersInJournal(method, journal) < distribution.get(method).get){
-          val occurrencesLeft = distribution.get(method).get - usedPapers.getOccurrenceOfMethodOverAllPapersInJournal(method, journal)
+        if (usedPapers.countMethodOccurrences(method, journal) < distribution.get(method).get) {
+          val occurrencesLeft = distribution.get(method).get - usedPapers.countMethodOccurrences(method, journal)
           usedPapers.add(corpus.removeRandomPaper(method, occurrencesLeft))
         }
-        else if(usedPapers.getOccurrenceOfMethodOverAllPapersInJournal(method, journal) > distribution.get(method).get){
-          val surplusOccurrences = usedPapers.getOccurrenceOfMethodOverAllPapersInJournal(method, journal) - distribution.get(method).get
+        else if (usedPapers.countMethodOccurrences(method, journal) > distribution.get(method).get) {
+          val surplusOccurrences = usedPapers.countMethodOccurrences(method, journal) - distribution.get(method).get
           corpus.add(usedPapers.removeRandomPaper(method, surplusOccurrences))
         }
       })

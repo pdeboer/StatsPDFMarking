@@ -27,14 +27,14 @@ object PaperSampler extends App with LazyLogging {
 
   val (corpus, plainCorpus) = createCorpus()
 
-  SamplerWriter.createCSVFile("corpus"+ allJournalsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_"), corpus, false, termLoader, journals)
+  private val globalCorpusName: String = allJournalsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_")
+  SamplerWriter.createCSVFile("corpus" + globalCorpusName, corpus, false, termLoader, journals)
   //SamplerWriter.createCSVFile("plainCorpus"+ allJournalsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_"), plainCorpus, false, termLoader, journals)
   logger.debug("Corpus csv created")
 
   var distribution : Map[String, Int] = calculateDistribution(corpus)
 
   journals.foreach(journal => {
-
     val journalCorpus = createJournalCorpus(corpus, journal)
     SamplerWriter.createCSVFile(s"corpus_$journal", journalCorpus, true, termLoader, journals)
 
@@ -92,7 +92,7 @@ object PaperSampler extends App with LazyLogging {
     if (distributionOverAllJournals) {
       val dist = termLoader.map(terms => {
         val method = terms.head
-        method -> Math.floor(corp.getOccurrenceOfMethodOverAllPapers(method) * PERCENT / 100.0).toInt
+        method -> Math.floor(corp.countMethodOccurrences(method) * PERCENT / 100.0).toInt
       }).toMap
       logger.debug("Distribution defined")
       dist
@@ -102,15 +102,15 @@ object PaperSampler extends App with LazyLogging {
   }
 
   def createJournalCorpus(corpus: PaperContainer, journal: String) : PaperContainer = {
-    val filteredPapers = corpus.get.flatMap(_._2.filter(_.journal.equalsIgnoreCase(journal)))
+    val papersOfThisJournal = corpus.get.flatMap(_._2.filter(_.journal.equalsIgnoreCase(journal)))
     val c = new PaperContainer()
-    filteredPapers.par.foreach(p => c.add(Some(p)))
+    papersOfThisJournal.foreach(p => c.add(Some(p)))
     c
   }
 
   def calcDistance(papers: PaperContainer) : Double = {
     Math.sqrt(distribution.map(d => {
-      Math.pow(papers.getOccurrenceOfMethodOverAllPapers(d._1) - d._2, 2.0)
+      Math.pow(papers.countMethodOccurrences(d._1) - d._2, 2.0)
     }).sum)
   }
 
