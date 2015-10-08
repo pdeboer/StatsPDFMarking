@@ -38,7 +38,7 @@ object PaperSampler extends App with LazyLogging {
 		val journalCorpus = createJournalCorpus(corpus, journal)
 		SamplerWriter.createCSVFile(s"corpus_$journal", journalCorpus, true, termLoader, journals)
 
-		/*
+
 		if(!distributionOverAllJournals){
 		  distribution = calculateDistribution(journalCorpus)
 		}
@@ -48,7 +48,6 @@ object PaperSampler extends App with LazyLogging {
 
 		SamplerWriter.createCSVFile(s"usedPapers_$journal", usedPapers, true, termLoader, journals)
 		logger.debug("Used Paper csv created")
-		*/
 	})
 
 	def createCorpus(): (PaperContainer, PaperContainer) = {
