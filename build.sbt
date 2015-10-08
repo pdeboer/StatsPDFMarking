@@ -14,11 +14,11 @@ libraryDependencies ++= Seq(
 	"pdeboer" %% "pplib" % "0.1-SNAPSHOT"
 )
 
-assemblyJarName in assembly := "occurrences.jar"
+assemblyJarName in assembly := "papersampler.jar"
 
 test in assembly := {}
 
-mainClass in assembly := Some("queries.MethodOccurrences")
+mainClass in assembly := Some("paperSampler.PaperSampler")
 
 assemblyMergeStrategy in assembly := {
 	case "log4j.properties" => MergeStrategy.concat
