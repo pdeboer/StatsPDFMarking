@@ -44,7 +44,7 @@ object PaperSampler extends App with LazyLogging {
 		}
 
 		logger.debug(s"Start algorithm for journal $journal...")
-		val usedPapers = SamplerAlgorithm.findBestPath(journalCorpus)
+		val usedPapers = SamplerAlgorithm.findByRandomness(journalCorpus, journal) //SamplerAlgorithm.findBestPath(journalCorpus)
 
 		SamplerWriter.createCSVFile(s"usedPapers_$journal", usedPapers, true, termLoader, journals)
 		logger.debug("Used Paper csv created")

@@ -10,11 +10,11 @@ object SamplerAlgorithm extends LazyLogging{
 
   var journalCorpus : PaperContainer = null
 
-  def findNeededElement(jCorpus: PaperContainer, journal: String) : PaperContainer = {
+  def findByRandomness(jCorpus: PaperContainer, journal: String): PaperContainer = {
     journalCorpus = jCorpus.copy
 
     var usedPapers = new PaperContainer()
-    var tmpDistance: Double = 10000.0
+    var tmpDistance: Double = Double.MaxValue
 
     var tmpUsedPapers: PaperContainer = usedPapers.copy
     var tmpCorpus: PaperContainer = journalCorpus.copy
