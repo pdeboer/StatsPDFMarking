@@ -7,7 +7,7 @@ import scala.util.Random
 /**
  * Created by mattia on 21.09.15.
  */
-class PaperContainer extends LazyLogging {
+class PaperContainer extends LazyLogging with Serializable {
 	def add(p: Option[Paper]) = {
 		if (p.isDefined) {
 			p.get.methods.foreach(m => {
@@ -87,4 +87,4 @@ class PaperContainer extends LazyLogging {
 
 }
 
-case class Paper(path: String, journal: String, methods: Map[String, Int])
+case class Paper(path: String, journal: String, methods: Map[String, Int]) extends Serializable

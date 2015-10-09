@@ -2,6 +2,7 @@ package paperSampler
 
 import java.io.{File, FilenameFilter}
 
+import ch.uzh.ifi.pdeboer.pplib.process.entities.FileProcessMemoizer
 import com.typesafe.scalalogging.LazyLogging
 import pdf.PDFTextExtractor
 
@@ -16,21 +17,24 @@ object PaperSampler extends App with LazyLogging {
 	val PERCENT = args(1).toDouble
 	val distributionOverAllJournals = args(2).toBoolean
 
+	val mem = new FileProcessMemoizer("papersampler")
+
 	logger.debug(s"Journals DIR: $allJournalsDir")
-	val journalsToPdfs = getJournalToPdfsMap
+	val journalsToPdfs: Map[String, List[File]] = mem.mem("journalsToPDFs")(getJournalToPdfsMap)
 
-	val journals = journalsToPdfs.keys.toList
+	val journals = mem.mem("journals")(journalsToPdfs.keys.toList)
 
-	val termLoader: List[List[String]] = Source.fromFile("methodlist_full.csv", "UTF-8").getLines().map(l => {
+	val termLoader: List[List[String]] = mem.mem("termloader")(Source.fromFile("methodlist_full.csv", "UTF-8").getLines().map(l => {
 		l.split(",").map(_.trim()).toList
-	}).toList
+	}).toList)
 
-	val (corpus, plainCorpus) = createCorpus()
+	val corpus = mem.mem("corpus")(createCorpus())
 
-	private val globalCorpusName: String = allJournalsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_")
+	private val globalCorpusName: String = mem.mem("globalcorpusname")(allJournalsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_"))
 	SamplerWriter.createCSVFile("corpus" + globalCorpusName, corpus, false, termLoader, journals)
 	//SamplerWriter.createCSVFile("plainCorpus"+ allJournalsDir.replaceAll("\\Q..\\E", "").replaceAll("/", "_"), plainCorpus, false, termLoader, journals)
 	logger.debug("Corpus csv created")
+
 
 	var distribution: Map[String, Int] = calculateDistribution(corpus)
 
@@ -39,8 +43,8 @@ object PaperSampler extends App with LazyLogging {
 		SamplerWriter.createCSVFile(s"corpus_$journal", journalCorpus, true, termLoader, journals)
 
 
-		if(!distributionOverAllJournals){
-		  distribution = calculateDistribution(journalCorpus)
+		if (!distributionOverAllJournals) {
+			distribution = calculateDistribution(journalCorpus)
 		}
 
 		logger.debug(s"Start algorithm for journal $journal...")
@@ -50,9 +54,8 @@ object PaperSampler extends App with LazyLogging {
 		logger.debug("Used Paper csv created")
 	})
 
-	def createCorpus(): (PaperContainer, PaperContainer) = {
+	def createCorpus() = {
 		val container = new PaperContainer
-		val plainContainer = new PaperContainer
 
 		journalsToPdfs.par.foreach(journal => {
 			journal._2.par.foreach(pdf => {
@@ -71,18 +74,10 @@ object PaperSampler extends App with LazyLogging {
 					method -> occurrenceMap.values.sum
 				}).toMap
 
-				/*
-				val plainMethods: Map[String, Int] = termLoader.map(terms => {
-				  val method = terms.head
-				  val occurrences: Int = terms.map(term => PDFTextExtractor.countAllOccurrences(term, pdfPlainTxt)).sum
-				  method -> occurrences
-				}).toMap
-		*/
 				container.add(Some(Paper(pdf.getPath, journal._1, methods)))
-				//      plainContainer.add(Some(Paper(pdf.getPath, journal._1, plainMethods)))
 			})
 		})
-		(container, plainContainer)
+		container
 	}
 
 	def getJournalToPdfsMap: Map[String, List[File]] = {
