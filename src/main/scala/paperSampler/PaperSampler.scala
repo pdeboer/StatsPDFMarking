@@ -20,13 +20,13 @@ object PaperSampler extends App with LazyLogging {
 	val mem = new FileProcessMemoizer("papersampler")
 
 	logger.debug(s"Journals DIR: $allJournalsDir")
-	val journalsToPdfs: Map[String, List[File]] = mem.mem("journalsToPDFs")(getJournalToPdfsMap)
+	val journalsToPdfs: Map[String, List[File]] = getJournalToPdfsMap
 
 	val journals = mem.mem("journals")(journalsToPdfs.keys.toList)
 
-	val termLoader: List[List[String]] = mem.mem("termloader")(Source.fromFile("methodlist_full.csv", "UTF-8").getLines().map(l => {
+	val termLoader: List[List[String]] = Source.fromFile("methodlist_full.csv", "UTF-8").getLines().map(l => {
 		l.split(",").map(_.trim()).toList
-	}).toList)
+	}).toList
 
 	val corpus = mem.mem("corpus")(createCorpus())
 
