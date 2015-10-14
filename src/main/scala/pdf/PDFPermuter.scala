@@ -48,6 +48,7 @@ object PDFTextExtractor extends LazyLogging {
 	}
 
 	def extractTextAsString(pdfPath: String): String = {
+		throw new IllegalArgumentException("do not use me. Use TextHighlight")
 		try {
 			val pdDoc: PDDocument = PDDocument.load(new File(pdfPath))
 

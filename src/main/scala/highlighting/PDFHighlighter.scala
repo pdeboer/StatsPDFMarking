@@ -1,19 +1,18 @@
 package highlighting
 
 import java.io.{ByteArrayOutputStream, FileInputStream}
-import java.util.regex.Pattern
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.pdfbox.pdfparser.PDFParser
 import org.apache.pdfbox.pdmodel.PDDocument
 import pdf.PDFHighlightInstruction
+import utils.Utils
 
 /**
  * Created by pdeboer on 16/06/15.
  */
 
 class PDFHighlighter(val pdfPath: String, val instructions: List[PDFHighlightInstruction]) extends LazyLogging {
-
 	/**
 	 * taken from Mattia's code and adapted
 	 */
@@ -28,11 +27,12 @@ class PDFHighlighter(val pdfPath: String, val instructions: List[PDFHighlightIns
 			pdfHighlight.setLineSeparator(" ")
 			pdfHighlight.initialize(pdDoc)
 
-			val pages: List[Int] = instructions.map(i => {
-				val patterns = List(i.searchString, i.highlightString).map(pattern => {
-					Pattern.compile(Pattern.quote(pattern))
+			val processedPages: List[Int] = instructions.map(i => {
+				Utils.escapeSearchString(i.searchString).foreach(searchString => {
+					Utils.escapeSearchString(i.highlightString).foreach(highlightString => {
+						pdfHighlight.highlight(searchString.r.pattern, highlightString.r.pattern, i.color, i.pageNr)
+					})
 				})
-				pdfHighlight.highlight(patterns.head, patterns(1), i.color, i.pageNr)
 				i.pageNr - 1
 			})
 
@@ -46,7 +46,7 @@ class PDFHighlighter(val pdfPath: String, val instructions: List[PDFHighlightIns
 				parser.getDocument.close()
 			}
 
-			(HighlightPage(pages.min, pages.max), byteArrayOutputStream.toByteArray)
+			(HighlightPage(processedPages.min, processedPages.max), byteArrayOutputStream.toByteArray)
 		} catch {
 			case e: Exception => {
 				logger.error(s"Cannot store highlighted version of pdf: $pdfPath.", e)
