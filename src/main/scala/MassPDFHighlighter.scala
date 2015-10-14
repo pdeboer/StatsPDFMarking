@@ -11,6 +11,7 @@ import utils.Utils
  * Created by pdeboer on 16/06/15.
  */
 object MassPDFHighlighter extends App with LazyLogging {
+  logger.debug("starting highlighting")
 
   val conf = ConfigFactory.load()
 

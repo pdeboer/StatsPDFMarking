@@ -43,7 +43,7 @@ class PNGManager(isMultipleColumnPaper: Boolean, pathConvert: String) extends La
       Seq("bash", "-c", s"nice -n 5 $pathConvert -density 200 -append ${pdfFile.getPath + range} ${pathConvertedPNGFile}")
 
     if(convertCommandWithParams.! != 0){
-      Utils.copyAndMoveFile("../errors_convertPDFtoPNG/", pdfFile, new Exception(s"Cannot convert PDF pages $range to PNG"))
+      Utils.copyIntoErrorFolder("../errors_convertPDFtoPNG/", pdfFile, new Exception(s"Cannot convert PDF pages $range to PNG"))
       null
     }else {
       logger.debug(s"File: ${pdfFile.getName} successfully converted to PNG")

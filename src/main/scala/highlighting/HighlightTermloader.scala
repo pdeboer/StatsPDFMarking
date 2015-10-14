@@ -21,18 +21,18 @@ class HighlightTermloader {
   lazy val terms = {
 
     val assumptionsInCSV = Source.fromFile("assumptions.csv", "UTF-8").getLines().map(l => {
-			val cols = l.split(",")
+		val cols = l.split(",").map(_.trim)
 			StatisticalAssumption(cols(0), cols.drop(1).toList)
 		}).toList
 
 		val methodNamesAndSynonyms = Source.fromFile("methods.csv", "UTF-8").getLines().map(l => {
-			val cols = l.split(",")
+			val cols = l.split(",").map(_.trim)
 			(cols(0), cols.drop(1).toList)
 		}).toList
 
     var methodMap = new mutable.HashMap[String, List[StatisticalAssumption]]()
 		Source.fromFile("met2ass.csv", "UTF-8").getLines().foreach(l => {
-			val cols = l.split(",")
+			val cols = l.split(",").map(_.trim)
 
 			val assumption = assumptionsInCSV.find(_.assumptionName == cols(1)).getOrElse( throw new Exception(cols(1)) )
 			methodMap += cols(0) -> (assumption :: methodMap.getOrElse(cols(0), Nil))

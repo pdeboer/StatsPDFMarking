@@ -17,7 +17,7 @@ object PaperSampler extends App with LazyLogging {
 	val PERCENT = args(1).toDouble
 	val distributionOverAllJournals = args(2).toBoolean
 
-	val mem = new FileProcessMemoizer("papersampler")
+	val mem = new FileProcessMemoizer("papersampler", overwriteExistingData = true)
 
 	logger.debug(s"Journals DIR: $allJournalsDir")
 	val journalsToPdfs: Map[String, List[File]] = getJournalToPdfsMap

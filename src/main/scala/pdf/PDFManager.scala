@@ -44,7 +44,7 @@ class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsDir: S
 
       } catch {
         case e: Exception => {
-          Utils.copyAndMoveFile("../errors_whilePermuting", pdfFile, e)
+          Utils.copyIntoErrorFolder("errors_whilePermuting", pdfFile, e)
           None
         }
       }

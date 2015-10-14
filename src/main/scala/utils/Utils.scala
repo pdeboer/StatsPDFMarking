@@ -63,7 +63,7 @@ object Utils extends LazyLogging {
 		})*/
 	}
 
-	def copyAndMoveFile(dest: String, f: File, e: Exception): Any = {
+	def copyIntoErrorFolder(dest: String, f: File, e: Exception): Any = {
 		logger.error(s"Error while highlighting permutations for file $f", e)
 		new File(dest).mkdir()
 		val pdf = new File(dest + f.getName)
