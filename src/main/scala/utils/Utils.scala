@@ -31,7 +31,7 @@ object Utils extends LazyLogging {
 		writer.close()
 	}
 
-	def escapeSearchString(searchString: String): List[String] = {
+	def buildRegexForString(searchString: String): List[String] = {
 		/*val search = searchString.map(m => "\\Q" + m + "\\E" + "[\\-\\–\\—\\―\\n\\r]{0,5}\\s*").mkString("")
 		if(searchString.length <= ALLOWED_SINGLE_WORD_CHARS || searchString.contains(" ")){
 		  "(?i)(\\b"+search+"\\b)"

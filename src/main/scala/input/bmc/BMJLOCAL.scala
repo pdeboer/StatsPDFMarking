@@ -19,7 +19,7 @@ object BMJLOCAL {
 
   def getPapersContainingTerm(term: String): List[BMJPaperBody] = {
     texts.map(txt => {
-      if(Utils.escapeSearchString(term).exists(_.r.findFirstIn(txt._2).nonEmpty)){
+      if (Utils.buildRegexForString(term).exists(_.r.findFirstIn(txt._2).nonEmpty)) {
         Some(new BMJPaperBody(txt._1, new WeakReference(txt._2), "", -1))
       }else{
         None

@@ -4,7 +4,9 @@ import java.io._
 import com.github.tototoshi.csv.CSVWriter
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
+import highlighting.{MergeMethods, PDFHighlighter, StatMethod}
 import input.folder.FolderPDFSource
+import org.codehaus.plexus.util.FileUtils
 import org.joda.time.DateTime
 import pdf._
 import utils.Utils
@@ -47,24 +49,46 @@ object PDFMergingPreview extends App with LazyLogging {
 
 				val methodList = permuter.findAllMethodsInPaper(availableMethods).sortBy(m => mgr.calculateIndexPositionOfMethod(permuter, m))
 
-				logger.debug(s"processed $pdfFile")
-				mgr.createStatMethodList(PaperHighlightManager(delta, permuter, methodList, maxLengthPDF))
+
+				val methodsToMerge = mgr.createStatMethodList(PaperHighlightManager(delta, permuter, methodList, maxLengthPDF))
+
+				MethodInPaper(pdfFile.getName, method, methodAndSynonyms, permuter, methodsToMerge)
 			} catch {
 				case e: Exception => {
 					Utils.copyIntoErrorFolder("errors_whilePermuting", pdfFile, e)
-					Nil
+					null
 				}
 			}
-		}).toList
+		}).filter(_ != null)
 
 		methodsToMerge.zipWithIndex.foreach(mi => {
-			mi._1.zipWithIndex.foreach(sm => {
+			mi._1.methodsToMerge.zipWithIndex.foreach(sm => {
 				sm._1.instructions.foreach(i => {
 					writer.writeRow(List(pdfFile.getName, i.highlightString, i.startSearchStringIndex, mi._2 * 1000 + sm._2))
 				})
 			})
 		})
 
+
+
+		val highlightingInstructions = methodsToMerge.map(methodInPaper => {
+			if (methodInPaper.methodsToMerge.nonEmpty) {
+				val (mergedMethods: List[StatMethod], assumptionsList: List[PDFHighlightInstruction]) = MergeMethods.mergeMethods(methodInPaper)
+				Some(mergedMethods.zipWithIndex.map(groupedMethods => HighlightInstruction(groupedMethods._2, groupedMethods._1.instructions, assumptionsList)))
+			} else None
+		}).filter(_.isDefined).flatMap(_.get).toList
+
+		if (highlightingInstructions.nonEmpty) {
+			val filename: String = "output/" + pdfFile.getName
+			FileUtils.copyFile(pdfFile, new File(filename))
+			val byteArray = new PDFHighlighter(filename, highlightingInstructions.flatMap(_.methodsList)).highlight()
+
+			Some(new BufferedOutputStream(new FileOutputStream(filename))).foreach(s => {
+				s.write(byteArray._2)
+				s.close()
+			})
+		}
+		logger.debug(s"processed $pdfFile")
 	})
 	writer.close()
 

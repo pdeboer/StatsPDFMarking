@@ -59,10 +59,8 @@ class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsDir: S
 	}
 
 	def calculateIndexPositionOfMethod(permuter: PDFPermuter, m: PDFHighlightInstruction): Int = {
-		permuter.txt.zipWithIndex.filter(_._2 < m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex
+		permuter.originalTxt.zipWithIndex.filter(_._2 < m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex
 	}
-
-	case class HighlightInstruction(groupId: Int, methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction])
 
 	def mergeMethodsAndHighlightPDF(methodInPaper: MethodInPaper): Option[List[Permutation]] = {
 		if (methodInPaper.methodsToMerge.nonEmpty) {
@@ -77,7 +75,7 @@ class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsDir: S
 
 	def highlightPDFAndCreatePNG(toHighlight: HighlightInstruction, methodInPaper: MethodInPaper): List[Permutation] = {
 
-		methodInPaper.permuter.getUniquePairsForSearchTerms(toHighlight.methodsList, toHighlight.assumptionsList).zipWithIndex.par.flatMap(highlighter => {
+		methodInPaper.permuter.createHighlighterForEveryAssumption(toHighlight.methodsList, toHighlight.assumptionsList).zipWithIndex.par.flatMap(highlighter => {
 
 			logger.debug(s"${highlighter._2}_${methodInPaper.pdfFilename}: highlighting combination of ${highlighter._1.instructions}")
 			val methodName = methodInPaper.method.replaceAll(" ", "_")
@@ -121,3 +119,5 @@ class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsDir: S
 }
 
 case class PaperHighlightManager(delta: Int, permuter: PDFPermuter, methodList: List[PDFHighlightInstruction], maxLengthPDF: Int)
+
+case class HighlightInstruction(groupId: Int, methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction])

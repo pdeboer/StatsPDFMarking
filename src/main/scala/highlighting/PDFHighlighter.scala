@@ -28,8 +28,8 @@ class PDFHighlighter(val pdfPath: String, val instructions: List[PDFHighlightIns
 			pdfHighlight.initialize(pdDoc)
 
 			val processedPages: List[Int] = instructions.map(i => {
-				Utils.escapeSearchString(i.searchString).foreach(searchString => {
-					Utils.escapeSearchString(i.highlightString).foreach(highlightString => {
+				Utils.buildRegexForString(i.searchString).foreach(searchString => {
+					Utils.buildRegexForString(i.highlightString).foreach(highlightString => {
 						pdfHighlight.highlight(searchString.r.pattern, highlightString.r.pattern, i.color, i.pageNr)
 					})
 				})
