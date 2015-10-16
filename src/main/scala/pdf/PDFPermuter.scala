@@ -135,13 +135,14 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 	def getUniqueStringsForSearchTerms(highlightTerms: Map[Color, List[String]]): Iterable[PDFHighlightInstruction] = {
 		highlightTerms.flatMap {
 			case (color, patterns) => patterns.flatMap(highlightPattern => {
-				originalTxt.zipWithIndex.flatMap(pageTxt => {
-					val allIndicesOfThesePatterns: List[Int] = Utils.buildRegexForString(highlightPattern).flatMap(_.r.findAllMatchIn(pageTxt._1).map(_.start))
+				//assert(highlightPattern.toLowerCase() == highlightPattern) //highlightpattern should be lowercase
+				originalTxt.zipWithIndex.flatMap(lowerPageTxt => {
+					val allIndicesOfThesePatterns: List[Int] = Utils.buildRegexForString(highlightPattern).flatMap(_.r.findAllMatchIn(lowerPageTxt._1).map(_.start))
 
-					val substringIndices: List[(Int, Int)] = extractSubstringIndicesWithoutInvalidCases(highlightPattern, allIndicesOfThesePatterns, pageTxt._1)
-					val substrings = substringIndices.map(i => pageTxt._1.substring(i._1, i._2))
+					val substringIndices: List[(Int, Int)] = extractSubstringIndices(highlightPattern, allIndicesOfThesePatterns, lowerPageTxt._1)
+					val substrings = substringIndices.map(i => originalTxt(lowerPageTxt._2).substring(i._1, i._2))
 
-					val pdfHighlightInstructions = substrings.map((searchString: String) => createPDFHighlightInstructionForSubstring(color, highlightPattern, searchString, pageTxt))
+					val pdfHighlightInstructions = substrings.map((searchString: String) => createPDFHighlightInstructionForSubstring(color, highlightPattern, searchString, lowerPageTxt))
 					pdfHighlightInstructions.filter(_.isDefined).map(_.get)
 				})
 			})
@@ -162,7 +163,7 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 		}
 	}
 
-	def extractSubstringIndicesWithoutInvalidCases(pattern: String, allIndicesOfThesePatterns: List[Int], pageTxt: String): List[(Int, Int)] = {
+	def extractSubstringIndices(pattern: String, allIndicesOfThesePatterns: List[Int], pageTxt: String): List[(Int, Int)] = {
 		allIndicesOfThesePatterns.map(index => {
 			extractSmallestBoundaryForSingleMatch(pattern, index, pageTxt)
 		})
