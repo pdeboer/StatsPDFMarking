@@ -50,7 +50,7 @@ object PDFMergingPreview extends App with LazyLogging {
 				val methodList = permuter.findAllMethodsInPaper(availableMethods).sortBy(m => mgr.calculateIndexPositionOfMethod(permuter, m))
 
 
-				val methodsToMerge = mgr.createStatMethodList(PaperHighlightManager(delta, permuter, methodList, maxLengthPDF))
+				val methodsToMerge = mgr.createStatMethodList(MergeMethodInstruction(delta, permuter, methodList, maxLengthPDF))
 
 				MethodInPaper(pdfFile.getName, method, methodAndSynonyms, permuter, methodsToMerge)
 			} catch {
@@ -61,6 +61,14 @@ object PDFMergingPreview extends App with LazyLogging {
 			}
 		}).filter(_ != null)
 
+		val highlightingInstructions = methodsToMerge.map(methodInPaper => {
+			if (methodInPaper.methodsToMerge.nonEmpty) {
+				val (mergedMethods: List[StatMethod], assumptionsList: List[PDFHighlightInstruction]) = MergeMethods.mergeMethods(methodInPaper)
+				Some(mergedMethods.zipWithIndex.map(groupedMethods => HighlightInstruction(groupedMethods._2, groupedMethods._1.instructions, assumptionsList)))
+			} else None
+		}).filter(_.isDefined).flatMap(_.get).toList
+
+
 		methodsToMerge.zipWithIndex.foreach(mi => {
 			mi._1.methodsToMerge.zipWithIndex.foreach(sm => {
 				sm._1.instructions.foreach(i => {
@@ -70,13 +78,6 @@ object PDFMergingPreview extends App with LazyLogging {
 		})
 
 
-
-		val highlightingInstructions = methodsToMerge.map(methodInPaper => {
-			if (methodInPaper.methodsToMerge.nonEmpty) {
-				val (mergedMethods: List[StatMethod], assumptionsList: List[PDFHighlightInstruction]) = MergeMethods.mergeMethods(methodInPaper)
-				Some(mergedMethods.zipWithIndex.map(groupedMethods => HighlightInstruction(groupedMethods._2, groupedMethods._1.instructions, assumptionsList)))
-			} else None
-		}).filter(_.isDefined).flatMap(_.get).toList
 
 		if (highlightingInstructions.nonEmpty) {
 			val filename: String = "output/" + pdfFile.getName

@@ -65,7 +65,7 @@ object MergeMethods extends LazyLogging {
 
 		if (mergedMethods.nonEmpty) {
 			val assumptionsForMethod: List[String] = data.methodAndSynonyms.assumptions.flatMap(assumption => {
-				List[String](assumption.assumptionName) ::: assumption.synonym
+				List(assumption.assumptionName) ::: assumption.synonym
 			})
 			val assumptionsList = data.permuter.getUniqueStringsForSearchTerms(Map(Color.green -> assumptionsForMethod)).toList
 

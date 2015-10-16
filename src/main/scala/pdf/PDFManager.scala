@@ -35,11 +35,11 @@ class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsDir: S
 
 			try {
 				val permuter = new PDFPermuter(pdfFile.getAbsolutePath)
-				val maxLengthPDF = PDFTextExtractor.extract(pdfFile.getAbsolutePath).map(_.length).sum
+				val totalCharsInPDF = PDFTextExtractor.extract(pdfFile.getAbsolutePath).map(_.length).sum
 
 				val methodList = permuter.findAllMethodsInPaper(availableMethods).sortBy(m => calculateIndexPositionOfMethod(permuter, m))
 
-				val methodsToMerge: List[StatMethod] = createStatMethodList(PaperHighlightManager(delta, permuter, methodList, maxLengthPDF))
+				val methodsToMerge: List[StatMethod] = createStatMethodList(MergeMethodInstruction(delta, permuter, methodList, totalCharsInPDF))
 
 				mergeMethodsAndHighlightPDF(MethodInPaper(pdfFile.getName, method, methodAndSynonyms, permuter, methodsToMerge))
 			} catch {
@@ -51,15 +51,16 @@ class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsDir: S
 		}).toList
 	}
 
-	def createStatMethodList(paperHighlightManager: PaperHighlightManager) = {
-		paperHighlightManager.methodList.map(m => {
-			val methodIndex = calculateIndexPositionOfMethod(paperHighlightManager.permuter, m)
-			StatMethod(Math.max(0, methodIndex - paperHighlightManager.delta), Math.min(paperHighlightManager.maxLengthPDF, methodIndex + paperHighlightManager.delta), List.empty[StatMethod], List[PDFHighlightInstruction](m))
+	def createStatMethodList(mergeMethodInstruction: MergeMethodInstruction) = {
+		mergeMethodInstruction.methodOccurrences.map(m => {
+			val methodIndex = calculateIndexPositionOfMethod(mergeMethodInstruction.permuter, m)
+			StatMethod(Math.max(0, methodIndex - mergeMethodInstruction.delta), Math.min(mergeMethodInstruction.maxLengthPDF, methodIndex + mergeMethodInstruction.delta), List.empty[StatMethod], List[PDFHighlightInstruction](m))
 		})
 	}
 
 	def calculateIndexPositionOfMethod(permuter: PDFPermuter, m: PDFHighlightInstruction): Int = {
-		permuter.originalTxt.zipWithIndex.filter(_._2 < m.pageNr).map(_._1.length).sum + m.startSearchStringIndex + m.startHighlightStringIndex
+		val numCharsOfPagesUntilActualPage: Int = permuter.originalTxt.zipWithIndex.filter(_._2 < m.pageNr).map(_._1.length).sum
+		numCharsOfPagesUntilActualPage + m.startSearchStringIndex + m.startHighlightStringIndex
 	}
 
 	def mergeMethodsAndHighlightPDF(methodInPaper: MethodInPaper): Option[List[Permutation]] = {
@@ -118,6 +119,6 @@ class PDFManager(isMultipleColumnPaper: Boolean, pdfsDir: String, snippetsDir: S
 	}
 }
 
-case class PaperHighlightManager(delta: Int, permuter: PDFPermuter, methodList: List[PDFHighlightInstruction], maxLengthPDF: Int)
+case class MergeMethodInstruction(delta: Int, permuter: PDFPermuter, methodOccurrences: List[PDFHighlightInstruction], maxLengthPDF: Int)
 
 case class HighlightInstruction(groupId: Int, methodsList: List[PDFHighlightInstruction], assumptionsList: List[PDFHighlightInstruction])

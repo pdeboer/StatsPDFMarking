@@ -135,7 +135,6 @@ class PDFPermuter(pdfPath: String) extends LazyLogging {
 	def getUniqueStringsForSearchTerms(highlightTerms: Map[Color, List[String]]): Iterable[PDFHighlightInstruction] = {
 		highlightTerms.flatMap {
 			case (color, patterns) => patterns.flatMap(highlightPattern => {
-				//assert(highlightPattern.toLowerCase() == highlightPattern) //highlightpattern should be lowercase
 				originalTxt.zipWithIndex.flatMap(lowerPageTxt => {
 					val allIndicesOfThesePatterns: List[Int] = Utils.buildRegexForString(highlightPattern).flatMap(_.r.findAllMatchIn(lowerPageTxt._1).map(_.start))
 
