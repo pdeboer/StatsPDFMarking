@@ -27,6 +27,7 @@ object MassPDFHighlighter extends App with LazyLogging {
   Utils.emptyDirRecursively(new File(OUTPUT_DIR))
 
   val isTwoColumn = args.isDefinedAt(0) && args(0).equalsIgnoreCase("2")
+  logger.debug(s"are we in two-column mode? $isTwoColumn")
 
   new PDFManager(isTwoColumn, INPUT_DIR, OUTPUT_DIR, CONVERT_CMD).highlightFiles()
 
